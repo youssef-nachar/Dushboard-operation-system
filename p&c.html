@@ -118,6 +118,14 @@
                     <a href="#">KPI</a>
                 </div>
             </div>
+<!-- Packing Station -->
+<div class="submenu-item">
+    <a href="#" onclick="toggleMenu('packingMenu')">Packing Station</a>
+    <div id="packingMenu" class="subsubmenu">
+        <a href="#" onclick="selectWarehouse('packing')">View Orders</a>
+    </div>
+</div>
+
 
         </div>
     </div>
@@ -164,6 +172,7 @@
                 <input type="text" id="pendingSearch" placeholder="Search Order # or Comment" oninput="renderPendingTable()">
                 <div id="pendingTable"></div>
             </div>
+<!-- Packing Station -->
 
         </div>
     </div>
@@ -244,74 +253,52 @@ fetch(sheetURL)
         selectWarehouse(currentWarehouse);
     });
 
-// Select warehouse and categorize orders
+
 function selectWarehouse(key) {
     currentWarehouse = key;
 
-    // عرض اسم المستودع للمستخدم
     document.getElementById("currentWarehouseName").textContent = "Warehouse: " + key;
 
     issuedOrders = [];
     pendingOrders = [];
 
     allOrders.forEach(o => {
-        const whData = o.warehouses[normalize(currentWarehouse)];
-        if (!whData) return;
+        if (key === "packing") {
+            // كل الـ packed orders عبر جميع المستودعات
+            for (const whKey in o.warehouses) {
+                const whData = o.warehouses[whKey];
+                if (whData.packed) {
+                    issuedOrders.push({
+                        order: o.order,
+                        whTime: whData.whTime,
+                        packTime: whData.packTime || whData.whTime,
+                        prep: whData.packTime ? minutesDiff(whData.whTime, whData.packTime) : 0,
+                        comment: whData.distributed ? whData.distributed : "Ready to distribute"
+                    });
+                }
+            }
+        } else {
+            const whData = o.warehouses[normalize(currentWarehouse)];
+            if (!whData) return;
 
-        const whTime = whData.whTime || null;
-        const packTime = whData.packTime || null;
+            const whTime = whData.whTime || null;
+            const packTime = whData.packTime || null;
 
-        if (whData.packed) {
-            issuedOrders.push({
-                order: o.order,
-                whTime,
-                packTime: packTime || whTime,
-                prep: packTime ? minutesDiff(whTime, packTime) : 0,
-                comment: whData.comment || ""
-            });
-        } else if (whTime) {
-            pendingOrders.push({
-                order: o.order,
-                whTime,
-                comment: whData.comment || ""
-            });
-        }
-    });
-
-    renderIssuedTable();
-    renderPendingTable();
-    updateKPIs();
-}
-function selectWarehouse(key) {
-    currentWarehouse = key;
-
-    // عرض اسم المستودع للمستخدم
-    document.getElementById("currentWarehouseName").textContent = "Warehouse: " + key;
-
-    issuedOrders = [];
-    pendingOrders = [];
-
-    allOrders.forEach(o => {
-        const whData = o.warehouses[normalize(currentWarehouse)];
-        if (!whData) return;
-
-        const whTime = whData.whTime || null;
-        const packTime = whData.packTime || null;
-
-        if (whData.packed) {
-            issuedOrders.push({
-                order: o.order,
-                whTime,
-                packTime: packTime || whTime,
-                prep: packTime ? minutesDiff(whTime, packTime) : 0,
-                comment: whData.comment || ""
-            });
-        } else if (whTime) {
-            pendingOrders.push({
-                order: o.order,
-                whTime,
-                comment: whData.comment || ""
-            });
+            if (whData.packed) {
+                issuedOrders.push({
+                    order: o.order,
+                    whTime,
+                    packTime: packTime || whTime,
+                    prep: packTime ? minutesDiff(whTime, packTime) : 0,
+                    comment: whData.comment || ""
+                });
+            } else if (whTime) {
+                pendingOrders.push({
+                    order: o.order,
+                    whTime,
+                    comment: whData.comment || ""
+                });
+            }
         }
     });
 
@@ -330,14 +317,14 @@ function renderIssuedTable() {
     <table>
         <tr>
             <th>Order #</th>
-            <th>Delivered to Packing</th>
-            <th>Preparation Time (min)</th>
+            <th>Received at Packing</th>
+            <th>${currentWarehouse === "packing" ? "Distributed" : "Preparation Time (min)"}</th>
         </tr>
         ${filtered.map(o => `
             <tr>
                 <td>${o.order}</td>
                 <td>${o.packTime ? o.packTime.toLocaleString() : "-"}</td>
-                <td>${o.prep}</td>
+                <td>${currentWarehouse === "packing" ? o.comment : o.prep}</td>
             </tr>`).join("")}
     </table>`;
 }
@@ -365,6 +352,60 @@ function renderPendingTable() {
             </tr>`).join("")}
     </table>`;
 }
+
+
+
+function renderPackingStation() {
+    const packingDiv = document.getElementById("packingOrders");
+    packingDiv.innerHTML = ""; // تنظيف المحتوى
+
+    // Filter كل الـ packed orders عبر جميع المستودعات
+    const packedOrders = [];
+    allOrders.forEach(o => {
+        for (const whKey in o.warehouses) {
+            const whData = o.warehouses[whKey];
+            if (whData.packed) {
+                // تحديد الـ distributed
+                let distributed = whData.distributed ? whData.distributed : "Ready to distribute";
+                packedOrders.push({
+                    order: o.order,
+                    packTime: whData.packTime,
+                    distributed
+                });
+            }
+        }
+    });
+
+    if (packedOrders.length === 0) {
+        packingDiv.innerHTML = "<p style='padding:8px;color:#aaa;'>No packed orders yet.</p>";
+        return;
+    }
+
+    // بناء جدول
+    const table = document.createElement("table");
+    table.innerHTML = `
+        <tr>
+            <th>Order #</th>
+            <th>Receiving Time</th>
+            <th>Distributed</th>
+        </tr>
+    `;
+
+    packedOrders.forEach(o => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${o.order}</td>
+            <td>${o.packTime ? o.packTime.toLocaleString() : "-"}</td>
+            <td>${o.distributed}</td>
+        `;
+        table.appendChild(tr);
+    });
+
+    packingDiv.appendChild(table);
+}
+
+
+
 
 // Update KPI cards
 function updateKPIs() {
