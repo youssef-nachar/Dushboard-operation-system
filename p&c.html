@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Warehouse Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+    <style>
+        :root {
+            --bg: #0f172a;
+            --sidebar: #020617;
+            --card: #111827;
+            --accent: #22c55e;
+            --warning: #f59e0b;
+            --text: #e5e7eb;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Inter, sans-serif; }
+        body { background: var(--bg); color: var(--text); }
+        .app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+
+        /* SIDEBAR */
+        .sidebar { background: var(--sidebar); padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+        .sidebar h2 { color: var(--accent); }
+        .sidebar a { color: var(--text); text-decoration: none; padding: 10px; border-radius: 8px; display: block; }
+        .sidebar a:hover { background: #111827; }
+
+        .menu-item>a { display: flex; justify-content: space-between; align-items: center; }
+        .submenu, .subsubmenu { display: none; margin-top: 6px; margin-left: 10px; }
+        .submenu a, .subsubmenu a { display: block; padding: 8px 12px; border-radius: 8px; font-size: 14px; }
+        .submenu a:hover, .subsubmenu a:hover { background: #111827; }
+        .subsubmenu { margin-left: 14px; border-left: 2px solid #1f2937; padding-left: 10px; }
+        .arrow { font-size: 12px; transition: transform 0.2s ease; }
+        .menu-open>a .arrow { transform: rotate(180deg); }
+
+        /* MAIN CONTENT */
+        .main-content { padding: 20px; }
+        .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .kpi { background: #020617; padding: 18px; border-radius: 14px; text-align: center; }
+        .kpi .value { font-size: 28px; font-weight: 700; margin-top: 6px; }
+
+        .pnc_warehouse { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .card { background: var(--card); border-radius: 16px; padding: 20px; }
+
+        table { width:100%; border-collapse: collapse; margin-top:12px; }
+        th, td { border:1px solid #333; padding:8px; text-align:center; }
+        th { background:#111827; color:var(--accent); }
+
+        input { width:100%; padding:8px; border-radius:8px; background:#020617; border:1px solid #1f2937; color:white; margin-bottom:8px; }
+        @media (max-width:1024px){ .pnc_warehouse{grid-template-columns:1fr;} }
+    </style>
+</head>
+
+<body>
+<div class="app">
+
+    <!-- Sidebar -->
+<aside class="sidebar">
+    <h2><i class="fa-solid fa-warehouse"></i> Warehouse Mgmt</h2>
+
+    <div class="menu-item">
+        <a href="#" onclick="toggleMenu('warehousesMenu')">
+            <i class="fa-solid fa-boxes-stacked"></i> Warehouses
+            <i class="fa-solid fa-chevron-down arrow"></i>
+        </a>
+
+        <div id="warehousesMenu" class="submenu">
+
+            <!-- P&C -->
+            <div class="submenu-item">
+                <a href="#" onclick="toggleMenu('pcMenu')">P&amp;C</a>
+                <div id="pcMenu" class="subsubmenu">
+                    <a href="#" onclick="selectWarehouse('p&c')">MyHoldal</a>
+                    <a href="#">Return</a>
+                    <a href="#">KPI</a>
+                </div>
+            </div>
+
+            <!-- Pharma -->
+            <div class="submenu-item">
+                <a href="#" onclick="toggleMenu('pharmaMenu')">Pharma</a>
+                <div id="pharmaMenu" class="subsubmenu">
+                    <a href="#" onclick="selectWarehouse('pharma')">MyHoldal</a>
+                    <a href="#">Return</a>
+                    <a href="#">KPI</a>
+                </div>
+            </div>
+
+            <!-- Retail -->
+            <div class="submenu-item">
+                <a href="#" onclick="toggleMenu('retailMenu')">Retail</a>
+                <div id="retailMenu" class="subsubmenu">
+                    <a href="#" onclick="selectWarehouse('retail')">MyHoldal</a>
+                    <a href="#">Return</a>
+                    <a href="#">KPI</a>
+                </div>
+            </div>
+
+            <!-- L’Oréal Lux -->
+            <div class="submenu-item">
+                <a href="#" onclick="toggleMenu('lorealMenu')">L’Oréal Lux</a>
+                <div id="lorealMenu" class="subsubmenu">
+                    <a href="#" onclick="selectWarehouse('loreal')">MyHoldal</a>
+                    <a href="#">Return</a>
+                    <a href="#">KPI</a>
+                </div>
+            </div>
+
+            <!-- Beesline -->
+            <div class="submenu-item">
+                <a href="#" onclick="toggleMenu('beeslineMenu')">Beesline</a>
+                <div id="beeslineMenu" class="subsubmenu">
+                    <a href="#" onclick="selectWarehouse('beesline')">MyHoldal</a>
+                    <a href="#">Return</a>
+                    <a href="#">KPI</a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</aside>
+
+
+
+    <!-- Main content -->
+    <div class="main-content">
+
+        <!-- KPIs -->
+        <div class="kpis">
+            <div class="kpi">
+                <div>Total Orders</div>
+                <div id="totalOrders" class="value">0</div>
+            </div>
+            <div class="kpi">
+                <div>Issued</div>
+                <div id="issuedOrders" class="value success">0</div>
+            </div>
+            <div class="kpi">
+                <div>Pending</div>
+                <div id="pendingOrders" class="value warning">0</div>
+            </div>
+            <div class="kpi">
+                <div>Avg Prep Time</div>
+                <div id="avgPrep" class="value">0 min</div>
+            </div>
+        </div>
+
+        <!-- Search + Tables -->
+        <div class="pnc_warehouse">
+
+            <!-- Issued -->
+            <div class="card">
+                <h3 style="color:#22c55e;">Issued Orders</h3>
+                <input type="text" id="issuedSearch" placeholder="Search Order #" oninput="renderIssuedTable()">
+                <div id="issuedTable"></div>
+            </div>
+
+            <!-- Pending -->
+            <div class="card">
+                <h3 style="color:#f59e0b;">Pending Orders</h3>
+                <input type="text" id="pendingSearch" placeholder="Search Order # or Comment" oninput="renderPendingTable()">
+                <div id="pendingTable"></div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSmcU44IrVbsgFcrMJ1TxA0xnjwBQa9cD6NKPf-jmVaDNIMaNOMa14pU0eRSh9QLw/pub?output=csv";
+
+    let allOrders = [];
+    let currentWarehouse = "p&c";
+    let issuedOrders = [];
+    let pendingOrders = [];
+
+    // تعديل normalize للتعامل مع P&C بشكل صحيح
+ function normalize(s) {
+    if (!s) return "";
+    return s.toLowerCase().replace(/\s+/g, "");
+}
+
+    function toggleMenu(id){
+        const el = document.getElementById(id);
+        el.style.display = (el.style.display==='block') ? 'none':'block';
+    }
+
+    function parseDate(d) {
+        const t = new Date(d);
+        return isNaN(t) ? null : t;
+    }
+
+    function minutesDiff(a, b) {
+        return Math.round((b - a) / 60000);
+    }
+
+    // Fetch & prepare data once
+    fetch(sheetURL)
+        .then(r => r.text())
+        .then(csv => {
+            const rows = Papa.parse(csv, { header: true, skipEmptyLines: true }).data;
+            const map = {};
+
+           rows.forEach(r => {
+    const id = r["#M Order"];
+    if (!id) return;
+
+    if (!map[id]) {
+        map[id] = { order: id, warehouses: {} };
+    }
+
+    let whName = (r["Warehouse Name"] || "").trim().toLowerCase();
+
+    // إزالة ---pack و WH من الاسم
+    let base = whName.replace(/---pack/g, "").replace(/\s*wh/g, "").trim();
+
+    // تطبيق normalize على base
+    base = normalize(base);
+
+    if (!map[id].warehouses[base]) {
+        map[id].warehouses[base] = { packed: false, comment: "" };
+    }
+
+    if (r["comment"]) map[id].warehouses[base].comment = r["comment"];
+
+    if (whName.includes("pack")) {
+        map[id].warehouses[base].packed = true;
+    }
+
+    const time = parseDate(r["Order Received in WH"]);
+    if (time) {
+        const w = map[id].warehouses[base];
+        if (!w.whTime || time < w.whTime) w.whTime = time;
+    }
+
+    const packTime = parseDate(r["Order Received in WH"]);
+    if (whName.includes("pack") && packTime) {
+        const w = map[id].warehouses[base];
+        if (!w.packTime || packTime > w.packTime) w.packTime = packTime;
+    }
+});
+
+            allOrders = Object.values(map);
+            selectWarehouse(currentWarehouse);
+        });
+
+function selectWarehouse(key) {
+    currentWarehouse = key;
+
+    issuedOrders = [];
+    pendingOrders = [];
+
+    allOrders.forEach(o => {
+        const whData = o.warehouses[normalize(currentWarehouse)];
+        if (!whData) return;
+
+        const whTime = whData.whTime || null;
+        const packTime = whData.packTime || null;
+
+        // إذا order يحتوي على ---pack تُحسب كـ issued
+        if (whData.packed) {
+            issuedOrders.push({
+                order: o.order,
+                whTime,
+                packTime: packTime || whTime, // إذا لم يوجد packTime استخدم whTime
+                prep: packTime ? minutesDiff(whTime, packTime) : 0,
+                comment: whData.comment || ""
+            });
+        } else if (whTime) {
+            pendingOrders.push({
+                order: o.order,
+                whTime,
+                comment: whData.comment || ""
+            });
+        }
+    });
+
+    renderIssuedTable();
+    renderPendingTable();
+    updateKPIs();
+}
+
+
+    function renderIssuedTable() {
+        const q = document.getElementById("issuedSearch").value.toLowerCase();
+        const filtered = issuedOrders.filter(o => o.order.toLowerCase().includes(q));
+        document.getElementById("issuedTable").innerHTML = `
+        <table>
+            <tr>
+                <th>Order #</th>
+                <th>Delivered to Packing</th>
+                <th>Preparation Time (min)</th>
+            </tr>
+            ${filtered.map(o => `
+                <tr>
+                    <td>${o.order}</td>
+                    <td>${o.packTime.toLocaleString()}</td>
+                    <td>${o.prep}</td>
+                </tr>`).join("")}
+        </table>`;
+    }
+
+    function renderPendingTable() {
+        const q = document.getElementById("pendingSearch").value.toLowerCase();
+        const filtered = pendingOrders.filter(o =>
+            o.order.toLowerCase().includes(q) ||
+            o.comment.toLowerCase().includes(q)
+        );
+        document.getElementById("pendingTable").innerHTML = `
+        <table>
+            <tr>
+                <th>Order #</th>
+                <th>Received at WH</th>
+                <th>Comment</th>
+            </tr>
+            ${filtered.map(o => `
+                <tr>
+                    <td>${o.order}</td>
+                    <td>${o.whTime.toLocaleString()}</td>
+                    <td>${o.comment}</td>
+                </tr>`).join("")}
+        </table>`;
+    }
+
+    function updateKPIs() {
+        const total = issuedOrders.length + pendingOrders.length;
+        const issued = issuedOrders.length;
+        const pending = pendingOrders.length;
+        const avgPrep = issued ? Math.round(issuedOrders.reduce((a,o)=>a+o.prep,0)/issued) : 0;
+
+        document.getElementById("totalOrders").textContent = total;
+        document.getElementById("issuedOrders").textContent = issued;
+        document.getElementById("pendingOrders").textContent = pending;
+        document.getElementById("avgPrep").textContent = avgPrep + " min";
+    }
+</script>
+
+</body>
+</html>
