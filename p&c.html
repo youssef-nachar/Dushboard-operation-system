@@ -59,7 +59,7 @@
 
     <!-- Sidebar -->
 <aside class="sidebar">
-    <h2><i class="fa-solid fa-warehouse"></i> Warehouse Mgmt</h2>
+    <h2>MYholdal</h2>
 
     <div class="menu-item">
         <a href="#" onclick="toggleMenu('warehousesMenu')">
@@ -127,7 +127,7 @@
 
     <!-- Main content -->
     <div class="main-content">
-
+ <h2 id="currentWarehouseName" style="margin-bottom: 20px; color: #22c55e;">Warehouse: P&C</h2>
         <!-- KPIs -->
         <div class="kpis">
             <div class="kpi">
@@ -170,85 +170,86 @@
 </div>
 
 <script>
-    const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSmcU44IrVbsgFcrMJ1TxA0xnjwBQa9cD6NKPf-jmVaDNIMaNOMa14pU0eRSh9QLw/pub?output=csv";
+const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSmcU44IrVbsgFcrMJ1TxA0xnjwBQa9cD6NKPf-jmVaDNIMaNOMa14pU0eRSh9QLw/pub?output=csv";
 
-    let allOrders = [];
-    let currentWarehouse = "p&c";
-    let issuedOrders = [];
-    let pendingOrders = [];
+let allOrders = [];
+let currentWarehouse = "p&c";
+let issuedOrders = [];
+let pendingOrders = [];
 
-    // تعديل normalize للتعامل مع P&C بشكل صحيح
- function normalize(s) {
+// Normalize warehouse names
+function normalize(s) {
     if (!s) return "";
     return s.toLowerCase().replace(/\s+/g, "");
 }
 
-    function toggleMenu(id){
-        const el = document.getElementById(id);
-        el.style.display = (el.style.display==='block') ? 'none':'block';
-    }
+// Toggle menu
+function toggleMenu(id){
+    const el = document.getElementById(id);
+    el.style.display = (el.style.display==='block') ? 'none':'block';
+}
 
-    function parseDate(d) {
-        const t = new Date(d);
-        return isNaN(t) ? null : t;
-    }
+// Parse date safely
+function parseDate(d) {
+    const t = new Date(d);
+    return isNaN(t) ? null : t;
+}
 
-    function minutesDiff(a, b) {
-        return Math.round((b - a) / 60000);
-    }
+// Calculate minutes difference
+function minutesDiff(a, b) {
+    if (!a || !b) return 0;
+    return Math.round((b - a) / 60000);
+}
 
-    // Fetch & prepare data once
-    fetch(sheetURL)
-        .then(r => r.text())
-        .then(csv => {
-            const rows = Papa.parse(csv, { header: true, skipEmptyLines: true }).data;
-            const map = {};
+// Fetch CSV and prepare data
+fetch(sheetURL)
+    .then(r => r.text())
+    .then(csv => {
+        const rows = Papa.parse(csv, { header: true, skipEmptyLines: true }).data;
+        console.log("Rows loaded:", rows);
 
-           rows.forEach(r => {
-    const id = r["#M Order"];
-    if (!id) return;
+        const map = {};
+        rows.forEach(r => {
+            const id = r["#M Order"];
+            if (!id) return;
 
-    if (!map[id]) {
-        map[id] = { order: id, warehouses: {} };
-    }
+            if (!map[id]) {
+                map[id] = { order: id, warehouses: {} };
+            }
 
-    let whName = (r["Warehouse Name"] || "").trim().toLowerCase();
+            let whName = (r["Warehouse Name"] || "").trim().toLowerCase();
+            let base = whName.replace(/---pack/g, "").replace(/\s*wh/g, "").trim();
+            base = normalize(base);
 
-    // إزالة ---pack و WH من الاسم
-    let base = whName.replace(/---pack/g, "").replace(/\s*wh/g, "").trim();
+            if (!map[id].warehouses[base]) map[id].warehouses[base] = { packed: false, comment: "" };
 
-    // تطبيق normalize على base
-    base = normalize(base);
+            if (r["comment"]) map[id].warehouses[base].comment = r["comment"];
 
-    if (!map[id].warehouses[base]) {
-        map[id].warehouses[base] = { packed: false, comment: "" };
-    }
+            if (whName.includes("pack")) map[id].warehouses[base].packed = true;
 
-    if (r["comment"]) map[id].warehouses[base].comment = r["comment"];
+            const time = parseDate(r["Order Received in WH"]);
+            if (time) {
+                const w = map[id].warehouses[base];
+                if (!w.whTime || time < w.whTime) w.whTime = time;
+            }
 
-    if (whName.includes("pack")) {
-        map[id].warehouses[base].packed = true;
-    }
-
-    const time = parseDate(r["Order Received in WH"]);
-    if (time) {
-        const w = map[id].warehouses[base];
-        if (!w.whTime || time < w.whTime) w.whTime = time;
-    }
-
-    const packTime = parseDate(r["Order Received in WH"]);
-    if (whName.includes("pack") && packTime) {
-        const w = map[id].warehouses[base];
-        if (!w.packTime || packTime > w.packTime) w.packTime = packTime;
-    }
-});
-
-            allOrders = Object.values(map);
-            selectWarehouse(currentWarehouse);
+            const packTime = parseDate(r["Order Received in WH"]);
+            if (whName.includes("pack") && packTime) {
+                const w = map[id].warehouses[base];
+                if (!w.packTime || packTime > w.packTime) w.packTime = packTime;
+            }
         });
 
+        allOrders = Object.values(map);
+        selectWarehouse(currentWarehouse);
+    });
+
+// Select warehouse and categorize orders
 function selectWarehouse(key) {
     currentWarehouse = key;
+
+    // عرض اسم المستودع للمستخدم
+    document.getElementById("currentWarehouseName").textContent = "Warehouse: " + key;
 
     issuedOrders = [];
     pendingOrders = [];
@@ -260,12 +261,48 @@ function selectWarehouse(key) {
         const whTime = whData.whTime || null;
         const packTime = whData.packTime || null;
 
-        // إذا order يحتوي على ---pack تُحسب كـ issued
         if (whData.packed) {
             issuedOrders.push({
                 order: o.order,
                 whTime,
-                packTime: packTime || whTime, // إذا لم يوجد packTime استخدم whTime
+                packTime: packTime || whTime,
+                prep: packTime ? minutesDiff(whTime, packTime) : 0,
+                comment: whData.comment || ""
+            });
+        } else if (whTime) {
+            pendingOrders.push({
+                order: o.order,
+                whTime,
+                comment: whData.comment || ""
+            });
+        }
+    });
+
+    renderIssuedTable();
+    renderPendingTable();
+    updateKPIs();
+}
+function selectWarehouse(key) {
+    currentWarehouse = key;
+
+    // عرض اسم المستودع للمستخدم
+    document.getElementById("currentWarehouseName").textContent = "Warehouse: " + key;
+
+    issuedOrders = [];
+    pendingOrders = [];
+
+    allOrders.forEach(o => {
+        const whData = o.warehouses[normalize(currentWarehouse)];
+        if (!whData) return;
+
+        const whTime = whData.whTime || null;
+        const packTime = whData.packTime || null;
+
+        if (whData.packed) {
+            issuedOrders.push({
+                order: o.order,
+                whTime,
+                packTime: packTime || whTime,
                 prep: packTime ? minutesDiff(whTime, packTime) : 0,
                 comment: whData.comment || ""
             });
@@ -284,59 +321,65 @@ function selectWarehouse(key) {
 }
 
 
-    function renderIssuedTable() {
-        const q = document.getElementById("issuedSearch").value.toLowerCase();
-        const filtered = issuedOrders.filter(o => o.order.toLowerCase().includes(q));
-        document.getElementById("issuedTable").innerHTML = `
-        <table>
+// Render Issued Orders Table
+function renderIssuedTable() {
+    const q = document.getElementById("issuedSearch").value.toLowerCase();
+    const filtered = issuedOrders.filter(o => o.order.toLowerCase().includes(q));
+
+    document.getElementById("issuedTable").innerHTML = `
+    <table>
+        <tr>
+            <th>Order #</th>
+            <th>Delivered to Packing</th>
+            <th>Preparation Time (min)</th>
+        </tr>
+        ${filtered.map(o => `
             <tr>
-                <th>Order #</th>
-                <th>Delivered to Packing</th>
-                <th>Preparation Time (min)</th>
-            </tr>
-            ${filtered.map(o => `
-                <tr>
-                    <td>${o.order}</td>
-                    <td>${o.packTime.toLocaleString()}</td>
-                    <td>${o.prep}</td>
-                </tr>`).join("")}
-        </table>`;
-    }
+                <td>${o.order}</td>
+                <td>${o.packTime ? o.packTime.toLocaleString() : "-"}</td>
+                <td>${o.prep}</td>
+            </tr>`).join("")}
+    </table>`;
+}
 
-    function renderPendingTable() {
-        const q = document.getElementById("pendingSearch").value.toLowerCase();
-        const filtered = pendingOrders.filter(o =>
-            o.order.toLowerCase().includes(q) ||
-            o.comment.toLowerCase().includes(q)
-        );
-        document.getElementById("pendingTable").innerHTML = `
-        <table>
+// Render Pending Orders Table
+function renderPendingTable() {
+    const q = document.getElementById("pendingSearch").value.toLowerCase();
+    const filtered = pendingOrders.filter(o =>
+        o.order.toLowerCase().includes(q) ||
+        o.comment.toLowerCase().includes(q)
+    );
+
+    document.getElementById("pendingTable").innerHTML = `
+    <table>
+        <tr>
+            <th>Order #</th>
+            <th>Received at WH</th>
+            <th>Comment</th>
+        </tr>
+        ${filtered.map(o => `
             <tr>
-                <th>Order #</th>
-                <th>Received at WH</th>
-                <th>Comment</th>
-            </tr>
-            ${filtered.map(o => `
-                <tr>
-                    <td>${o.order}</td>
-                    <td>${o.whTime.toLocaleString()}</td>
-                    <td>${o.comment}</td>
-                </tr>`).join("")}
-        </table>`;
-    }
+                <td>${o.order}</td>
+                <td>${o.whTime ? o.whTime.toLocaleString() : "-"}</td>
+                <td>${o.comment}</td>
+            </tr>`).join("")}
+    </table>`;
+}
 
-    function updateKPIs() {
-        const total = issuedOrders.length + pendingOrders.length;
-        const issued = issuedOrders.length;
-        const pending = pendingOrders.length;
-        const avgPrep = issued ? Math.round(issuedOrders.reduce((a,o)=>a+o.prep,0)/issued) : 0;
+// Update KPI cards
+function updateKPIs() {
+    const total = issuedOrders.length + pendingOrders.length;
+    const issued = issuedOrders.length;
+    const pending = pendingOrders.length;
+    const avgPrep = issued ? Math.round(issuedOrders.reduce((a,o)=>a+o.prep,0)/issued) : 0;
 
-        document.getElementById("totalOrders").textContent = total;
-        document.getElementById("issuedOrders").textContent = issued;
-        document.getElementById("pendingOrders").textContent = pending;
-        document.getElementById("avgPrep").textContent = avgPrep + " min";
-    }
+    document.getElementById("totalOrders").textContent = total;
+    document.getElementById("issuedOrders").textContent = issued;
+    document.getElementById("pendingOrders").textContent = pending;
+    document.getElementById("avgPrep").textContent = avgPrep + " min";
+}
 </script>
+
 
 </body>
 </html>
