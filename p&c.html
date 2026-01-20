@@ -1,5 +1,7 @@
+
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Warehouse Dashboard</title>
@@ -18,302 +20,473 @@
             --warning: #f59e0b;
             --text: #e5e7eb;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Inter, sans-serif; }
-        body { background: var(--bg); color: var(--text); }
-        .app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Inter, sans-serif;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .app {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            min-height: 100vh;
+        }
 
         /* SIDEBAR */
-        .sidebar { background: var(--sidebar); padding: 20px; display: flex; flex-direction: column; gap: 20px; }
-        .sidebar h2 { color: var(--accent); }
-        .sidebar a { color: var(--text); text-decoration: none; padding: 10px; border-radius: 8px; display: block; }
-        .sidebar a:hover { background: #111827; }
+        .sidebar {
+            background: var(--sidebar);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
 
-        .menu-item>a { display: flex; justify-content: space-between; align-items: center; }
-        .submenu, .subsubmenu { display: none; margin-top: 6px; margin-left: 10px; }
-        .submenu a, .subsubmenu a { display: block; padding: 8px 12px; border-radius: 8px; font-size: 14px; }
-        .submenu a:hover, .subsubmenu a:hover { background: #111827; }
-        .subsubmenu { margin-left: 14px; border-left: 2px solid #1f2937; padding-left: 10px; }
-        .arrow { font-size: 12px; transition: transform 0.2s ease; }
-        .menu-open>a .arrow { transform: rotate(180deg); }
+        .sidebar h2 {
+            color: var(--accent);
+        }
+
+        .sidebar a {
+            color: var(--text);
+            text-decoration: none;
+            padding: 10px;
+            border-radius: 8px;
+            display: block;
+        }
+
+        .sidebar a:hover {
+            background: #111827;
+        }
+
+        .menu-item>a {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .submenu,
+        .subsubmenu {
+            display: none;
+            margin-top: 6px;
+            margin-left: 10px;
+        }
+
+        .submenu a,
+        .subsubmenu a {
+            display: block;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .submenu a:hover,
+        .subsubmenu a:hover {
+            background: #111827;
+        }
+
+        .subsubmenu {
+            margin-left: 14px;
+            border-left: 2px solid #1f2937;
+            padding-left: 10px;
+        }
+
+        .arrow {
+            font-size: 12px;
+            transition: transform 0.2s ease;
+        }
+
+        .menu-open>a .arrow {
+            transform: rotate(180deg);
+        }
 
         /* MAIN CONTENT */
-        .main-content { padding: 20px; }
-        .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 20px; }
-        .kpi { background: #020617; padding: 18px; border-radius: 14px; text-align: center; }
-        .kpi .value { font-size: 28px; font-weight: 700; margin-top: 6px; }
+        .main-content {
+            padding: 20px;
+        }
 
-        .pnc_warehouse { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .card { background: var(--card); border-radius: 16px; padding: 20px; }
+        .kpis {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
 
-        table { width:100%; border-collapse: collapse; margin-top:12px; }
-        th, td { border:1px solid #333; padding:8px; text-align:center; }
-        th { background:#111827; color:var(--accent); }
+        .kpi {
+            background: #020617;
+            padding: 18px;
+            border-radius: 14px;
+            text-align: center;
+        }
 
-        input { width:100%; padding:8px; border-radius:8px; background:#020617; border:1px solid #1f2937; color:white; margin-bottom:8px; }
-        @media (max-width:1024px){ .pnc_warehouse{grid-template-columns:1fr;} }
+        .kpi .value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-top: 6px;
+        }
+
+        .pnc_warehouse {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 16px;
+            padding: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+
+        th,
+        td {
+            border: 1px solid #333;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background: #111827;
+            color: var(--accent);
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            border-radius: 8px;
+            background: #020617;
+            border: 1px solid #1f2937;
+            color: white;
+            margin-bottom: 8px;
+        }
+.btn{
+  background:#22c55e;
+  border:none;
+  color:#020617;
+  padding:8px 14px;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:600;
+}
+.btn:hover{
+  opacity:.85;
+}
+        @media (max-width:1024px) {
+            .pnc_warehouse {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 
 <body>
-<div class="app">
+    <div class="app">
 
-    <!-- Sidebar -->
-<aside class="sidebar">
-    <h2>MYholdal</h2>
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <h2>MYholdal</h2>
 
-    <div class="menu-item">
-        <a href="#" onclick="toggleMenu('warehousesMenu')">
-            <i class="fa-solid fa-boxes-stacked"></i> Warehouses
-            <i class="fa-solid fa-chevron-down arrow"></i>
-        </a>
+            <div class="menu-item">
+                <a href="#" onclick="toggleMenu('warehousesMenu')">
+                    <i class="fa-solid fa-boxes-stacked"></i> Warehouses
+                    <i class="fa-solid fa-chevron-down arrow"></i>
+                </a>
 
-        <div id="warehousesMenu" class="submenu">
+                <div id="warehousesMenu" class="submenu">
 
-            <!-- P&C -->
-            <div class="submenu-item">
-                <a href="#" onclick="toggleMenu('pcMenu')">P&amp;C</a>
-                <div id="pcMenu" class="subsubmenu">
-                    <a href="#" onclick="selectWarehouse('p&c')">MyHoldal</a>
-                    <a href="#">Return</a>
-                    <a href="#">KPI</a>
-                </div>
-            </div>
+                    <!-- P&C -->
+                    <div class="submenu-item">
+                        <a href="#" onclick="toggleMenu('pcMenu')">P&amp;C</a>
+                        <div id="pcMenu" class="subsubmenu">
+                            <a href="#" onclick="selectWarehouse('p&c')">MyHoldal</a>
+                            <a href="#">Return</a>
+                            <a href="#">KPI</a>
+                        </div>
+                    </div>
 
-            <!-- Pharma -->
-            <div class="submenu-item">
-                <a href="#" onclick="toggleMenu('pharmaMenu')">Pharma</a>
-                <div id="pharmaMenu" class="subsubmenu">
-                    <a href="#" onclick="selectWarehouse('pharma')">MyHoldal</a>
-                    <a href="#">Return</a>
-                    <a href="#">KPI</a>
-                </div>
-            </div>
+                    <!-- Pharma -->
+                    <div class="submenu-item">
+                        <a href="#" onclick="toggleMenu('pharmaMenu')">Pharma</a>
+                        <div id="pharmaMenu" class="subsubmenu">
+                            <a href="#" onclick="selectWarehouse('pharma')">MyHoldal</a>
+                            <a href="#">Return</a>
+                            <a href="#">KPI</a>
+                        </div>
+                    </div>
 
-            <!-- Retail -->
-            <div class="submenu-item">
-                <a href="#" onclick="toggleMenu('retailMenu')">Retail</a>
-                <div id="retailMenu" class="subsubmenu">
-                    <a href="#" onclick="selectWarehouse('retail')">MyHoldal</a>
-                    <a href="#">Return</a>
-                    <a href="#">KPI</a>
-                </div>
-            </div>
+                    <!-- Retail -->
+                    <div class="submenu-item">
+                        <a href="#" onclick="toggleMenu('retailMenu')">Retail</a>
+                        <div id="retailMenu" class="subsubmenu">
+                            <a href="#" onclick="selectWarehouse('retail')">MyHoldal</a>
+                            <a href="#">Return</a>
+                            <a href="#">KPI</a>
+                        </div>
+                    </div>
 
-            <!-- L’Oréal Lux -->
-            <div class="submenu-item">
-                <a href="#" onclick="toggleMenu('lorealMenu')">L’Oréal Lux</a>
-                <div id="lorealMenu" class="subsubmenu">
-                    <a href="#" onclick="selectWarehouse('loreal')">MyHoldal</a>
-                    <a href="#">Return</a>
-                    <a href="#">KPI</a>
-                </div>
-            </div>
+                    <!-- L’Oréal Lux -->
+                    <div class="submenu-item">
+                        <a href="#" onclick="toggleMenu('lorealMenu')">L’Oréal
+                            Lux</a>
+                        <div id="lorealMenu" class="subsubmenu">
+                           <a href="#" onclick="selectWarehouse('loreallux')">MyHoldal</a>
+                            <a href="#">Return</a>
+                            <a href="#">KPI</a>
+                        </div>
+                    </div>
 
-            <!-- Beesline -->
-            <div class="submenu-item">
-                <a href="#" onclick="toggleMenu('beeslineMenu')">Beesline</a>
-                <div id="beeslineMenu" class="subsubmenu">
-                    <a href="#" onclick="selectWarehouse('beesline')">MyHoldal</a>
-                    <a href="#">Return</a>
-                    <a href="#">KPI</a>
-                </div>
-            </div>
-<!-- Packing Station -->
-<div class="submenu-item">
-    <a href="#" onclick="toggleMenu('packingMenu')">Packing Station</a>
-    <div id="packingMenu" class="subsubmenu">
-        <a href="#" onclick="selectWarehouse('packing')">View Orders</a>
-    </div>
+                    <!-- Beesline -->
+                    <div class="submenu-item">
+                        <a href="#" onclick="toggleMenu('beeslineMenu')">Beesline</a>
+                        <div id="beeslineMenu" class="subsubmenu">
+                            <a href="#" onclick="selectWarehouse('beesline')">MyHoldal</a>
+                            <a href="#">Return</a>
+                            <a href="#">KPI</a>
+                        </div>
+                    </div>
+                    <!-- Packing Station -->
+<div class="submenu-item"> 
+        <a href="#" onclick="selectWarehouse('packing')">Packing Station</a>
 </div>
 
-
-        </div>
-    </div>
-</aside>
-
-
-
-    <!-- Main content -->
-    <div class="main-content">
- <h2 id="currentWarehouseName" style="margin-bottom: 20px; color: #22c55e;">Warehouse: P&C</h2>
-        <!-- KPIs -->
-        <div class="kpis">
-            <div class="kpi">
-                <div>Total Orders</div>
-                <div id="totalOrders" class="value">0</div>
+                </div>
             </div>
-            <div class="kpi">
-                <div>Issued</div>
-                <div id="issuedOrders" class="value success">0</div>
-            </div>
-            <div class="kpi">
-                <div>Pending</div>
-                <div id="pendingOrders" class="value warning">0</div>
-            </div>
-            <div class="kpi">
-                <div>Avg Prep Time</div>
-                <div id="avgPrep" class="value">0 min</div>
-            </div>
-        </div>
+        </aside>
 
-        <!-- Search + Tables -->
-        <div class="pnc_warehouse">
+        <!-- Main content -->
+        <div class="main-content">
+            <h2 id="currentWarehouseName" style="margin-bottom: 20px; color: #22c55e;">Warehouse:
+                P&C</h2>
 
-            <!-- Issued -->
-            <div class="card">
-                <h3 style="color:#22c55e;">Issued Orders</h3>
-                <input type="text" id="issuedSearch" placeholder="Search Order #" oninput="renderIssuedTable()">
-                <div id="issuedTable"></div>
+            <!-- KPIs -->
+            <div class="kpis">
+                <div class="kpi">
+                    <div>Total Orders</div>
+                    <div id="totalOrders" class="value">0</div>
+                </div>
+                <div class="kpi">
+                    <div>Issued</div>
+                    <div id="issuedOrders" class="value success">0</div>
+                </div>
+                <div class="kpi">
+                    <div>Pending</div>
+                    <div id="pendingOrders" class="value warning">0</div>
+                </div>
+                <div class="kpi">
+                    <div>Avg Prep Time</div>
+                    <div id="avgPrep" class="value">0 min</div>
+                </div>
             </div>
+<!-- Date Filter -->
+<div class="card" style="margin-bottom:20px;">
+  <h3 style="color:#22c55e;">Date Filter</h3>
 
-            <!-- Pending -->
-            <div class="card">
-                <h3 style="color:#f59e0b;">Pending Orders</h3>
-                <input type="text" id="pendingSearch" placeholder="Search Order # or Comment" oninput="renderPendingTable()">
-                <div id="pendingTable"></div>
-            </div>
-<!-- Packing Station -->
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <input type="date" id="fromDate">
+    <input type="date" id="toDate">
+    <button onclick="applyDateFilter()" class="btn">Apply</button>
+  </div>
 
-        </div>
-    </div>
+  <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+    <button onclick="quickDate('today')" class="btn">Today</button>
+    <button onclick="quickDate('yesterday')" class="btn">Yesterday</button>
+    <button onclick="quickDate('week')" class="btn">This Week</button>
+    <button onclick="quickDate('month')" class="btn">This Month</button>
+    <button onclick="quickDate('all')" class="btn" style="background:#374151;">All</button>
+  </div>
 </div>
+            <!-- Search + Tables -->
+            <div class="pnc_warehouse">
 
-<script>
-const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSmcU44IrVbsgFcrMJ1TxA0xnjwBQa9cD6NKPf-jmVaDNIMaNOMa14pU0eRSh9QLw/pub?output=csv";
+                <!-- Issued -->
+                <div class="card">
+                    <h3 style="color:#22c55e;">Issued Orders</h3>
+                    <input type="text" id="issuedSearch" placeholder="Search Order #" oninput="renderIssuedTable()">
+                    <div id="issuedTable"></div>
+                </div>
 
-let allOrders = [];
-let currentWarehouse = "p&c";
-let issuedOrders = [];
-let pendingOrders = [];
+                <!-- Pending -->
+                <div class="card">
+                    <h3 style="color:#f59e0b;">Pending Orders</h3>
+                    <input type="text" id="pendingSearch" placeholder="Search Order # or Comment"
+                        oninput="renderPendingTable()">
+                    <div id="pendingTable"></div>
+                </div>
+                <!-- Packing Station -->
+                    
+                    <!-- Packing Station -->
+<div id="packingSection" class="pnc_warehouse" style="display:none;">
 
-// Normalize warehouse names
-function normalize(s) {
-    if (!s) return "";
-    return s.toLowerCase().replace(/\s+/g, "");
+  <!-- Orders in Packing -->
+  <div class="card">
+    <h3 style="color:#22c55e;">Orders in Packing</h3>
+    <div id="packingOrders"></div>
+  </div>
+
+  <!-- Distributed Orders -->
+  <div class="card">
+    <h3 style="color:#3b82f6;">Distributed Orders</h3>
+    <div id="distributedOrders"></div>
+  </div>
+
+</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSmcU44IrVbsgFcrMJ1TxA0xnjwBQa9cD6NKPf-jmVaDNIMaNOMa14pU0eRSh9QLw/pub?output=csv";
+
+        let allOrders = [];
+        let currentWarehouse = "p&c";
+        let issuedOrders = [];
+        let pendingOrders = [];
+let packingOrders = [];
+let distributedOrders = [];
+        // Normalize warehouse names
+        function normalize(s) {
+  if (!s) return "";
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "")   // يحذف كل الرموز é ’ - ---
+    .replace(/wh|pack/g, "")     // يحذف wh و pack
+    .trim();
 }
 
-// Toggle menu
-function toggleMenu(id){
-    const el = document.getElementById(id);
-    el.style.display = (el.style.display==='block') ? 'none':'block';
-}
-
-// Parse date safely
-function parseDate(d) {
-    const t = new Date(d);
-    return isNaN(t) ? null : t;
-}
-
-// Calculate minutes difference
-function minutesDiff(a, b) {
-    if (!a || !b) return 0;
-    return Math.round((b - a) / 60000);
-}
-
-// Fetch CSV and prepare data
-fetch(sheetURL)
-    .then(r => r.text())
-    .then(csv => {
-        const rows = Papa.parse(csv, { header: true, skipEmptyLines: true }).data;
-        console.log("Rows loaded:", rows);
-
-        const map = {};
-        rows.forEach(r => {
-            const id = r["#M Order"];
-            if (!id) return;
-
-            if (!map[id]) {
-                map[id] = { order: id, warehouses: {} };
-            }
-
-            let whName = (r["Warehouse Name"] || "").trim().toLowerCase();
-            let base = whName.replace(/---pack/g, "").replace(/\s*wh/g, "").trim();
-            base = normalize(base);
-
-            if (!map[id].warehouses[base]) map[id].warehouses[base] = { packed: false, comment: "" };
-
-            if (r["comment"]) map[id].warehouses[base].comment = r["comment"];
-
-            if (whName.includes("pack")) map[id].warehouses[base].packed = true;
-
-            const time = parseDate(r["Order Received in WH"]);
-            if (time) {
-                const w = map[id].warehouses[base];
-                if (!w.whTime || time < w.whTime) w.whTime = time;
-            }
-
-            const packTime = parseDate(r["Order Received in WH"]);
-            if (whName.includes("pack") && packTime) {
-                const w = map[id].warehouses[base];
-                if (!w.packTime || packTime > w.packTime) w.packTime = packTime;
-            }
-        });
-
-        allOrders = Object.values(map);
-        selectWarehouse(currentWarehouse);
-    });
-
-
-function selectWarehouse(key) {
-    currentWarehouse = key;
-
-    document.getElementById("currentWarehouseName").textContent = "Warehouse: " + key;
-
-    issuedOrders = [];
-    pendingOrders = [];
-
-    allOrders.forEach(o => {
-        if (key === "packing") {
-            // كل الـ packed orders عبر جميع المستودعات
-            for (const whKey in o.warehouses) {
-                const whData = o.warehouses[whKey];
-                if (whData.packed) {
-                    issuedOrders.push({
-                        order: o.order,
-                        whTime: whData.whTime,
-                        packTime: whData.packTime || whData.whTime,
-                        prep: whData.packTime ? minutesDiff(whData.whTime, whData.packTime) : 0,
-                        comment: whData.distributed ? whData.distributed : "Ready to distribute"
-                    });
-                }
-            }
-        } else {
-            const whData = o.warehouses[normalize(currentWarehouse)];
-            if (!whData) return;
-
-            const whTime = whData.whTime || null;
-            const packTime = whData.packTime || null;
-
-            if (whData.packed) {
-                issuedOrders.push({
-                    order: o.order,
-                    whTime,
-                    packTime: packTime || whTime,
-                    prep: packTime ? minutesDiff(whTime, packTime) : 0,
-                    comment: whData.comment || ""
-                });
-            } else if (whTime) {
-                pendingOrders.push({
-                    order: o.order,
-                    whTime,
-                    comment: whData.comment || ""
-                });
-            }
+        // Toggle menu
+        function toggleMenu(id) {
+            const el = document.getElementById(id);
+            el.style.display = (el.style.display === 'block') ? 'none' : 'block';
         }
-    });
 
-    renderIssuedTable();
-    renderPendingTable();
-    updateKPIs();
-}
+        // Parse date safely
+        function parseDate(d) {
+            const t = new Date(d);
+            return isNaN(t) ? null : t;
+        }
+
+        // Calculate minutes difference
+        function minutesDiff(a, b) {
+            if (!a || !b) return 0;
+            return Math.round((b - a) / 60000);
+        }
+
+        // Fetch CSV and prepare data
+        fetch(sheetURL)
+            .then(r => r.text())
+            .then(csv => {
+                const rows = Papa.parse(csv, { header: true, skipEmptyLines: true }).data;
+                console.log("Rows loaded:", rows);
+
+                const map = {};
+                rows.forEach(r => {
+                    const id = r["#M Order"];
+                    if (!id) return;
+
+                    if (!map[id]) {
+                        map[id] = { order: id, warehouses: {} };
+                    }
+
+                    let whName = (r["Warehouse Name"] || "").trim().toLowerCase();
+                    let base = whName.replace(/---pack/g, "").replace(/\s*wh/g, "").trim();
+                    base = normalize(base);
+
+                    if (!map[id].warehouses[base]) map[id].warehouses[base] = { packed: false, comment: "" };
+
+                    if (r["comment"]) map[id].warehouses[base].comment = r["comment"];
+
+                    if (whName.includes("pack")) map[id].warehouses[base].packed = true;
+
+                    const time = parseDate(r["Order Received in WH"]);
+                    if (time) {
+                        const w = map[id].warehouses[base];
+                        if (!w.whTime || time < w.whTime) w.whTime = time;
+                    }
+
+                    const packTime = parseDate(r["Order Received in WH"]);
+                    if (whName.includes("pack") && packTime) {
+                        const w = map[id].warehouses[base];
+                        if (!w.packTime || packTime > w.packTime) w.packTime = packTime;
+                    }
+                });
+
+                allOrders = Object.values(map);
+                selectWarehouse(currentWarehouse);
+            });
 
 
-// Render Issued Orders Table
-function renderIssuedTable() {
-    const q = document.getElementById("issuedSearch").value.toLowerCase();
-    const filtered = issuedOrders.filter(o => o.order.toLowerCase().includes(q));
+        function selectWarehouse(key) {
+            currentWarehouse = key;
 
-    document.getElementById("issuedTable").innerHTML = `
+            document.getElementById("currentWarehouseName").textContent = "Warehouse: " + key;
+
+            issuedOrders = [];
+            pendingOrders = [];
+
+            allOrders.forEach(o => {
+                if (key === "packing") {
+                    // كل الـ packed orders عبر جميع المستودعات
+                    for (const whKey in o.warehouses) {
+                        const whData = o.warehouses[whKey];
+                        if (whData.packed) {
+                            issuedOrders.push({
+                                order: o.order,
+                                whTime: whData.whTime,
+                                packTime: whData.packTime || whData.whTime,
+                                prep: whData.packTime ? minutesDiff(whData.whTime, whData.packTime) : 0,
+                                comment: whData.distributed ? whData.distributed : "Ready to distribute"
+                            });
+                        }
+                    }
+                } else {
+                    const whData = o.warehouses[normalize(currentWarehouse)];
+                    if (!whData) return;
+
+                    const whTime = whData.whTime || null;
+                    const packTime = whData.packTime || null;
+
+                    if (whData.packed) {
+                        issuedOrders.push({
+                            order: o.order,
+                            whTime,
+                            packTime: packTime || whTime,
+                            prep: packTime ? minutesDiff(whTime, packTime) : 0,
+                            comment: whData.comment || ""
+                        });
+                    } else if (whTime) {
+                        pendingOrders.push({
+                            order: o.order,
+                            whTime,
+                            comment: whData.comment || ""
+                        });
+                    }
+                }
+            });
+
+            renderIssuedTable();
+            renderPendingTable();
+            updateKPIs();
+        }
+
+
+        // Render Issued Orders Table
+        function renderIssuedTable() {
+            const q = document.getElementById("issuedSearch").value.toLowerCase();
+            const filtered = issuedOrders.filter(o =>
+  o.order.toLowerCase().includes(q) &&
+  inDateRange(o.packTime)
+);
+            document.getElementById("issuedTable").innerHTML = `
     <table>
         <tr>
             <th>Order #</th>
@@ -327,17 +500,18 @@ function renderIssuedTable() {
                 <td>${currentWarehouse === "packing" ? o.comment : o.prep}</td>
             </tr>`).join("")}
     </table>`;
-}
+        }
 
-// Render Pending Orders Table
-function renderPendingTable() {
-    const q = document.getElementById("pendingSearch").value.toLowerCase();
-    const filtered = pendingOrders.filter(o =>
-        o.order.toLowerCase().includes(q) ||
-        o.comment.toLowerCase().includes(q)
-    );
+        // Render Pending Orders Table
+        function renderPendingTable() {
+            const q = document.getElementById("pendingSearch").value.toLowerCase();
+            const filtered = pendingOrders.filter(o =>
+  (o.order.toLowerCase().includes(q) ||
+   o.comment.toLowerCase().includes(q)) &&
+  inDateRange(o.whTime)
+);
 
-    document.getElementById("pendingTable").innerHTML = `
+            document.getElementById("pendingTable").innerHTML = `
     <table>
         <tr>
             <th>Order #</th>
@@ -351,39 +525,39 @@ function renderPendingTable() {
                 <td>${o.comment}</td>
             </tr>`).join("")}
     </table>`;
-}
-
-
-
-function renderPackingStation() {
-    const packingDiv = document.getElementById("packingOrders");
-    packingDiv.innerHTML = ""; // تنظيف المحتوى
-
-    // Filter كل الـ packed orders عبر جميع المستودعات
-    const packedOrders = [];
-    allOrders.forEach(o => {
-        for (const whKey in o.warehouses) {
-            const whData = o.warehouses[whKey];
-            if (whData.packed) {
-                // تحديد الـ distributed
-                let distributed = whData.distributed ? whData.distributed : "Ready to distribute";
-                packedOrders.push({
-                    order: o.order,
-                    packTime: whData.packTime,
-                    distributed
-                });
-            }
         }
-    });
 
-    if (packedOrders.length === 0) {
-        packingDiv.innerHTML = "<p style='padding:8px;color:#aaa;'>No packed orders yet.</p>";
-        return;
-    }
 
-    // بناء جدول
-    const table = document.createElement("table");
-    table.innerHTML = `
+
+        function renderPackingStation() {
+            const packingDiv = document.getElementById("packingOrders");
+            packingDiv.innerHTML = ""; // تنظيف المحتوى
+
+            // Filter كل الـ packed orders عبر جميع المستودعات
+            const packedOrders = [];
+            allOrders.forEach(o => {
+                for (const whKey in o.warehouses) {
+                    const whData = o.warehouses[whKey];
+                    if (whData.packed) {
+                        // تحديد الـ distributed
+                        let distributed = whData.distributed ? whData.distributed : "Ready to distribute";
+                        packedOrders.push({
+                            order: o.order,
+                            packTime: whData.packTime,
+                            distributed
+                        });
+                    }
+                }
+            });
+
+            if (packedOrders.length === 0) {
+                packingDiv.innerHTML = "<p style='padding:8px;color:#aaa;'>No packed orders yet.</p>";
+                return;
+            }
+
+            // بناء جدول
+            const table = document.createElement("table");
+            table.innerHTML = `
         <tr>
             <th>Order #</th>
             <th>Receiving Time</th>
@@ -391,36 +565,147 @@ function renderPackingStation() {
         </tr>
     `;
 
-    packedOrders.forEach(o => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
+            packedOrders.forEach(o => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
             <td>${o.order}</td>
             <td>${o.packTime ? o.packTime.toLocaleString() : "-"}</td>
             <td>${o.distributed}</td>
         `;
-        table.appendChild(tr);
-    });
+                table.appendChild(tr);
+            });
 
-    packingDiv.appendChild(table);
-}
-
-
+            packingDiv.appendChild(table);
+        }
 
 
-// Update KPI cards
-function updateKPIs() {
-    const total = issuedOrders.length + pendingOrders.length;
-    const issued = issuedOrders.length;
-    const pending = pendingOrders.length;
-    const avgPrep = issued ? Math.round(issuedOrders.reduce((a,o)=>a+o.prep,0)/issued) : 0;
+
+
+        // Update KPI cards
+        function updateKPIs() {
+
+  let issuedFiltered = [];
+  let pendingFiltered = [];
+
+  // ================= PACKING STATION =================
+  if (currentWarehouse === "packing") {
+
+    issuedFiltered = issuedOrders.filter(o =>
+      inDateRange(o.packTime)
+    );
+
+    pendingFiltered = pendingOrders.filter(o =>
+      inDateRange(o.whTime)
+    );
+
+    const total = issuedFiltered.length + pendingFiltered.length;
 
     document.getElementById("totalOrders").textContent = total;
-    document.getElementById("issuedOrders").textContent = issued;
-    document.getElementById("pendingOrders").textContent = pending;
-    document.getElementById("avgPrep").textContent = avgPrep + " min";
-}
-</script>
+    document.getElementById("issuedOrders").textContent = issuedFiltered.length;
+    document.getElementById("pendingOrders").textContent = pendingFiltered.length;
+    document.getElementById("avgPrep").textContent = "0 min";
 
+    return;
+  }
+
+  // ================= باقي المستودعات =================
+  issuedFiltered = issuedOrders.filter(o =>
+    inDateRange(o.packTime)
+  );
+
+  pendingFiltered = pendingOrders.filter(o =>
+    inDateRange(o.whTime)
+  );
+
+  const total = issuedFiltered.length + pendingFiltered.length;
+  const issued = issuedFiltered.length;
+  const pending = pendingFiltered.length;
+
+  const avgPrep = issued
+    ? Math.round(
+        issuedFiltered.reduce((sum, o) => sum + (o.prep || 0), 0) / issued
+      )
+    : 0;
+
+  document.getElementById("totalOrders").textContent = total;
+  document.getElementById("issuedOrders").textContent = issued;
+  document.getElementById("pendingOrders").textContent = pending;
+  document.getElementById("avgPrep").textContent = avgPrep + " min";
+}    
+        
+        
+        
+        
+        
+        let dateFilter = { from: null, to: null };
+
+// Apply manual date filter
+function applyDateFilter(){
+  const from = document.getElementById("fromDate").value;
+  const to = document.getElementById("toDate").value;
+
+  dateFilter.from = from ? new Date(from + " 00:00:00") : null;
+  dateFilter.to = to ? new Date(to + " 23:59:59") : null;
+
+  renderIssuedTable();
+  renderPendingTable();
+  updateKPIs();
+}
+
+// Quick buttons
+function quickDate(type){
+  const now = new Date();
+  let from = null, to = null;
+
+  if(type === "today"){
+    from = new Date(now.setHours(0,0,0,0));
+    to = new Date();
+  }
+  if(type === "yesterday"){
+    from = new Date(now.setDate(now.getDate()-1));
+    from.setHours(0,0,0,0);
+    to = new Date(from);
+    to.setHours(23,59,59,999);
+  }
+  if(type === "week"){
+    const day = now.getDay() || 7;
+    from = new Date(now.setDate(now.getDate() - day + 1));
+    from.setHours(0,0,0,0);
+    to = new Date();
+  }
+  if(type === "month"){
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+    to = new Date();
+  }
+  if(type === "all"){
+    from = null;
+    to = null;
+  }
+
+  dateFilter.from = from;
+  dateFilter.to = to;
+
+  document.getElementById("fromDate").value = from ? from.toISOString().slice(0,10) : "";
+  document.getElementById("toDate").value = to ? to.toISOString().slice(0,10) : "";
+
+  renderIssuedTable();
+  renderPendingTable();
+  updateKPIs();
+}
+
+// Date match helper
+function inDateRange(d){
+  if(!d) return false;
+  if(dateFilter.from && d < dateFilter.from) return false;
+  if(dateFilter.to && d > dateFilter.to) return false;
+  return true;
+}
+        
+        
+        
+    </script>
 
 </body>
+
 </html>
+
