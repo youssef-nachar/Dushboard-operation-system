@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -180,6 +181,34 @@
 .btn:hover{
   opacity:.85;
 }
+    
+    /* Date inputs side by side & small */
+.date-inline {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+    width:250px
+}
+
+.date-inline input[type="date"] {
+  width: 140px;              /* حجم صغير */
+  padding: 6px 8px;
+  font-size: 13px;
+  margin-bottom: 0;          /* إلغاء المسافة السفلية */
+  cursor: pointer;
+}
+
+/* Focus / select effect */
+.date-inline input[type="date"]:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.35);
+}
+    
+    #packingSection {
+  grid-template-columns: repeat(3, 1fr);
+}
+    
         @media (max-width:1024px) {
             .pnc_warehouse {
                 grid-template-columns: 1fr;
@@ -194,7 +223,7 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <h2>MYholdal</h2>
-
+<button class="btn" onclick="goHome()">Dashboard</button>
             <div class="menu-item">
                 <a href="#" onclick="toggleMenu('warehousesMenu')">
                     <i class="fa-solid fa-boxes-stacked"></i> Warehouses
@@ -287,21 +316,40 @@
                 </div>
             </div>
 <!-- Date Filter -->
+<!-- Date Filter -->
 <div class="card" style="margin-bottom:20px;">
-  <h3 style="color:#22c55e;">Date Filter</h3>
-
-  <div style="display:flex;gap:10px;flex-wrap:wrap;">
-    <input type="date" id="fromDate">
-    <input type="date" id="toDate">
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+<div class="date-inline">
+ From: <input type="date" id="fromDate">
+ to: <input type="date" id="toDate">
+</div>
+    
     <button onclick="applyDateFilter()" class="btn">Apply</button>
-  </div>
 
-  <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-    <button onclick="quickDate('today')" class="btn">Today</button>
-    <button onclick="quickDate('yesterday')" class="btn">Yesterday</button>
-    <button onclick="quickDate('week')" class="btn">This Week</button>
-    <button onclick="quickDate('month')" class="btn">This Month</button>
-    <button onclick="quickDate('all')" class="btn" style="background:#374151;">All</button>
+    <!-- Three dots -->
+    <div style="position:relative;">
+      <button class="btn" onclick="toggleQuickMenu()" style="background:#374151;">⋮</button>
+
+      <div id="quickMenu" style="
+        display:none;
+        position:absolute;
+        right:0;
+        top:40px;
+        background:#020617;
+        border:1px solid #1f2937;
+        border-radius:10px;
+        padding:8px;
+        z-index:99;
+        min-width:140px;
+      ">
+        <button class="btn" style="width:100%;margin-bottom:6px;" onclick="quickDate('today')">Today</button>
+        <button class="btn" style="width:100%;margin-bottom:6px;" onclick="quickDate('yesterday')">Yesterday</button>
+        <button class="btn" style="width:100%;margin-bottom:6px;" onclick="quickDate('week')">This Week</button>
+        <button class="btn" style="width:100%;margin-bottom:6px;" onclick="quickDate('month')">This Month</button>
+        <button class="btn" style="width:100%;background:#374151;" onclick="quickDate('all')">All</button>
+      </div>
+    </div>
+
   </div>
 </div>
             <!-- Search + Tables -->
@@ -326,16 +374,22 @@
                     <!-- Packing Station -->
 <div id="packingSection" class="pnc_warehouse" style="display:none;">
 
-  <!-- Orders in Packing -->
+  <!-- Packed -->
   <div class="card">
-    <h3 style="color:#22c55e;">Orders in Packing</h3>
-    <div id="packingOrders"></div>
+    <h3 style="color:#22c55e;">Packed Orders</h3>
+    <div id="packedTable"></div>
   </div>
 
-  <!-- Distributed Orders -->
+  <!-- Waiting Packing -->
   <div class="card">
-    <h3 style="color:#3b82f6;">Distributed Orders</h3>
-    <div id="distributedOrders"></div>
+    <h3 style="color:#f59e0b;">Waiting Packing</h3>
+    <div id="waitingPackingTable"></div>
+  </div>
+
+  <!-- Waiting Other Warehouse -->
+  <div class="card">
+    <h3 style="color:#ef4444;">Waiting Other Warehouse</h3>
+    <div id="waitingOtherTable"></div>
   </div>
 
 </div>
@@ -344,6 +398,28 @@
     </div>
 
     <script>
+    function checkLogin(){
+  if(sessionStorage.getItem("loggedIn") === "true"){
+    document.getElementById("loginSection").style.display = "none";
+    document.getElementById("dashboardSection").style.display = "block";
+  } else {
+    document.getElementById("loginSection").style.display = "block";
+    document.getElementById("dashboardSection").style.display = "none";
+  }
+}
+
+// نفّذ عند تحميل الصفحة
+document.addEventListener("DOMContentLoaded", checkLogin);
+
+
+// نفّذ عند تحميل الصفحة
+    
+    
+function goHome(){
+  sessionStorage.setItem("loggedIn","true");
+  checkLogin();
+}
+
         const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSmcU44IrVbsgFcrMJ1TxA0xnjwBQa9cD6NKPf-jmVaDNIMaNOMa14pU0eRSh9QLw/pub?output=csv";
 
         let allOrders = [];
@@ -423,59 +499,116 @@ let distributedOrders = [];
                 selectWarehouse(currentWarehouse);
             });
 
+function selectWarehouse(key) {
 
-        function selectWarehouse(key) {
-            currentWarehouse = key;
+  currentWarehouse = key;
+  document.getElementById("currentWarehouseName").textContent =
+    "Warehouse: " + key;
 
-            document.getElementById("currentWarehouseName").textContent = "Warehouse: " + key;
+  issuedOrders = [];
+  pendingOrders = [];
 
-            issuedOrders = [];
-            pendingOrders = [];
+  // ================= PACKING STATION =================
+  if (key === "packing") {
 
-            allOrders.forEach(o => {
-                if (key === "packing") {
-                    // كل الـ packed orders عبر جميع المستودعات
-                    for (const whKey in o.warehouses) {
-                        const whData = o.warehouses[whKey];
-                        if (whData.packed) {
-                            issuedOrders.push({
-                                order: o.order,
-                                whTime: whData.whTime,
-                                packTime: whData.packTime || whData.whTime,
-                                prep: whData.packTime ? minutesDiff(whData.whTime, whData.packTime) : 0,
-                                comment: whData.distributed ? whData.distributed : "Ready to distribute"
-                            });
-                        }
-                    }
-                } else {
-                    const whData = o.warehouses[normalize(currentWarehouse)];
-                    if (!whData) return;
+    document.getElementById("packingSection").style.display = "grid";
 
-                    const whTime = whData.whTime || null;
-                    const packTime = whData.packTime || null;
+    allOrders.forEach(o => {
 
-                    if (whData.packed) {
-                        issuedOrders.push({
-                            order: o.order,
-                            whTime,
-                            packTime: packTime || whTime,
-                            prep: packTime ? minutesDiff(whTime, packTime) : 0,
-                            comment: whData.comment || ""
-                        });
-                    } else if (whTime) {
-                        pendingOrders.push({
-                            order: o.order,
-                            whTime,
-                            comment: whData.comment || ""
-                        });
-                    }
-                }
-            });
+      const whs = o.warehouses;
+      const whNames = Object.keys(whs);
 
-            renderIssuedTable();
-            renderPendingTable();
-            updateKPIs();
+      let packedCount = 0;
+      const waitingWH = [];
+
+      whNames.forEach(wh => {
+        if (whs[wh].packed) {
+          packedCount++;
+        } else {
+          waitingWH.push(wh);
         }
+      });
+
+      const totalWH = whNames.length;
+
+      // ===== مستودع واحد =====
+      if (totalWH === 1) {
+        const w = whs[whNames[0]];
+
+        if (w.packed) {
+          issuedOrders.push({
+            order: o.order,
+            packTime: w.packTime || null,
+            prep: 0,
+            comment: "Ready to distribute"
+          });
+        } else {
+          pendingOrders.push({
+            order: o.order,
+            whTime: w.whTime || null,
+            comment: "Waiting packing"
+          });
+        }
+      }
+
+      // ===== أكثر من مستودع =====
+      else {
+
+        if (packedCount === totalWH) {
+          issuedOrders.push({
+            order: o.order,
+            packTime: Object.values(whs).find(w => w.packed)?.packTime || null,
+            prep: 0,
+            comment: "Ready to distribute"
+          });
+        } else {
+          pendingOrders.push({
+            order: o.order,
+            whTime: Object.values(whs).find(w => !w.packed)?.whTime || null,
+            comment: "Waiting other warehouse: " + waitingWH.join(", ")
+          });
+        }
+
+      }
+
+    });
+
+    renderPackingTables();
+    updateKPIs();
+    return;
+  }
+
+  // ================= باقي المستودعات =================
+  document.getElementById("packingSection").style.display = "none";
+
+  allOrders.forEach(o => {
+    const whData = o.warehouses[normalize(key)];
+    if (!whData) return;
+
+    const whTime = whData.whTime || null;
+    const packTime = whData.packTime || null;
+
+    if (whData.packed) {
+      issuedOrders.push({
+        order: o.order,
+        whTime,
+        packTime: packTime || whTime,
+        prep: packTime ? minutesDiff(whTime, packTime) : 0,
+        comment: whData.comment || ""
+      });
+    } else if (whTime) {
+      pendingOrders.push({
+        order: o.order,
+        whTime,
+        comment: whData.comment || ""
+      });
+    }
+  });
+
+  renderIssuedTable();
+  renderPendingTable();
+  updateKPIs();
+}
 
 
         // Render Issued Orders Table
@@ -699,12 +832,126 @@ function inDateRange(d){
   if(dateFilter.to && d > dateFilter.to) return false;
   return true;
 }
+       function renderPackingTables(){
+
+  const packed = [];
+  const waitingPacking = [];
+  const waitingOther = [];
+
+  allOrders.forEach(o => {
+
+    const whs = o.warehouses;
+    const whNames = Object.keys(whs);
+
+    let packedCount = 0;
+    const waitingWH = [];
+
+    whNames.forEach(wh => {
+      if (whs[wh].packed) {
+        packedCount++;
+      } else {
+        waitingWH.push(wh);
+      }
+    });
+
+    const totalWH = whNames.length;
+
+    // ===== مستودع واحد =====
+    if (totalWH === 1) {
+
+      const w = whs[whNames[0]];
+
+      if (w.packed) {
+        packed.push({
+          order: o.order,
+          time: w.packTime
+        });
+      } else {
+        waitingPacking.push({
+          order: o.order,
+          time: w.whTime
+        });
+      }
+
+    }
+
+    // ===== أكثر من مستودع =====
+    else {
+
+      if (packedCount === totalWH) {
+        packed.push({
+          order: o.order,
+          time: Object.values(whs).find(w => w.packed)?.packTime
+        });
+      } else {
+        waitingOther.push({
+          order: o.order,
+          waiting: waitingWH.join(", "),
+          time: Object.values(whs).find(w => !w.packed)?.whTime
+        });
+      }
+
+    }
+
+  });
+
+  // ===== Packed =====
+  document.getElementById("packedTable").innerHTML = packed.length
+    ? `
+      <table>
+        <tr>
+          <th>Order #</th>
+          <th>Packed Time</th>
+        </tr>
+        ${packed.map(o=>`
+          <tr>
+            <td>${o.order}</td>
+            <td>${o.time ? o.time.toLocaleString() : "-"}</td>
+          </tr>`).join("")}
+      </table>`
+    : "<p style='color:#aaa'>No packed orders</p>";
+
+  // ===== Waiting Packing =====
+  document.getElementById("waitingPackingTable").innerHTML = waitingPacking.length
+    ? `
+      <table>
+        <tr>
+          <th>Order #</th>
+          <th>Received at WH</th>
+        </tr>
+        ${waitingPacking.map(o=>`
+          <tr>
+            <td>${o.order}</td>
+            <td>${o.time ? o.time.toLocaleString() : "-"}</td>
+          </tr>`).join("")}
+      </table>`
+    : "<p style='color:#aaa'>No waiting packing orders</p>";
+
+  // ===== Waiting Other Warehouse =====
+  document.getElementById("waitingOtherTable").innerHTML = waitingOther.length
+    ? `
+      <table>
+        <tr>
+          <th>Order #</th>
+          <th>Status</th>
+        </tr>
+        ${waitingOther.map(o=>`
+          <tr>
+            <td>${o.order}</td>
+            <td>Waiting other warehouse: <b>${o.waiting}</b></td>
+          </tr>`).join("")}
+      </table>`
+    : "<p style='color:#aaa'>No waiting warehouse orders</p>";
+}
         
-        
-        
+        function toggleQuickMenu(){
+  const m = document.getElementById("quickMenu");
+  m.style.display = m.style.display === "block" ? "none" : "block";
+}
     </script>
 
 </body>
 
 </html>
+
 
