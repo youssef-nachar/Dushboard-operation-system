@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -387,10 +388,7 @@
                     <div id="packedTable"></div>
                 </div>
 
-                <div class="card">
-                    <h3 style="color:#f59e0b;">Waiting Packing</h3>
-                    <div id="waitingPackingTable"></div>
-                </div>
+                
 
                 <div class="card">
                     <h3 style="color:#ef4444;">Waiting Other Warehouse</h3>
@@ -417,27 +415,107 @@
             }
         }
 
-        // نفّذ عند تحميل الصفحة
-        document.addEventListener("DOMContentLoaded", checkLogin);
+  let dateFilter = { from: null, to: null };
 
+        document.addEventListener("DOMContentLoaded", () => {
+    selectWarehouse("p&c");
 
-        // نفّذ عند تحميل الصفحة
+    // ضبط التاريخ على اليوم تلقائيًا
+    const today = new Date().toISOString().slice(0, 10);
+    document.getElementById("fromDate").value = today;
+    document.getElementById("toDate").value = today;
 
+    // تفعيل فلتر التاريخ تلقائيًا
+    dateFilter.from = new Date(today + " 00:00:00");
+    dateFilter.to = new Date(today + " 23:59:59");
+});
 
         function goHome() {
             sessionStorage.setItem("loggedIn", "true");
             checkLogin();
         }
-
-        const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=1480729463&single=true&output=csv";
-         const pharma=  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=875574333&single=true&output=csv";
-            const pnc="https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=228371932&single=true&output=csv";
-         const retail="https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pubhtml?gid=274206&single=true";
-       const beesline="https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pubhtml?gid=1278749068&single=true";
-         const lux = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pubhtml?gid=884068351&single=true";
-        const packing_station = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pubhtml?gid=457547473&single=true";
-
+const pharma=  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=875574333&single=true&output=csv";
+ 
+const pnc ="https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=228371932&single=true&output=csv"
+const retail = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=274206&single=true&output=csv";
+const beesline = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=1278749068&single=true&output=csv";
+const lux = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=884068351&single=true&output=csv";
+const packing_station = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=457547473&single=true&output=csv";
         
+
+let packingOrdersSet = new Set();
+
+function normalizeOrderId(val) {
+  if (!val) return "";
+  return val
+    .toString()
+    .toUpperCase()
+    .replace("#", "")
+    .trim();
+}
+
+let packingData = [];
+
+function loadPackingStation(callback) {
+  Papa.parse(packing_station, {
+    download: true,
+    header: true,
+    skipEmptyLines: true,
+    complete: (res) => {
+      packingOrdersSet.clear();
+      packingData = res.data;
+
+      res.data.forEach(row => {
+        const id =
+          row["Shopify Order#"] ||
+          row["#M Order"] ||
+          row["Order #"];
+
+        const orderId = normalizeOrderId(id);
+        if (orderId) packingOrdersSet.add(orderId);
+      });
+
+      callback();
+    }
+  });
+}
+
+function attachPackingTimes() {
+  allOrders.forEach(o => {
+    const normalizedOrder = normalizeOrderId(o.order);
+
+    const packRow = packingData.find(r => {
+      const id =
+        r["Shopify Order#"] ||
+        r["#M Order"] ||
+        r["Order #"];
+      return normalizeOrderId(id) === normalizedOrder;
+    });
+
+    if (!packRow) return;
+
+    const packKey = Object.keys(packRow).find(
+  k => k.toLowerCase().includes("packing")
+);
+
+const packTime = packKey ? parseDate(packRow[packKey]) : null;
+    for (const wh in o.warehouses) {
+      o.warehouses[wh].packTime = packTime;
+    }
+  });
+}
+
+const warehouseSheets = {
+  "p&c": pnc,
+  "pharma": pharma,
+  "retail": retail,
+  "beesline": beesline,
+  "loreallux": lux,
+  "packing": packing_station
+};
+
+
+
         let allOrders = [];
         let currentWarehouse = "p&c";
         let issuedOrders = [];
@@ -445,15 +523,12 @@
         let packingOrders = [];
         let distributedOrders = [];
         // Normalize warehouse names
-        function normalize(s) {
-            if (!s) return "";
-            return s
-                .toLowerCase()
-                .replace(/[^a-z0-9]/g, "")   // يحذف كل الرموز é ’ - ---
-                .replace(/wh|pack/g, "")     // يحذف wh و pack
-                .trim();
-        }
+      function normalize(s) {
+  if (!s) return "";
+  return s.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
 
+//
         // Toggle menu
         function toggleMenu(id) {
             const el = document.getElementById(id);
@@ -472,69 +547,99 @@
             return Math.round((b - a) / 60000);
         }
 
-        // Fetch CSV and prepare data
-        fetch(sheetURL)
-            .then(r => r.text())
-            .then(csv => {
-                const rows = Papa.parse(csv, { header: true, skipEmptyLines: true }).data;
-                console.log("Rows loaded:", rows);
+  function loadWarehouseData(warehouseKey) {
 
-                const map = {};
-                rows.forEach(r => {
-                    const id = r["#M Order"];
-                    if (!id) return;
+  const url = warehouseSheets[warehouseKey];
+  if (!url) return;
 
-                    if (!map[id]) {
-                        map[id] = { order: id, warehouses: {} };
-                    }
+  fetch(url)
+    .then(r => r.text())
+    .then(csv => {
 
-                    let whName = (r["Warehouse Name"] || "").trim().toLowerCase();
-                    let base = whName.replace(/---pack/g, "").replace(/\s*wh/g, "").trim();
-                    base = normalize(base);
+      const rows = Papa.parse(csv, {
+        header: true,
+        skipEmptyLines: true
+      }).data;
 
-                  if (!map[id].warehouses[base]) {
-  map[id].warehouses[base] = {
-    packed: false,
-    comment: "",
-    distributedBy: ""
-  };
+      const map = {};
+
+      rows.forEach(r => {
+
+        const id =
+          r["Shopify Order#"] ||
+          r["#M Order"] ||
+          r["Order #"];
+
+        if (!id) return;
+
+        if (!map[id]) {
+          map[id] = { order: id, warehouses: {} };
+        }
+
+        const base = normalize(warehouseKey);
+
+        if (!map[id].warehouses[base]) {
+          map[id].warehouses[base] = {
+            packed: false,
+            comment: "",
+            whTime: null,
+            packTime: null,
+            distributedBy: ""
+          };
+        }
+
+        const w = map[id].warehouses[base];
+
+        if (r["Comment"]) w.comment = r["Comment"];
+
+        const whName = (r["Warehouse Name"] || "").toLowerCase();
+        if (whName.includes("pack")) w.packed = true;
+
+        const time = parseDate(r["Order Received in WH"]);
+        if (time) {
+          if (!w.whTime || time < w.whTime) w.whTime = time;
+               }
+
+        if (r["Distributed By"]) {
+          w.distributedBy = r["Distributed By"];
+        }
+      });
+allOrders = Object.values(map);
+
+// ✅ اربط وقت الـ packing بعد تحميل الطلبات
+attachPackingTimes();
+
+// ✅ ثم اعرض النتائج
+selectWarehouseLogic(currentWarehouse);
+    });
+  
 }
-if (r["Distributed By"])
-  map[id].warehouses[base].distributedBy =
-    r["Distributed By"].toLowerCase();
+function selectWarehouse(key) {
+  currentWarehouse = key;
 
-                    if (r["comment"]) map[id].warehouses[base].comment = r["comment"];
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById("fromDate").value = today;
+  document.getElementById("toDate").value = today;
+  dateFilter.from = new Date(today + " 00:00:00");
+  dateFilter.to = new Date(today + " 23:59:59");
 
-                    if (whName.includes("pack")) map[id].warehouses[base].packed = true;
+  loadPackingStation(() => {
+    loadWarehouseData(key);
+     // ✅ بعد الربط
+  });
+}
 
-                    const time = parseDate(r["Order Received in WH"]);
-                    if (time) {
-                        const w = map[id].warehouses[base];
-                        if (!w.whTime || time < w.whTime) w.whTime = time;
-                    }
 
-                    const packTime = parseDate(r["Order Received in WH"]);
-                    if (whName.includes("pack") && packTime) {
-                        const w = map[id].warehouses[base];
-                        if (!w.packTime || packTime > w.packTime) w.packTime = packTime;
-                    }
-                });
 
-                allOrders = Object.values(map);
-                selectWarehouse(currentWarehouse);
-            });
+function selectWarehouseLogic(key) {
 
-        function selectWarehouse(key) {
+  issuedOrders = [];
+  pendingOrders = [];
 
-            currentWarehouse = key;
-            document.getElementById("currentWarehouseName").textContent =
-                "Warehouse: " + key;
-
-            issuedOrders = [];
-            pendingOrders = [];
-
-            // ================= PACKING STATION =================
-            if (key === "packing") {
+  // 🔁 انسخ هنا حرفيًا كل محتوى
+  // selectWarehouse القديم
+  // من أول:
+  if (key === "packing") {
 
                 // show packing tables
                 document.getElementById("packingSection").style.display = "grid";
@@ -607,7 +712,7 @@ if (r["Distributed By"])
                 return;
             }
 
-            // ================= باقي المستودعات =================
+            // ================= باقي المستودعات ==============
             document.getElementById("packingSection").style.display = "none";
             document.getElementById("normalWarehouseSection").style.display = "grid";
 
@@ -618,28 +723,30 @@ if (r["Distributed By"])
                 const whTime = whData.whTime || null;
                 const packTime = whData.packTime || null;
 
-                if (whData.packed) {
-                    issuedOrders.push({
-                        order: o.order,
-                        whTime,
-                        packTime: packTime || whTime,
-                        prep: packTime ? minutesDiff(whTime, packTime) : 0,
-                        comment: whData.comment || ""
-                    });
-                } else if (whTime) {
-                    pendingOrders.push({
-                        order: o.order,
-                        whTime,
-                        comment: whData.comment || ""
-                    });
-                }
+                const normalizedOrder = normalizeOrderId(o.order);
+
+if (packingOrdersSet.has(normalizedOrder)) {
+  issuedOrders.push({
+    order: o.order,
+    whTime,
+    packTime: whData.packTime || null,
+    prep: 0,
+    comment: "Issued via Packing Station"
+  });
+} else if (whTime) {
+  pendingOrders.push({
+    order: o.order,
+    whTime,
+    comment: whData.comment || ""
+  });
+}
             });
 
             renderIssuedTable();
             renderPendingTable();
             updateKPIs();
-        }
-
+  // إلى آخر updateKPIs();
+}
 
         // Render Issued Orders Table
         function renderIssuedTable() {
@@ -795,8 +902,7 @@ if (r["Distributed By"])
             document.getElementById("avgPrep").textContent = avgPrep + " min";
         }
 
-        let dateFilter = { from: null, to: null };
-
+        
         // Apply manual date filter
         function applyDateFilter() {
             const from = document.getElementById("fromDate").value;
@@ -853,11 +959,17 @@ if (r["Distributed By"])
 
         // Date match helper
         function inDateRange(d) {
-            if (!d) return false;
-            if (dateFilter.from && d < dateFilter.from) return false;
-            if (dateFilter.to && d > dateFilter.to) return false;
-            return true;
-        }
+    if (!d) return true; // إذا لا يوجد وقت، نعتبره صالح للعرض
+
+    // تأكد أن d من نوع Date
+    let dateObj = (d instanceof Date) ? d : new Date(d);
+    if (isNaN(dateObj)) return false;
+
+    if (dateFilter.from && dateObj < dateFilter.from) return false;
+    if (dateFilter.to && dateObj > dateFilter.to) return false;
+
+    return true;
+}
         function renderPackingTables() {
 
             const packed = [];
@@ -975,11 +1087,14 @@ const distributed = [];
             const m = document.getElementById("quickMenu");
             m.style.display = m.style.display === "block" ? "none" : "block";
         }
+
+
+
     </script>
 
 </body>
 
-</html>
+</html> 
 
 
 
