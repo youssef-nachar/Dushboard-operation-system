@@ -414,6 +414,8 @@
 </head>
 
 <body>
+<div id="loginSection">
+  <!-- كل كود الـ login هنا -->
 
     <div id="loginContainer" class="login-wrapper">
         <form id="loginForm" class="login-card">
@@ -441,6 +443,8 @@
             </p>
         </form>
     </div>
+</div>
+   
 
     <div id="dashboard" class="hidden app">
         <aside class="sidebar">
@@ -448,9 +452,9 @@
             <a href="#">Dashboard</a>
             <div class="menu-item">
                 <a href="#" onclick="toggleMenu('warehousesMenu')">
-                    <i class="fa-solid fa-boxes-stacked"></i> Warehouses
-                    <i class="fa-solid fa-chevron-down arrow"></i>
-                </a>
+<a href="./p&c.html"><i class="fa-solid fa-boxes-stacked"></i> Warehouses</a>
+                    
+            
 
                 <div id="warehousesMenu" class="submenu">
 
@@ -513,7 +517,7 @@
             <header style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">
                 <h3><B style="font-style: 26px;">My</B>Holdal</h3>
                 <div style="display:flex;gap:10px;align-items:center">
-                    <button type="button" id="toggleToDate" style="padding:4px 8px; font-size:12px;"> from</button>
+                    <button type="button" id="toggleFrDate" style="padding:4px 8px; font-size:12px;"> from</button>
 
                     <input type="date" id="dateFrom" onchange="updateDashboard()">
 
@@ -579,7 +583,7 @@
     </div>
     </main>
     </div>
-
+</div>
     <div id="orderDetails" class="hidden">
         <div class="card">
             <button onclick="closeOrderDetails()" style="float:right;background:#ef4444">Close</button>
@@ -597,13 +601,28 @@
             <h2><span>MY</span> HOLDAL</h2>
             <p>Loading Dashboard...</p>
         </div>
-    </div>
+    
 
 </body>
 <script>
+const loginContainer = document.getElementById("loginContainer");
+const dashboard = document.getElementById("dashboard");
+window.addEventListener('DOMContentLoaded', () => {
+    const loggedIn = localStorage.getItem("isLoggedIn");
+    if (loggedIn === "true") {
+        // إخفاء login واظهار dashboard مباشرة
+        loginContainer.style.display = "none";
+        dashboard.classList.remove("hidden");
+        loadData(); // تحميل البيانات
+    } else {
+        // عرض login
+        loginContainer.style.display = "flex";
+        dashboard.classList.add("hidden");
+    }
+});
+
     const users = [{ username: "manager", password: "123456" }];
-    const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSmcU44IrVbsgFcrMJ1TxA0xnjwBQa9cD6NKPf-jmVaDNIMaNOMa14pU0eRSh9QLw/pub?output=csv";
-    let allOrders = [];
+    const sheetURL =  "https://docs.google.com/spreadsheets/d/1PH4riJZOR17lT92RDvPJOZsMdnWDwfhJ5-O9Fun8KXs/export?format=csv&gid=0";  let allOrders = [];
     let lastDisplayedOrders = [];
 
     function updateSearch() {
@@ -636,189 +655,249 @@
         <th>Note</th>
     </tr>
 
-    ${filtered.map(o =>
-            o.warehouses.map(w => {
+ ${filtered.map(o =>
+    o.warehouses.map(w => {
 
-                /* STATUS فقط Pending أو In-Packing */
-                const status = w.packed ? "In-Packing" : "Pending";
-                const time = formatDateForInput(w["Snapshot_Date"]);
-                return `
-                <tr>
-                    <td>${o.orderNo}</td>
-                    <td>${w.base}</td>
-                    <td>${status}</td>
-                    <td>${w.comment || ""}</td>
-                </tr>
+        // STATUS مع distributed يأخذ الأولوية
+        let status;
+        if (o.status === "distributed") {
+            status = "Completed"; // <-- أو "Distributed" حسب ما تريد
+        } else {
+            status = w.packed ? "In-Packing" : "Pending";
+        }
 
-                ${(
-                        o.status === "distributed" &&
-                        w.distributed &&
-                        o.distributor
-                    ) ? `
-                <tr style="background:#020617;color:#22c55e;font-weight:600">
-                    <td colspan="4">
-                        <i class="fa-solid fa-truck"></i>
-                        Distributed    to: ${o.distributor} ? <span style="margin-left:12px; color:#9ca3af"><i class="fa-regular fa-clock"></i>${o.distributedTime}</span>
-                    </td>
-                </tr>
-                ` : ""}
-            `;
-            }).join("")
-        ).join("")}
+        const time = formatDateForInput(w["Order Received in WH"]);
+        return `
+        <tr>
+            <td>${o.orderNo}</td>
+            <td>${w.base}</td>
+            <td>${status}</td>
+            <td>${w.comment || ""}</td>
+        </tr>
+
+        ${(
+                o.status === "distributed" &&
+                w.distributed &&
+                o.distributor
+            ) ? `
+        <tr style="background:#020617;color:#22c55e;font-weight:600">
+            <td colspan="4">
+                <i class="fa-solid fa-truck"></i>
+                Distributed to: ${o.distributor} ? <span style="margin-left:12px; color:#9ca3af"><i class="fa-regular fa-clock"></i>${o.distributedTime}</span>
+            </td>
+        </tr>
+        ` : ""}
+    `;
+    }).join("")
+).join("")}
 </table>
 `;
 
         resultsDiv.style.display = "block";
     }
+
+
+
+
     // LOGIN
     loginForm.onsubmit = e => {
-        e.preventDefault();
+    e.preventDefault();
 
-        const u = users.find(
-            x => x.username === username.value && x.password === password.value
-        );
+    const u = users.find(
+        x => x.username === username.value && x.password === password.value
+    );
 
-        if (!u) {
-            loginError.classList.remove("hidden");
-            return;
-        }
-
-        loginError.classList.add("hidden");
-
-        loginContainer.style.display = "none";
-        loadingOverlay.classList.remove("hidden"); // 👈 Loading ON
-
-        loadData(); // 👈 تحميل حقيقي
-    };
-    // FORMAT DATE
-    function formatDateForInput(d) {
-        if (!d || !d.includes("/")) return "";
-        const p = d.split("/");
-        return `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+    if (!u) {
+        loginError.classList.remove("hidden");
+        return;
     }
+
+    loginError.classList.add("hidden");
+
+    // تخزين حالة تسجيل الدخول
+    localStorage.setItem("isLoggedIn", "true");
+
+    // إخفاء login وإظهار dashboard
+    loginContainer.style.display = "none";
+    dashboard.classList.remove("hidden");
+
+    loadData(); // تحميل البيانات
+};
+    // FORMAT DATE
+    function formatDateForInput(value) {
+    if (!value) return "";
+
+    // لو هو Date جاهز
+    if (value instanceof Date && !isNaN(value)) {
+        return value.toISOString().slice(0, 10);
+    }
+
+    let v = String(value).trim();
+
+    // yyyy-mm-dd (جاهز)
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+        return v;
+    }
+
+    // yyyy/mm/dd
+    if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(v)) {
+        const [y, m, d] = v.split("/");
+        return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+    }
+
+    // dd/mm/yyyy أو d/m/yyyy
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v)) {
+        const [d, m, y] = v.split("/");
+        return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+    }
+
+    // dd-mm-yyyy
+    if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(v)) {
+        const [d, m, y] = v.split("-");
+        return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+    }
+
+    // Date with time (Excel / Google Sheets)
+    const parsed = new Date(v);
+    if (!isNaN(parsed)) {
+        return parsed.toISOString().slice(0, 10);
+    }
+
+    return "";
+}
 
     function loadData() {
-        fetch(sheetURL)
-            .then(r => r.text())
-            .then(csv => {
-                const rows = Papa.parse(csv, {
-                    header: true,
-                    skipEmptyLines: true
-                }).data;
+    fetch(sheetURL)
+        .then(r => r.text())
+        .then(csv => {
 
-                const map = {};
-
-                rows.forEach(r => {
-                    const id = r["#M Order"];
-                    if (!id) return;
-
-                    if (!map[id]) {
-                        map[id] = {
-                            orderNo: id,
-                            date: formatDateForInput(r["Snapshot_Date"]),
-                            wh: {}
-                        };
-                    }
-
-                    let wh = (r["Warehouse Name"] || "").toLowerCase();
-                    let base = wh.replace(/---pack/g, "").replace(/\s*wh/g, "").trim();
-
-                    if (!map[id].wh[base]) {
-                        map[id].wh[base] = {
-                            base,
-                            packed: false,
-                            distributed: false,
-                            distributor: null,
-                            comment: ""
-                        };
-                    }
-
-                    if (r["comment"]) {
-                        map[id].wh[base].comment = r["comment"];
-                    }
-
-                    if (wh.includes("pack")) {
-                        map[id].wh[base].packed = true;
-                    }
-
-                    const d = (r["Distribution"] || "").toUpperCase();
-                    if (["LMD", "WAKILNI", "EMPLOYEE"].includes(d)) {
-                        map[id].wh[base].distributed = true;
-                        map[id].wh[base].distributor = d;
-
-                        map[id].wh[base].distributedTime = r["Order Received in WH"]
-                    }
-                });
-
-                allOrders = Object.values(map).map(o => {
-                    const warehouses = Object.values(o.wh);
-                    const packedCount = warehouses.filter(w => w.packed).length;
-                    const isDistributed = warehouses.some(w => w.distributed);
-
-                    let status = "pending";
-                    if (isDistributed) status = "distributed";
-                    else if (packedCount === warehouses.length) status = "completed";
-                    else if (packedCount > 0) status = "partial";
-
-                    const distWH = warehouses.find(w => w.distributed);
-                    const distributor = distWH ? distWH.distributor : null;
-                    const distributedTime = distWH ? distWH.distributedTime : null
-                    warehouses.forEach(w => w.distributed = false);
-                    if (distWH) distWH.distributed = true;
-
-                    return {
-                        ...o,
-                        status,
-                        warehouses,
-                        warehouseCount: warehouses.length,
-                        distributor,
-                        distributedTime
-                    };
-                });
-
-                initDate();
-                updateDashboard();
-
-                loadingOverlay.classList.add("hidden");
-                dashboard.classList.remove("hidden");
-            })
-            .catch(err => {
-                loadingOverlay.innerHTML = `
-                <div class="loading-card">
-                    <h2 style="color:#ef4444">MY HOLDAL</h2>
-                    <p>Failed to load data</p>
-                </div>
-            `;
-                console.error(err);
+            const parsed = Papa.parse(csv, {
+                skipEmptyLines: true
             });
-    }
+
+            const rows = parsed.data;
+            rows.shift(); // إزالة header
+
+            const map = {};
+
+            rows.forEach(r => {
+
+                const orderId       = r[0];
+const receivedDate  = r[1]; // ✅ التاريخ
+const warehouseRaw  = r[2]; // ✅ المستودع
+const distribution  = r[3];
+const comment       = r[4];
+                if (!orderId) return;
+
+                if (!map[orderId]) {
+                    map[orderId] = {
+                        orderNo: orderId,
+                        date: formatDateForInput(receivedDate),
+                        wh: {}
+                    };
+                }
+
+                let wh = warehouseRaw.toLowerCase();
+                let base = wh.replace(/---pack/g, "").replace(/\s*wh/g, "").trim();
+
+                if (!map[orderId].wh[base]) {
+                    map[orderId].wh[base] = {
+                        base,
+                        packed: false,
+                        distributed: false,
+                        distributor: null,
+                        comment: ""
+                    };
+                }
+
+                if (comment) {
+                    map[orderId].wh[base].comment = comment;
+                }
+
+                if (wh.includes("pack")) {
+                    map[orderId].wh[base].packed = true;
+                }
+
+                const d = distribution.toUpperCase();
+                if (["LMD", "WAKILNI", "EMPLOYEE"].includes(d)) {
+                    map[orderId].wh[base].distributed = true;
+                    map[orderId].wh[base].distributor = d;
+                    map[orderId].wh[base].distributedTime = receivedDate;
+                }
+            });
+
+            allOrders = Object.values(map).map(o => {
+                const warehouses = Object.values(o.wh);
+                const packedCount = warehouses.filter(w => w.packed).length;
+                const isDistributed = warehouses.some(w => w.distributed);
+
+                let status = "pending";
+                if (isDistributed) status = "distributed";
+                else if (packedCount === warehouses.length) status = "completed";
+                else if (packedCount > 0) status = "partial";
+
+                const distWH = warehouses.find(w => w.distributed);
+                const distributor = distWH ? distWH.distributor : null;
+                const distributedTime = distWH ? distWH.distributedTime : null;
+
+                warehouses.forEach(w => w.distributed = false);
+                if (distWH) distWH.distributed = true;
+
+                return {
+                    ...o,
+                    status,
+                    warehouses,
+                    warehouseCount: warehouses.length,
+                    distributor,
+                    distributedTime
+                };
+            });
+
+            initDate();
+            updateDashboard();
+            loadingOverlay.classList.add("hidden");
+            dashboard.classList.remove("hidden");
+        })
+        .catch(err => {
+            console.error(err);
+        });
+}
 
     // INIT DATE FILTER
-    function initDate() {
-        const dates = [...new Set(allOrders.map(o => o.date))].filter(Boolean).sort();
-        if (!dates.length) return;
+function initDate() {
+    const today = new Date().toISOString().slice(0, 10);
 
-        dateFrom.value = dates[0];                 // أول تاريخ
-        dateTo.value = dates[dates.length - 1];    // آخر تاريخ
-    }
+    // اجعل اليوم هو الافتراضي دائماً
+    dateFrom.value = today;
+    dateTo.value   = today;
 
-    // APPLY DATE FILTER
+    updateDashboard();
+}
+
     function applyFilters() {
-        const from = dateFrom.value ? new Date(dateFrom.value) : null;
-        const to = dateTo.value ? new Date(dateTo.value) : null;
+    const from = dateFrom.value
+        ? new Date(dateFrom.value + "T00:00:00")
+        : null;
 
-        return allOrders.filter(o => {
-            if (!o.date) return false;
+    const to = dateTo.value
+        ? new Date(dateTo.value + "T23:59:59")
+        : null;
 
-            const orderDate = new Date(o.date);
+    return allOrders.filter(o => {
+        if (!o.date) return false; // ❌ لا نسمح بدون تاريخ
 
-            if (from && orderDate < from) return false;
-            if (to && orderDate > to) return false;
+        // نحول التاريخ لبداية اليوم (LOCAL)
+        const orderDate = new Date(o.date + "T00:00:00");
+        if (isNaN(orderDate)) return false;
 
-            return true;
-        });
-    }
+        if (from && orderDate < from) return false;
+        if (to && orderDate > to) return false;
 
+        return true;
+    });
+}
+
+filteredOrders = Object.values(unique);
     // UPDATE DASHBOARD KPIS
     function updateDashboard() {
         const o = applyFilters();
@@ -958,22 +1037,34 @@ ${Object.entries(m).map(([k, v]) => `
         displayOrders(o, "Single-Warehouse Orders");
     }
 
-    // DISPLAY ORDERS MODAL
-    function displayOrders(o, title = null) {
-        lastDisplayedOrders = o;
-        orderList.innerHTML = "";
-        orderDetailsTitle.textContent = title ? `Order Details - ${title}` : "Order Details";
+  function displayOrders(o, title = null) {
+    lastDisplayedOrders = o;
+    orderList.innerHTML = "";
+    orderDetailsTitle.textContent = title ? `Order Details - ${title}` : "Order Details";
 
-        o.forEach(x => {
-            orderList.innerHTML += `
+    o.forEach(x => {
+        // إذا الـ order موزع بالكامل → كل warehouses تظهر Completed
+        const warehousesHTML = x.warehouses.map(w => {
+            let status;
+            if (x.status === "distributed") {
+                status = "Completed"; // <-- هنا المفتاح
+            } else {
+                status = w.packed ? "In-Packing" : "Pending";
+            }
+            return `<li>${w.base} - ${status}</li>`;
+        }).join("");
+
+        // عرض عنوان الـ order
+        let orderStatus = x.status === "distributed" ? "Completed" : x.status;
+        orderList.innerHTML += `
 <div class="warehouse-card">
- <b>Order:</b> ${x.orderNo} - ${x.status}
- <ul>${x.warehouses.map(w => `<li>${w.base} - ${w.packed ? "In-Packing" : "Pending"}</li>`).join("")}</ul>
+ <b>Order:</b> ${x.orderNo} - ${orderStatus}
+ <ul>${warehousesHTML}</ul>
 </div>`;
-        });
+    });
 
-        orderDetails.classList.remove("hidden");
-    }
+    orderDetails.classList.remove("hidden");
+}
     function toggleMenu(id) {
         const menu = document.getElementById(id);
         if (!menu) return;
@@ -1048,16 +1139,36 @@ ${Object.entries(m).map(([k, v]) => `
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
     }
+function normalizeWarehouse(name) {
+    if (!name) return "";
 
+    const raw = name.toLowerCase();
+
+    const isPacked = raw.includes('---pack');
+
+    const base = raw
+        .replace(/---pack/gi, "")
+        .replace(/\bwh\b/gi, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    return {
+        base,       // loreal lux
+        packed: isPacked
+    };
+}
     // SHOW WAREHOUSES PAGE
     function showWarehouses() { }
 
     // SIGN OUT
-    function signOut() { dashboard.classList.add("hidden"); loginContainer.style.display = "flex"; }
-
+    function signOut() {
+    localStorage.removeItem("isLoggedIn"); // إزالة الحالة
+    dashboard.classList.add("hidden");
+    loginContainer.style.display = "flex"; // إظهار login
+}
 
 
 </script>
 </body>
 
-</html>
+</html> 
