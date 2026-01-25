@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Packing Station Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg:#0b1220;
+ --card:#0f172a;
+ --border:#1e293b;
+ --text:#e5e7eb;
+ --muted:#94a3b8;
+ --accent:#22d3ee;
+}
+*{box-sizing:border-box;font-family:Inter,sans-serif}
+body{margin:0;background:var(--bg);color:var(--text)}
+.container{max-width:1600px;margin:auto;padding:24px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+header h1{margin:0;font-size:26px;font-weight:700}
+.filters{display:flex;gap:12px}
+input{background:var(--card);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:10px}
+input:focus{outline:none;border-color:var(--accent)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-bottom:28px}
+.kpi{background:linear-gradient(180deg,#0f172a,#020617);padding:22px;border-radius:18px;border:1px solid var(--border);box-shadow:0 8px 25px rgba(0,0,0,.35)}
+.kpi span{color:var(--muted);font-size:14px}
+.kpi h2{margin:10px 0 0;font-size:32px;font-weight:700;color:var(--accent)}
+.section{background:var(--card);padding:22px;border-radius:18px;border:1px solid var(--border);margin-bottom:26px}
+.section h3{margin:0 0 14px;font-size:18px;font-weight:600}
+.section .search{margin-bottom:12px;width:320px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:12px 14px;border-bottom:1px solid var(--border)}
+th{color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.04em;text-align:left}
+tr:hover{background:#020617}
+a{color:var(--accent);font-weight:600;text-decoration:none}
+a:hover{text-decoration:underline}
+button{padding:6px 14px;margin-top:6px;border:none;border-radius:8px;background:var(--accent);color:#000;font-weight:600;cursor:pointer}
+button:hover{opacity:0.9}
+@media(max-width:768px){header{flex-direction:column;align-items:flex-start;gap:12px}.kpi h2{font-size:26px}.section .search{width:100%}}
+</style>
+</head>
+<body>
+<div style="display:flex;min-height:100vh">
+<aside style="width:240px;background:#020617;border-right:1px solid #1e293b;padding:20px">
+  <h2 style="margin:0 0 20px;color:#22d3ee">Dashboard</h2>
+  <nav style="display:flex;flex-direction:column;gap:10px">
+    <a href="index.html">Summary</a>
+    <a href="warehouses.html">Warehouses</a>
+    <a href="packing.html" style="color:#22d3ee;font-weight:700">Packing Station</a>
+  </nav>
+</aside>
+
+<div class="container">
+
+<header>
+ <h1>Packing Station</h1>
+ <div class="filters">
+  <input type="date" id="from">
+  <input type="date" id="to">
+ </div>
+</header>
+
+<div class="kpis">
+ <div class="kpi"><span>Total Orders</span><h2 id="kpiTotal">0</h2></div>
+ <div class="kpi"><span>In‑Packing Orders</span><h2 id="kpiInPacking">0</h2></div>
+ <div class="kpi"><span>Pending (Other WH)</span><h2 id="kpiPending">0</h2></div>
+</div>
+
+<div class="section">
+<h3>In‑Packing Orders</h3>
+<input class="search" id="searchInPacking" placeholder="Search by order or warehouse">
+<table><thead><tr><th>Order</th><th>Received at Packing</th><th>Warehouse</th></tr></thead><tbody id="inPacking"></tbody></table>
+<div style="margin-top:6px;color:var(--muted)">Count: <span id="inPackingCount">0</span></div>
+<button id="seeMoreInPacking">See More</button>
+</div>
+
+<div class="section">
+<h3>Waiting Other Warehouses</h3>
+<input class="search" id="searchWaiting" placeholder="Search by order or warehouse">
+<table><thead><tr><th>Order</th><th>Warehouse</th><th>Location</th></tr></thead><tbody id="waiting"></tbody></table>
+<div style="margin-top:6px;color:var(--muted)">Count: <span id="waitingCount">0</span></div>
+<button id="seeMoreWaiting">See More</button>
+</div>
+
+<div class="section">
+<h3>Distributed Orders</h3>
+<input class="search" id="searchDistributed" placeholder="Search by company">
+<table><thead><tr><th>Company</th><th>Orders</th></tr></thead><tbody id="distributed"></tbody></table>
+<div style="margin-top:6px;color:var(--muted)">Count: <span id="distributedCount">0</span></div>
+<button id="seeMoreDistributed">See More</button>
+</div>
+
+</div>
+
+<script>
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=457547473&single=true&output=csv";
+
+let allRows = [];
+let currentData = { inPacking:[], waiting:[], distributed:[] };
+let limits = { inPacking:10, waiting:10, distributed:10 };
+
+function parseDate(v){
+ if(!v) return null;
+ const parts = v.split(' ')[0].split('/');
+ if(parts.length!==3) return null;
+ return new Date(+parts[2], parts[1]-1, +parts[0]);
+}
+
+async function fetchCSV(){
+ const res = await fetch(CSV_URL);
+ const text = await res.text();
+ const lines = text.trim().split("\n");
+ return lines.slice(1).map(l=>{
+   const r = l.split(",");
+   return {
+     order:r[0]?.trim(),
+     received:r[1]?.trim(),
+     warehouse:r[2]?.replace(/---Pack/i,'').trim(),
+     location:r[4]?.trim()||'-',
+     comment:r[5]?.trim()||"",
+     date:parseDate(r[1])
+   };
+ }).filter(r=>r.order);
+}
+
+function classify(rows){
+ const inPacking=[], waiting=[], distributed=[];
+ rows.forEach(r=>{
+   const c=r.comment.toLowerCase();
+   if(c.includes('dhl')||c.includes('aramex')){
+     r.company=c.includes('dhl')?'DHL':'Aramex';
+     distributed.push(r); return;
+   }
+   if(r.received) inPacking.push(r);
+   else waiting.push(r);
+ });
+ return { inPacking, waiting, distributed };
+}
+
+function render(data){
+ currentData=data;
+ document.getElementById('kpiTotal').textContent = data.inPacking.length + data.waiting.length + data.distributed.length;
+ document.getElementById('kpiInPacking').textContent = data.inPacking.length;
+ document.getElementById('kpiPending').textContent = data.waiting.length;
+ renderTables();
+}
+
+function renderTables(){
+ const s1=searchInPacking.value.toLowerCase();
+ const s2=searchWaiting.value.toLowerCase();
+ const s3=searchDistributed.value.toLowerCase();
+
+ const inP=currentData.inPacking.filter(r=>r.order.toLowerCase().includes(s1) || r.warehouse.toLowerCase().includes(s1));
+ const wait=currentData.waiting.filter(r=>r.order.toLowerCase().includes(s2) || r.warehouse.toLowerCase().includes(s2));
+
+ inPacking.innerHTML = inP.slice(0,limits.inPacking).map(r=>`<tr><td>${r.order}</td><td>${r.received}</td><td>${r.warehouse}</td></tr>`).join('');
+ waiting.innerHTML = wait.slice(0,limits.waiting).map(r=>`<tr><td>${r.order}</td><td>${r.warehouse}</td><td>${r.location}</td></tr>`).join('');
+
+ document.getElementById('inPackingCount').textContent = inP.length;
+ document.getElementById('waitingCount').textContent = wait.length;
+
+ const map={};
+ currentData.distributed.forEach(r=>{if(!map[r.company]) map[r.company]=[]; map[r.company].push(r);});
+ const companies = Object.keys(map).filter(c=>c.toLowerCase().includes(s3));
+ distributed.innerHTML = companies.slice(0,limits.distributed).map(c=>`<tr><td>${c}</td><td><a onclick="alert('${map[c].map(o=>o.order).join(', ')}')">${map[c].length}</a></td></tr>`).join('');
+ document.getElementById('distributedCount').textContent = companies.length;
+
+ // إظهار أو إخفاء زر See More
+ seeMoreInPacking.style.display = inP.length > limits.inPacking ? 'inline-block' : 'none';
+ seeMoreWaiting.style.display = wait.length > limits.waiting ? 'inline-block' : 'none';
+ seeMoreDistributed.style.display = companies.length > limits.distributed ? 'inline-block' : 'none';
+}
+
+// إعداد زر See More
+seeMoreInPacking.onclick = ()=>{ limits.inPacking += 10; renderTables(); };
+seeMoreWaiting.onclick = ()=>{ limits.waiting += 10; renderTables(); };
+seeMoreDistributed.onclick = ()=>{ limits.distributed += 10; renderTables(); };
+
+function setToday(){
+ const today = new Date();
+ const yyyy = today.getFullYear();
+ const mm = String(today.getMonth()+1).padStart(2,'0');
+ const dd = String(today.getDate()).padStart(2,'0');
+ from.value = to.value = `${yyyy}-${mm}-${dd}`;
+}
+
+function applyDateFilter(){
+ let filtered = [...allRows];
+ const fromVal = from.value;
+ const toVal = to.value;
+ if(fromVal){ const f = new Date(fromVal); filtered = filtered.filter(r=>r.date && r.date >= f);}
+ if(toVal){ const t = new Date(toVal); t.setHours(23,59,59,999); filtered = filtered.filter(r=>r.date && r.date <= t);}
+ render(classify(filtered));
+}
+
+[from,to,searchInPacking,searchWaiting,searchDistributed].forEach(el=>{
+ el.addEventListener('input',()=>{
+   if(el===from||el===to) applyDateFilter(); else renderTables();
+ });
+});
+
+async function init(){
+ allRows = await fetchCSV();
+ setToday();
+ applyDateFilter();
+}
+
+init();
+</script>
+</body>
+</html>
