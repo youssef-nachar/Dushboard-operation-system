@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -210,16 +209,181 @@
         #packingSection {
             grid-template-columns: repeat(3, 1fr);
         }
+    .footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  font-size: 13px;
+  color: #9ca3af;
+  background: #020617;
+  border-top: 1px solid #1f2937;
+}
+
+.footer strong {
+  color: #22c55e;
+}
+
+.footer .version {
+  margin-left: 6px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.footer-center i {
+  margin-right: 6px;
+  color: #22c55e;
+}
+    
+    .footer-credit {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #6b7280;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .footer {
+    flex-direction: column;
+    gap: 6px;
+    text-align: center;
+  }
+}
+    
 
         @media (max-width:1024px) {
             .pnc_warehouse {
                 grid-template-columns: 1fr;
             }
         }
+    /* Mobile menu button */
+.mobile-menu-btn {
+  display: none;
+  background: #020617;
+  border: 1px solid #1f2937;
+  color: #e5e7eb;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+/* Mobile behavior */
+@media (max-width: 768px) {
+
+  .app {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -260px;
+    width: 240px;
+    height: 100vh;
+    z-index: 1000;
+    transition: left 0.3s ease;
+    box-shadow: 10px 0 30px rgba(0,0,0,0.4);
+  }
+
+  .sidebar.open {
+    left: 0;
+  }
+
+  .mobile-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+    
+    /* Mobile Menu Button */
+.mobile-menu-btn {
+  display: none;
+  background: #020617;
+  border: 1px solid #1f2937;
+  color: #e5e7eb;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  margin: 12px;
+  font-size: 14px;
+  z-index: 1100;
+  position: fixed;
+}
+
+/* Overlay */
+#overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 999;
+}
+
+/* Mobile Behavior */
+@media (max-width: 768px) {
+
+  .app {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -260px;
+    width: 240px;
+    height: 100vh;
+    z-index: 1000;
+    transition: left 0.3s ease;
+    box-shadow: 10px 0 30px rgba(0,0,0,0.4);
+  }
+
+  .sidebar.open {
+    left: 0;
+  }
+
+  .mobile-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+      position:absolute;
+      right:-60px
+      ;top:20px
+  }
+}
     </style>
 </head>
 
 <body>
+    
+    <div id="loadingBox" style="
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.35);
+  z-index:9999;
+  align-items:center;
+  justify-content:center;
+">
+  <div style="
+    background:#fff;
+    padding:20px 30px;
+    border-radius:12px;
+    font-size:18px;
+    font-weight:600;
+    box-shadow:0 10px 30px rgba(0,0,0,0.25);
+  ">
+    ⏳ Please wait...
+  </div>
+</div>
+    
+    <!-- Overlay -->
+<div id="overlay" onclick="closeSidebar()" style="display:none;"></div>
+
+<!-- Mobile menu button -->
+<button class="mobile-menu-btn" onclick="toggleSidebar()">
+  <i class="fa-solid fa-bars"></i> Menu
+</button>
     <div class="app">
 
         <!-- Sidebar -->
@@ -295,9 +459,12 @@
 
         <!-- Main content -->
         <div class="main-content">
-            <h2 id="currentWarehouseName" style="margin-bottom: 20px; color: #22c55e;">Warehouse:
+         
+            <h2 id="currentWarehouseName" style="margin-bottom: 20px; color: #22c55e;">
                 P&C</h2>
-
+<button class="btn" style="background:#2563eb; margin-top:10px;margin-right:10px" onclick="refreshData()">
+  🔄 
+</button>
             <!-- KPIs -->
             <div class="kpis">
                 <div class="kpi">
@@ -384,16 +551,25 @@
             <div id="packingSection" class="pnc_warehouse" style="display:none;grid-template-columns:repeat(3,1fr);">
 
                 <div class="card">
-                    <h3 style="color:#22c55e;">Packed Orders</h3>
-                    <div id="packedTable"></div>
-                </div>
+  <h3 style="color:#22c55e;">Packed Orders</h3>
+
+  <!-- Search bar for Packed Orders -->
+  <input type="text" id="packedSearch" placeholder="Search Order #" 
+         oninput="renderPackedTable()">
+
+  <div id="packedTable"></div>
+</div>
 
                 
 
-                <div class="card">
-                    <h3 style="color:#ef4444;">Waiting Other Warehouse</h3>
-                    <div id="waitingOtherTable"></div>
-                </div>
+              <div class="card">
+  <h3 style="color:#f59e0b;">Waiting Other Warehouse</h3>
+  <!-- Search bar -->
+  <input type="text" id="waitingSearch" placeholder="Search Order #" 
+         oninput="renderWaitingOtherTable()">
+  <div id="waitingOtherTable"></div>
+</div>
+                
   <div class="card">
     <h3 style="color:#3b82f6;">Distributed Orders</h3>
     <div id="distributedTable"></div>
@@ -404,7 +580,91 @@
     </div>
     </div>
 
+
+<footer class="footer">
+  <div class="footer-left">
+    <strong>MYholdal</strong> dashboard
+    <span class="version">v1.0.0</span>
+  </div>
+
+  <div class="footer-center">
+    <i class="fa-solid fa-rotate"></i>
+    Last sync:
+    <span id="lastSync">--</span>
+  </div>
+
+  <div class="footer-right">
+    © <span id="year"></span> MYholdal
+  </div>
+    <div class="footer-credit">
+  Designed & Developed by Youssef Nachar · Supported by Wael Rizk
+</div>
+    
+    
+</footer>
+
+
+</body>
     <script>
+function toggleSidebar() {
+  document.querySelector(".sidebar").classList.toggle("open");
+}
+
+document.addEventListener("click", function (e) {
+  const sidebar = document.querySelector(".sidebar");
+  const btn = document.querySelector(".mobile-menu-btn");
+
+  if (
+    sidebar.classList.contains("open") &&
+    !sidebar.contains(e.target) &&
+    !btn.contains(e.target)
+  ) {
+    sidebar.classList.remove("open");
+  }
+});
+function toggleSidebar() {
+  const sidebar = document.querySelector(".sidebar");
+  const overlay = document.getElementById("overlay");
+
+  sidebar.classList.toggle("open");
+  overlay.style.display = sidebar.classList.contains("open") ? "block" : "none";
+}
+
+function closeSidebar() {
+  const sidebar = document.querySelector(".sidebar");
+  const overlay = document.getElementById("overlay");
+
+  sidebar.classList.remove("open");
+  overlay.style.display = "none";
+}
+
+// إغلاق القائمة تلقائياً عند اختيار warehouse
+function selectWarehouse(key) {
+  currentWarehouse = key;
+
+  // تحديث العنوان
+  const label = warehouseLabels[key] || key;
+  document.getElementById("currentWarehouseName").textContent =
+    "Warehouse: " + label;
+
+  // اغلاق القائمة إذا كانت مفتوحة على الموبايل
+  closeSidebar();
+
+  // تحميل البيانات
+  loadPackingStation(() => {
+    loadWarehouseData(key);
+  });
+}
+
+
+const warehouseLabels = {
+  "p&c": "P&C – MyHoldal",
+  "pharma": "Pharma – MyHoldal",
+  "retail": "Retail – MyHoldal",
+  "beesline": "Beesline – MyHoldal",
+  "loreallux": "L’Oréal Lux – MyHoldal",
+  "packing": "Packing Station"
+};
         function checkLogin() {
             if (sessionStorage.getItem("loggedIn") === "true") {
                 document.getElementById("loginSection").style.display = "none";
@@ -430,10 +690,7 @@
     dateFilter.to = new Date(today + " 23:59:59");
 });
 
-        function goHome() {
-            sessionStorage.setItem("loggedIn", "true");
-            checkLogin();
-        }
+        
 const pharma=  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=875574333&single=true&output=csv";
  
 const pnc ="https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=228371932&single=true&output=csv"
@@ -453,8 +710,44 @@ function normalizeOrderId(val) {
     .replace("#", "")
     .trim();
 }
+// 🔍 إيجاد العمود الذي يحتوي Order ID تلقائيًا
+function findOrderId(row) {
+  // 1) جرّب أول عمود
+  const first = Object.values(row)[0];
+  if (first && /[A-Za-z0-9]/.test(first)) return first;
 
+  // 2) جرّب أي عمود يحتوي كلمة order أو #
+  const key = Object.keys(row).find(k =>
+    k.toLowerCase().includes("order") ||
+    k.includes("#")
+  );
+
+  return key ? row[key] : null;
+}
+
+// 🕒 إيجاد أي عمود وقت خاص بالـ Packing
+function findPackingTime(row) {
+  const key = Object.keys(row).find(k => {
+    const n = k.toLowerCase();
+    return (
+      n.includes("pack") &&
+      (
+        n.includes("receiv") ||
+        n.includes("time") ||
+        n.includes("date") ||
+        n.includes("at")
+      )
+    );
+  });
+
+  if (!key) return null;
+
+  const d = new Date(row[key]);
+  return isNaN(d) ? null : d;
+}
 let packingData = [];
+
+let packingMap = new Map();
 
 function loadPackingStation(callback) {
   Papa.parse(packing_station, {
@@ -463,47 +756,36 @@ function loadPackingStation(callback) {
     skipEmptyLines: true,
     complete: (res) => {
       packingOrdersSet.clear();
+      packingMap.clear();
       packingData = res.data;
 
       res.data.forEach(row => {
-        const id =
-          row["Shopify Order#"] ||
-          row["#M Order"] ||
-          row["Order #"];
-
-        const orderId = normalizeOrderId(id);
-        if (orderId) packingOrdersSet.add(orderId);
+        const id = normalizeOrderId(findOrderId(row));
+        if (id) {
+          packingOrdersSet.add(id);
+          packingMap.set(id, row); // ✅ Map لكل order للبحث السريع
+        }
       });
 
       callback();
     }
   });
 }
-
 function attachPackingTimes() {
   allOrders.forEach(o => {
     const normalizedOrder = normalizeOrderId(o.order);
-
-    const packRow = packingData.find(r => {
-      const id =
-        r["Shopify Order#"] ||
-        r["#M Order"] ||
-        r["Order #"];
-      return normalizeOrderId(id) === normalizedOrder;
-    });
+    const packRow = packingMap.get(normalizedOrder); // استخدام Map بدل find
 
     if (!packRow) return;
 
-    const packKey = Object.keys(packRow).find(
-  k => k.toLowerCase().includes("packing")
-);
-
-const packTime = packKey ? parseDate(packRow[packKey]) : null;
+    const packTime = findPackingTime(packRow);
     for (const wh in o.warehouses) {
       o.warehouses[wh].packTime = packTime;
     }
   });
 }
+
+
 
 const warehouseSheets = {
   "p&c": pnc,
@@ -536,19 +818,56 @@ const warehouseSheets = {
         }
 
         // Parse date safely
-        function parseDate(d) {
-            const t = new Date(d);
-            return isNaN(t) ? null : t;
-        }
+        function parseDate(val) {
+  if (!val) return null;
+
+  // لو هو Date أصلاً
+  if (val instanceof Date && !isNaN(val)) return val;
+
+  let s = val.toString().trim();
+  if (!s) return null;
+
+  // 1️⃣ ISO & YYYY-MM-DD & YYYY-MM-DD HH:mm
+  let d = new Date(s);
+  if (!isNaN(d)) return d;
+
+  // 2️⃣ DD/MM/YYYY or DD/MM/YYYY HH:mm
+  let m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);
+  if (m) {
+    return new Date(
+      Number(m[3]),          // year
+      Number(m[2]) - 1,      // month
+      Number(m[1]),          // day
+      Number(m[4] || 0),     // hour
+      Number(m[5] || 0)      // minute
+    );
+  }
+
+  // 3️⃣ MM/DD/YYYY (US format)
+  m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (m) {
+    return new Date(
+      Number(m[3]),
+      Number(m[1]) - 1,
+      Number(m[2])
+    );
+  }
+
+  // 4️⃣ Google Sheets numeric date
+  if (!isNaN(s)) {
+    const excelEpoch = new Date(1899, 11, 30);
+    return new Date(excelEpoch.getTime() + Number(s) * 86400000);
+  }
+
+  return null;
+}
 
         // Calculate minutes difference
         function minutesDiff(a, b) {
             if (!a || !b) return 0;
             return Math.round((b - a) / 60000);
         }
-
-  function loadWarehouseData(warehouseKey) {
-
+async function loadWarehouseData(warehouseKey) {
   const url = warehouseSheets[warehouseKey];
   if (!url) return;
 
@@ -556,76 +875,76 @@ const warehouseSheets = {
     .then(r => r.text())
     .then(csv => {
 
-      const rows = Papa.parse(csv, {
-        header: true,
-        skipEmptyLines: true
-      }).data;
-
       const map = {};
 
-      rows.forEach(r => {
+      Papa.parse(csv, {
+        header: true,
+        skipEmptyLines: true,
+        step: function(row) {
+          const data = row.data;
 
-        const id =
-          r["Shopify Order#"] ||
-          r["#M Order"] ||
-          r["Order #"];
+          const id = findOrderId(data);
+          if (!id) return;
 
-        if (!id) return;
+          // لا فلترة التاريخ هنا بعد الآن
+          if (!map[id]) map[id] = { order: id, warehouses: {} };
 
-        if (!map[id]) {
-          map[id] = { order: id, warehouses: {} };
-        }
+          const base = normalize(warehouseKey);
+          if (!map[id].warehouses[base]) {
+            map[id].warehouses[base] = {
+              packed: false,
+              comment: "",
+              whTime: null,
+              packTime: null,
+              distributedBy: ""
+            };
+          }
 
-        const base = normalize(warehouseKey);
+          const w = map[id].warehouses[base];
 
-        if (!map[id].warehouses[base]) {
-          map[id].warehouses[base] = {
-            packed: false,
-            comment: "",
-            whTime: null,
-            packTime: null,
-            distributedBy: ""
-          };
-        }
+          if (data["Comment"]) w.comment = data["Comment"];
 
-        const w = map[id].warehouses[base];
+          const whName = (data["Warehouse Name"] || "").toLowerCase();
+          if (whName.includes("pack")) w.packed = true;
 
-        if (r["Comment"]) w.comment = r["Comment"];
+          const time = parseDate(data["Order Received in WH"]);
+          if (time) {
+            if (!w.whTime || time < w.whTime) w.whTime = time;
+          }
 
-        const whName = (r["Warehouse Name"] || "").toLowerCase();
-        if (whName.includes("pack")) w.packed = true;
+          if (data["Distributed By"]) w.distributedBy = data["Distributed By"];
+        },
+        complete: () => {
+          allOrders = Object.values(map);
 
-        const time = parseDate(r["Order Received in WH"]);
-        if (time) {
-          if (!w.whTime || time < w.whTime) w.whTime = time;
-               }
+          // اربط وقت الـ packing بعد تحميل البيانات
+          attachPackingTimes();
 
-        if (r["Distributed By"]) {
-          w.distributedBy = r["Distributed By"];
+          // ثم عرض النتائج
+          selectWarehouseLogic(currentWarehouse);
         }
       });
-allOrders = Object.values(map);
-
-// ✅ اربط وقت الـ packing بعد تحميل الطلبات
-attachPackingTimes();
-
-// ✅ ثم اعرض النتائج
-selectWarehouseLogic(currentWarehouse);
     });
-  
 }
 function selectWarehouse(key) {
   currentWarehouse = key;
 
+  // 🔹 تحديث اسم المستودع في العنوان
+  const label = warehouseLabels[key] || key;
+  document.getElementById("currentWarehouseName").textContent =
+    "Warehouse: " + label;
+
+  // 🔹 ضبط التاريخ على اليوم تلقائيًا
   const today = new Date().toISOString().slice(0, 10);
   document.getElementById("fromDate").value = today;
   document.getElementById("toDate").value = today;
-  dateFilter.from = new Date(today + " 00:00:00");
-  dateFilter.to = new Date(today + " 23:59:59");
 
+  dateFilter.from = new Date(today + " 00:00:00");
+  dateFilter.to   = new Date(today + " 23:59:59");
+
+  // 🔹 تحميل البيانات
   loadPackingStation(() => {
     loadWarehouseData(key);
-     // ✅ بعد الربط
   });
 }
 
@@ -633,170 +952,210 @@ function selectWarehouse(key) {
 
 function selectWarehouseLogic(key) {
 
-  issuedOrders = [];
-  pendingOrders = [];
+    issuedOrders = [];
+    pendingOrders = [];
 
-  // 🔁 انسخ هنا حرفيًا كل محتوى
-  // selectWarehouse القديم
-  // من أول:
-  if (key === "packing") {
+    if (key === "packing") {
+        // show packing tables
+        document.getElementById("packingSection").style.display = "grid";
+        // hide normal warehouse tables
+        document.getElementById("normalWarehouseSection").style.display = "none";
 
-                // show packing tables
-                document.getElementById("packingSection").style.display = "grid";
+        allOrders.forEach(o => {
+            const whs = o.warehouses;
+            const whNames = Object.keys(whs);
 
-                // hide normal warehouse tables
-                document.getElementById("normalWarehouseSection").style.display = "none";
+            let packedCount = 0;
+            const waitingWH = [];
 
-                allOrders.forEach(o => {
-
-                    const whs = o.warehouses;
-                    const whNames = Object.keys(whs);
-
-                    let packedCount = 0;
-                    const waitingWH = [];
-
-                    whNames.forEach(wh => {
-                        if (whs[wh].packed) {
-                            packedCount++;
-                        } else {
-                            waitingWH.push(wh);
-                        }
-                    });
-
-                    const totalWH = whNames.length;
-
-                    // ===== مستودع واحد =====
-                    if (totalWH === 1) {
-                        const w = whs[whNames[0]];
-
-                        if (w.packed) {
-                            issuedOrders.push({
-                                order: o.order,
-                                packTime: w.packTime || null,
-                                prep: 0,
-                                comment: "Ready to distribute"
-                            });
-                        } else {
-                            pendingOrders.push({
-                                order: o.order,
-                                whTime: w.whTime || null,
-                                comment: "Waiting packing"
-                            });
-                        }
-                    }
-
-                    // ===== أكثر من مستودع =====
-                    else {
-
-                        if (packedCount === totalWH) {
-                            issuedOrders.push({
-                                order: o.order,
-                                packTime: Object.values(whs).find(w => w.packed)?.packTime || null,
-                                prep: 0,
-                                comment: "Ready to distribute"
-                            });
-                        } else {
-                            pendingOrders.push({
-                                order: o.order,
-                                whTime: Object.values(whs).find(w => !w.packed)?.whTime || null,
-                                comment: "Waiting other warehouse: " + waitingWH.join(", ")
-                            });
-                        }
-
-                    }
-
-                });
-
-                renderPackingTables();
-                updateKPIs();
-                return;
-            }
-
-            // ================= باقي المستودعات ==============
-            document.getElementById("packingSection").style.display = "none";
-            document.getElementById("normalWarehouseSection").style.display = "grid";
-
-            allOrders.forEach(o => {
-                const whData = o.warehouses[normalize(key)];
-                if (!whData) return;
-
-                const whTime = whData.whTime || null;
-                const packTime = whData.packTime || null;
-
-                const normalizedOrder = normalizeOrderId(o.order);
-
-if (packingOrdersSet.has(normalizedOrder)) {
-  issuedOrders.push({
-    order: o.order,
-    whTime,
-    packTime: whData.packTime || null,
-    prep: 0,
-    comment: "Issued via Packing Station"
-  });
-} else if (whTime) {
-  pendingOrders.push({
-    order: o.order,
-    whTime,
-    comment: whData.comment || ""
-  });
-}
+            whNames.forEach(wh => {
+                if (whs[wh].packed) {
+                    packedCount++;
+                } else {
+                    waitingWH.push(wh);
+                }
             });
 
-            renderIssuedTable();
-            renderPendingTable();
-            updateKPIs();
-  // إلى آخر updateKPIs();
+            const totalWH = whNames.length;
+
+            if (totalWH === 1) {
+                const w = whs[whNames[0]];
+                if (w.packed) {
+                    issuedOrders.push({
+                        order: o.order,
+                        packTime: w.packTime || null,
+                        prep: 0,
+                        comment: "Ready to distribute"
+                    });
+                } else {
+                    pendingOrders.push({
+                        order: o.order,
+                        whTime: w.whTime || null,
+                        comment: "Waiting packing"
+                    });
+                }
+            } else {
+                if (packedCount === totalWH) {
+                    issuedOrders.push({
+                        order: o.order,
+                        packTime: Object.values(whs).find(w => w.packed)?.packTime || null,
+                        prep: 0,
+                        comment: "Ready to distribute"
+                    });
+                } else {
+                    pendingOrders.push({
+                        order: o.order,
+                        whTime: Object.values(whs).find(w => !w.packed)?.whTime || null,
+                        comment: "Waiting other warehouse: " + waitingWH.join(", ")
+                    });
+                }
+            }
+        });
+
+        renderPackingTables();
+        updateKPIs();
+        return;
+        
+        
+        
+    }
+
+    // ================= باقي المستودعات =================
+    document.getElementById("packingSection").style.display = "none";
+    document.getElementById("normalWarehouseSection").style.display = "grid";
+
+    allOrders.forEach(o => {
+        const whData = o.warehouses[normalize(key)];
+        if (!whData) return;
+
+        const whTime = whData.whTime || null;
+        const normalizedOrder = normalizeOrderId(o.order);
+
+        if (packingOrdersSet.has(normalizedOrder)) {
+            const packRow = packingData.find(r => {
+                const id = r["Shopify Order#"] || r["#M Order"] || r["Order #"];
+                return normalizeOrderId(id) === normalizedOrder;
+            });
+
+            const packKey = Object.keys(packRow).find(k =>
+                k.toLowerCase().includes("receiv") &&
+                k.toLowerCase().includes("pack")
+            );
+
+            const realPackTime = packKey ? parseDate(packRow[packKey]) : null;
+
+            const prep = whTime && realPackTime ? Math.round((realPackTime - whTime) / 60000) : 0;
+
+            issuedOrders.push({
+                order: o.order,
+                whTime,
+                packTime: realPackTime,
+                prep: prep,
+                comment: "Issued via Packing Station"
+            });
+        } else if (whTime) {
+            pendingOrders.push({
+                order: o.order,
+                whTime,
+                comment: whData.comment || ""
+            });
+        }
+    });
+
+    renderIssuedTable();
+    renderPendingTable();
+    updateKPIs();
+    renderPackedTable();
+renderWaitingOtherTable();
 }
 
+
+
+
+
+const TABLE_LIMIT = 10;
+const tableExpanded = {}; // لكل جدول حالته
+
+function buildTable(rows, headers, renderRowFn, tableId) {
+  const expanded = tableExpanded[tableId] === true;
+  const visibleRows = expanded ? rows : rows.slice(0, TABLE_LIMIT);
+
+  let html = `<table><tr>${headers.map(h => `<th>${h}</th>`).join("")}</tr>`;
+  html += visibleRows.map(renderRowFn).join("");
+  html += `</table>`;
+
+  if (rows.length > TABLE_LIMIT) {
+    html += `
+      <div style="margin-top:8px;text-align:center;">
+        <button class="btn" style="background:#374151"
+          onclick="toggleTable('${tableId}')">
+          ${
+            expanded
+              ? "See less"
+              : `See more (${rows.length - TABLE_LIMIT})`
+          }
+        </button>
+      </div>`;
+  }
+  return html;
+}
+function toggleTable(id) {
+  tableExpanded[id] = !tableExpanded[id];
+  if (id === "issued") renderIssuedTable();
+  if (id === "pending") renderPendingTable();
+}
         // Render Issued Orders Table
         function renderIssuedTable() {
-            const q = document.getElementById("issuedSearch").value.toLowerCase();
-            const filtered = issuedOrders.filter(o =>
-                o.order.toLowerCase().includes(q) &&
-                inDateRange(o.packTime)
-            );
-            document.getElementById("issuedTable").innerHTML = `
-    <table>
+  const q = document.getElementById("issuedSearch").value.toLowerCase();
+
+  const filtered = issuedOrders.filter(o =>
+    o.order.toLowerCase().includes(q) &&
+    inDateRange(o.packTime)
+  );
+
+  document.getElementById("issuedTable").innerHTML =
+    buildTable(
+      filtered,
+      [
+        "Order #",
+        "Received at Packing",
+        currentWarehouse === "packing" ? "Distributed" : "Preparation Time (min)"
+      ],
+      o => `
         <tr>
-            <th>Order #</th>
-            <th>Received at Packing</th>
-            <th>${currentWarehouse === "packing" ? "Distributed" : "Preparation Time (min)"}</th>
+          <td>${o.order}</td>
+          <td>${o.packTime ? o.packTime.toLocaleString() : "-"}</td>
+          <td>${currentWarehouse === "packing" ? o.comment : o.prep}</td>
         </tr>
-        ${filtered.map(o => `
-            <tr>
-                <td>${o.order}</td>
-                <td>${o.packTime ? o.packTime.toLocaleString() : "-"}</td>
-                <td>${currentWarehouse === "packing" ? o.comment : o.prep}</td>
-            </tr>`).join("")}
-    </table>`;
-        }
+      `,
+      "issued"
+    );
+}
 
         // Render Pending Orders Table
         function renderPendingTable() {
-            const q = document.getElementById("pendingSearch").value.toLowerCase();
-            const filtered = pendingOrders.filter(o =>
-                (o.order.toLowerCase().includes(q) ||
-                    o.comment.toLowerCase().includes(q)) &&
-                inDateRange(o.whTime)
-            );
+  const q = document.getElementById("pendingSearch").value.toLowerCase();
 
-            document.getElementById("pendingTable").innerHTML = `
-    <table>
+  const filtered = pendingOrders.filter(o =>
+    (o.order.toLowerCase().includes(q) ||
+     o.comment.toLowerCase().includes(q)) &&
+    inDateRange(o.whTime)
+  );
+
+  document.getElementById("pendingTable").innerHTML =
+    buildTable(
+      filtered,
+      ["Order #", "Received at WH", "Comment"],
+      o => `
         <tr>
-            <th>Order #</th>
-            <th>Received at WH</th>
-            <th>Comment</th>
+          <td>${o.order}</td>
+          <td>${o.whTime ? o.whTime.toLocaleString() : "-"}</td>
+          <td>${o.comment}</td>
         </tr>
-        ${filtered.map(o => `
-            <tr>
-                <td>${o.order}</td>
-                <td>${o.whTime ? o.whTime.toLocaleString() : "-"}</td>
-                <td>${o.comment}</td>
-            </tr>`).join("")}
-    </table>`;
-        }
-
-
+      `,
+      "pending"
+    );
+}
 
         function renderPackingStation() {
             const packingDiv = document.getElementById("packingOrders");
@@ -959,142 +1318,137 @@ if (packingOrdersSet.has(normalizedOrder)) {
 
         // Date match helper
         function inDateRange(d) {
-    if (!d) return true; // إذا لا يوجد وقت، نعتبره صالح للعرض
+  // لا يوجد فلتر → اعرض الكل
+  if (!dateFilter.from && !dateFilter.to) return true;
 
-    // تأكد أن d من نوع Date
-    let dateObj = (d instanceof Date) ? d : new Date(d);
-    if (isNaN(dateObj)) return false;
+  // لا يوجد تاريخ للطلب → لا تعرضه
+  if (!d) return false;
 
-    if (dateFilter.from && dateObj < dateFilter.from) return false;
-    if (dateFilter.to && dateObj > dateFilter.to) return false;
+  const dateObj = (d instanceof Date) ? d : new Date(d);
+  if (isNaN(dateObj)) return false;
 
-    return true;
+  if (dateFilter.from && dateObj < dateFilter.from) return false;
+  if (dateFilter.to && dateObj > dateFilter.to) return false;
+
+  return true;
 }
-        function renderPackingTables() {
+        function renderPackedTable() {
+  const query = document.getElementById("packedSearch").value.toLowerCase();
+  const packed = [];
 
-            const packed = [];
-            const waitingPacking = [];
-            const waitingOther = [];
-const distributed = [];
+  allOrders.forEach(o => {
+    const whs = o.warehouses;
+    const whNames = Object.keys(whs);
 
-            allOrders.forEach(o => {
+    if (!whNames.length) return;
 
-                const whs = o.warehouses;
-                const whNames = Object.keys(whs);
+    const packedCount = whNames.filter(wh => whs[wh].packed).length;
 
-                let packedCount = 0;
-                const waitingWH = [];
+    if (packedCount === whNames.length) {
+      if (o.order.toLowerCase().includes(query)) {
+        packed.push({
+          order: o.order,
+          time: Object.values(whs).find(w => w.packed)?.packTime
+        });
+      }
+    }
+  });
 
-                whNames.forEach(wh => {
-                    if (whs[wh].packed) {
-                        packedCount++;
-                    } else {
-                        waitingWH.push(wh);
-                    }
-                });
+  document.getElementById("packedTable").innerHTML = packed.length
+    ? `<table>
+         <tr><th>Order #</th><th>Packed Time</th></tr>
+         ${packed.map(o => `
+           <tr>
+             <td>${o.order}</td>
+             <td>${o.time ? o.time.toLocaleString() : "-"}</td>
+           </tr>`).join("")}
+       </table>`
+    : "<p style='color:#aaa'>No packed orders</p>";
+}
+function renderWaitingOtherTable() {
+  const query = document.getElementById("waitingSearch").value.toLowerCase();
+  const waitingOther = [];
 
-                const totalWH = whNames.length;
+  allOrders.forEach(o => {
+    const whs = o.warehouses;
+    const whNames = Object.keys(whs);
 
-                // ===== مستودع واحد =====
-                if (totalWH === 1) {
+    if (whNames.length <= 1) return;
 
-                    const w = whs[whNames[0]];
+    const packedCount = whNames.filter(wh => whs[wh].packed).length;
 
-                    if (w.packed) {
-                        packed.push({
-                            order: o.order,
-                            time: w.packTime
-                        });
-                    } else {
-                        waitingPacking.push({
-                            order: o.order,
-                            time: w.whTime
-                        });
-                    }
+    if (packedCount < whNames.length) {
+      if (o.order.toLowerCase().includes(query)) {
+        waitingOther.push({
+          order: o.order,
+          status: "Waiting other warehouse"
+        });
+      }
+    }
+  });
 
-                }
-
-                // ===== أكثر من مستودع =====
-                else {
-
-                    if (packedCount === totalWH) {
-                        packed.push({
-                            order: o.order,
-                            time: Object.values(whs).find(w => w.packed)?.packTime
-                        });
-                    } else {
-                        waitingOther.push({
-                            order: o.order,
-                            waiting: waitingWH.join(", "),
-                            time: Object.values(whs).find(w => !w.packed)?.whTime
-                        });
-                    }
-
-                }
-
-            });
-
-            // ===== Packed =====
-            document.getElementById("packedTable").innerHTML = packed.length
-                ? `
-      <table>
-        <tr>
-          <th>Order #</th>
-          <th>Packed Time</th>
-        </tr>
-        ${packed.map(o => `
-          <tr>
-            <td>${o.order}</td>
-            <td>${o.time ? o.time.toLocaleString() : "-"}</td>
-          </tr>`).join("")}
-      </table>`
-                : "<p style='color:#aaa'>No packed orders</p>";
-
-            // ===== Waiting Packing =====
-            document.getElementById("waitingPackingTable").innerHTML = waitingPacking.length
-                ? `
-      <table>
-        <tr>
-          <th>Order #</th>
-          <th>Received at WH</th>
-        </tr>
-        ${waitingPacking.map(o => `
-          <tr>
-            <td>${o.order}</td>
-            <td>${o.time ? o.time.toLocaleString() : "-"}</td>
-          </tr>`).join("")}
-      </table>`
-                : "<p style='color:#aaa'>No waiting packing orders</p>";
-
-            // ===== Waiting Other Warehouse =====
-            document.getElementById("waitingOtherTable").innerHTML = waitingOther.length
-                ? `
-      <table>
-        <tr>
-          <th>Order #</th>
-          <th>Status</th>
-        </tr>
-        ${waitingOther.map(o => `
-          <tr>
-            <td>${o.order}</td>
-            <td>Waiting other warehouse: <b>${o.waiting}</b></td>
-          </tr>`).join("")}
-      </table>`
-                : "<p style='color:#aaa'>No waiting warehouse orders</p>";
-        }
-
+  document.getElementById("waitingOtherTable").innerHTML = waitingOther.length
+    ? `<table>
+         <tr><th>Order #</th><th>Status</th></tr>
+         ${waitingOther.map(o => `
+           <tr>
+             <td>${o.order}</td>
+             <td>${o.status}</td>
+           </tr>`).join("")}
+       </table>`
+    : "<p style='color:#aaa'>No waiting orders from other warehouses</p>";
+}
         function toggleQuickMenu() {
             const m = document.getElementById("quickMenu");
             m.style.display = m.style.display === "block" ? "none" : "block";
         }
+function showLoading() {
+  document.getElementById("loadingBox").style.display = "flex";
+}
+
+function hideLoading() {
+  document.getElementById("loadingBox").style.display = "none";
+}
 
 
+async function refreshData() {
+  showLoading();
 
-    </script>
+  issuedOrders = [];
+  pendingOrders = [];
 
-</body>
+  try {
+    await loadWarehouseData(); // مهم تكون async
+  } catch (e) {
+    console.error("Load error", e);
+  }
+
+  renderIssuedTable();
+  renderPendingTable();
+  updateKPIs();
+
+  hideLoading();
+}
+
+setInterval(() => {
+  refreshData();
+}, 10 * 60 * 1000);
+
+  function updateFooterInfo() {
+    const now = new Date();
+    document.getElementById("lastSync").textContent =
+      now.toLocaleDateString() + " " + now.toLocaleTimeString();
+
+    document.getElementById("year").textContent =
+      now.getFullYear();
+  }
+
+  updateFooterInfo();
+</script>
+    
 
 </html> 
+
 
 
 
