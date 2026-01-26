@@ -790,7 +790,15 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!map[orderId]) {
         map[orderId] = {
             orderNo: orderId,
-            date: formatDateForInput(receivedDate),
+           const normalizedDate = formatDateForInput(receivedDate);
+
+map[orderId] = {
+    orderNo: orderId,
+    rawDate: receivedDate,          // keep original
+    date: normalizedDate || null,   // normalized YYYY-MM-DD
+    wh: {}
+};
+
             wh: {}
         };
     }
@@ -841,16 +849,20 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // INIT DATE FILTER
 function initDate() {
-    const today = new Date().toISOString().slice(0, 10);
+    const dates = allOrders
+        .map(o => o.date)
+        .filter(Boolean)
+        .sort();
 
-    // اجعل اليوم هو الافتراضي دائماً
-    dateFrom.value = today;
-    dateTo.value   = today;
+    if (!dates.length) return;
+
+    dateFrom.value = dates[0];
+    dateTo.value   = dates[dates.length - 1];
 
     updateDashboard();
 }
 
-    function applyFilters() {
+   function applyFilters() {
     const from = dateFrom.value
         ? new Date(dateFrom.value + "T00:00:00")
         : null;
@@ -860,11 +872,10 @@ function initDate() {
         : null;
 
     return allOrders.filter(o => {
-        if (!o.date) return false; // ❌ لا نسمح بدون تاريخ
+        if (!o.date) return true; // ✅ DO NOT DROP orders without date
 
-        // نحول التاريخ لبداية اليوم (LOCAL)
-        const orderDate = new Date(o.date + "T00:00:00");
-        if (isNaN(orderDate)) return false;
+        const orderDate = new Date(o.date + "T12:00:00"); // avoid TZ bug
+        if (isNaN(orderDate)) return true;
 
         if (from && orderDate < from) return false;
         if (to && orderDate > to) return false;
@@ -1148,6 +1159,7 @@ function normalizeWarehouse(name) {
 </body>
 
 </html> 
+
 
 
 
