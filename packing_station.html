@@ -7,6 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
+/* ===== existing variables ===== */
 :root{
  --bg:#0b1220;
  --card:#0f172a;
@@ -17,23 +18,50 @@
  --hover:#1c2433;
 }
 
-
-*{box-sizing:border-box;font-family:Inter,sans-serif}
-body{margin:0;background:var(--bg);color:var(--text)}
+/* ===== layout ===== */
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,sans-serif}
 .container{max-width:1400px;margin:auto;padding:32px}
 header{display:flex;justify-content:space-between;align-items:center;margin-bottom:32px}
-header h1{margin:0;font-size:28px;font-weight:700}
 .filters{display:flex;gap:16px}
-input{background:var(--card);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:12px;width:180px;transition:0.2s}
+input{background:var(--card);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:12px;transition:0.2s}
 input:focus{outline:none;border-color:var(--accent)}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-bottom:36px}
-.kpi{background:linear-gradient(180deg,#0f172a,#020617);padding:26px;border-radius:20px;border:1px solid var(--border);box-shadow:0 12px 30px rgba(0,0,0,.4);transition:0.3s}
+
+/* ===== KPI ===== */
+.kpis{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:24px;
+  margin-bottom:36px;
+}
+.kpi{
+  background:linear-gradient(180deg,#0f172a,#020617);
+  padding:28px 24px;
+  border-radius:20px;
+  border:1px solid var(--border);
+  box-shadow:0 12px 30px rgba(0,0,0,.4);
+  transition:0.3s;
+  text-align:center;
+}
 .kpi:hover{transform:translateY(-3px);box-shadow:0 14px 35px rgba(0,0,0,.5)}
-.kpi span{color:var(--muted);font-size:14px}
-.kpi h2{margin:12px 0 0;font-size:34px;font-weight:700;color:var(--accent)}
-.section{background:var(--card);padding:26px;border-radius:20px;border:1px solid var(--border);margin-bottom:28px;box-shadow:0 8px 20px rgba(0,0,0,.3)}
+.kpi span{color:var(--muted);font-size:14px;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em}
+.kpi h2{margin:0;font-size:36px;font-weight:700;color:var(--accent)}
+
+/* ===== Sections / Tables ===== */
+.sections-container{
+  display:grid;
+  grid-template-columns:1fr; /* default mobile */
+  gap:28px;
+}
+.section{
+  background:var(--card);
+  padding:26px;
+  border-radius:20px;
+  border:1px solid var(--border);
+  box-shadow:0 8px 20px rgba(0,0,0,.3);
+}
 .section h3{margin:0 0 16px;font-size:20px;font-weight:600}
-.section .search{margin-bottom:14px;width:300px;transition:0.2s}
+.section .search{margin-bottom:14px;width:100%;padding:10px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--text)}
+
 table{width:100%;border-collapse:separate;border-spacing:0;box-shadow:0 4px 12px rgba(0,0,0,.2);border-radius:12px;overflow:hidden}
 th,td{padding:14px 16px;border-bottom:1px solid var(--border)}
 th{color:var(--muted);font-size:14px;text-transform:uppercase;letter-spacing:.04em;text-align:left;background:var(--card)}
@@ -42,15 +70,43 @@ a{color:var(--accent);font-weight:600;text-decoration:none}
 a:hover{text-decoration:underline}
 button{padding:8px 18px;margin-top:8px;border:none;border-radius:12px;background:var(--accent);color:#000;font-weight:700;cursor:pointer;transition:0.2s}
 button:hover{opacity:0.9;transform:translateY(-2px)}
+
+/* ===== Aside / Sidebar ===== */
 aside{width:260px;background:#020617;border-right:1px solid var(--border);padding:24px;flex-shrink:0}
 aside h2{margin:0 0 24px;color:var(--accent)}
 aside nav{display:flex;flex-direction:column;gap:14px}
 aside nav a{color:var(--text);font-weight:500;text-decoration:none;transition:0.2s}
 aside nav a:hover{color:var(--accent)}
 aside nav a.active{color:var(--accent);font-weight:700}
-@media(max-width:1024px){.container{padding:20px}.kpi h2{font-size:28px}.section h3{font-size:18px}.section .search{width:100%}}
+.quick-dates {
+  display: flex;
+  gap: 8px;
+}
+
+.quick-dates button {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 500;
+  transition: 0.2s;
+}
+
+.quick-dates button:hover {
+  background: var(--hover);
+  color: var(--accent);
+}
+
+/* ===== Responsive ===== */
+@media(min-width:1024px){
+  .sections-container{grid-template-columns:repeat(2,1fr)} /* جدولين جنب بعض على اللابتوب */
+}
+@media(max-width:1024px){.kpi h2{font-size:28px}.section h3{font-size:18px}}
 @media(max-width:768px){header{flex-direction:column;align-items:flex-start;gap:12px}.kpi h2{font-size:26px}}
 </style>
+
 </head>
 <body>
 <div style="display:flex;min-height:100vh">
@@ -67,18 +123,25 @@ aside nav a.active{color:var(--accent);font-weight:700}
 
 <header>
  <h1>Packing Station</h1>
- <div class="filters">
+<div class="filters">
   <input type="date" id="from">
   <input type="date" id="to">
- </div>
+
+  <div class="quick-dates">
+    <button type="button" id="btnToday">today</button>
+    <button type="button" id="btnYesterday">yesterday</button>
+    <button type="button" id="btnLast7"> last 7 days</button>
+  </div>
+</div>
+
 </header>
 
 <div class="kpis">
  <div class="kpi"><span>Total Orders</span><h2 id="kpiTotal">0</h2></div>
  <div class="kpi"><span>In‑Packing Orders</span><h2 id="kpiInPacking">0</h2></div>
- <div class="kpi"><span>Pending (Other WH)</span><h2 id="kpiPending">0</h2></div>
+ <div class="kpi"><a href="#searchDistributed"><span>Pending (Other WH)</span><h2 id="kpiPending">0</h2></div></a>
 </div>
-
+<div class="sections-container">
 <div class="section">
 <h3>In‑Packing Orders</h3>
 <input class="search" id="searchInPacking" placeholder="Search by order or warehouse">
@@ -102,7 +165,7 @@ aside nav a.active{color:var(--accent);font-weight:700}
 <div style="margin-top:8px;color:var(--muted)">Count: <span id="distributedCount">0</span></div>
 <button id="seeMoreDistributed">See More</button>
 </div>
-
+</div>
 </div>
 
 <script>
@@ -113,6 +176,40 @@ const DISTRIBUTION_SHEET ="https://docs.google.com/spreadsheets/d/e/2PACX-1vTecp
 
 let distributionRows = [];
 
+function setDateRange(fromDate, toDate){
+  const yyyy1 = fromDate.getFullYear();
+  const mm1 = String(fromDate.getMonth() + 1).padStart(2,'0');
+  const dd1 = String(fromDate.getDate()).padStart(2,'0');
+
+  const yyyy2 = toDate.getFullYear();
+  const mm2 = String(toDate.getMonth() + 1).padStart(2,'0');
+  const dd2 = String(toDate.getDate()).padStart(2,'0');
+
+  from.value = `${yyyy1}-${mm1}-${dd1}`;
+  to.value = `${yyyy2}-${mm2}-${dd2}`;
+
+  apply(); // تحديث الجداول
+}
+
+// زر "اليوم"
+document.getElementById('btnToday').onclick = () => {
+  const today = new Date();
+  setDateRange(today, today);
+};
+
+document.getElementById('btnYesterday').onclick = () => {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  setDateRange(yesterday, yesterday);
+};
+
+
+document.getElementById('btnLast7').onclick = () => {
+  const today = new Date();
+  const last7 = new Date();
+  last7.setDate(today.getDate() - 6);  
+  setDateRange(last7, today);
+};
 
 let allRows = [];
 let currentData = { inPacking:[], waiting:[], distributed:[] };
@@ -146,12 +243,13 @@ function classify(rows, summaryMap, distributionRows){
   const seenWaiting = new Set();
   const seenDistributed = new Set();
 
-  // ✅ 1) Distribution sheet لها أولوية
+  // توزيع من ملف distribution
   distributionRows.forEach(d=>{
     distributed.push({
       order: d.order,
       company: d.company.toUpperCase(),
-      time: d.time
+      time: d.time,
+      clientAddress: d.clientAddress
     });
     seenDistributed.add(d.order);
   });
@@ -159,9 +257,8 @@ function classify(rows, summaryMap, distributionRows){
   rows.forEach(r=>{
     if(seenDistributed.has(r.order)) return;
 
-    const c = r.comment.toLowerCase();
+    const c = r.comment?.toLowerCase() || "";
 
-    // DHL / Aramex
     if(c.includes('dhl') || c.includes('aramex')){
       r.company = c.includes('dhl') ? 'DHL' : 'Aramex';
       distributed.push(r);
@@ -188,11 +285,9 @@ function classify(rows, summaryMap, distributionRows){
   return { inPacking, waiting, distributed };
 }
 
-
 function render(data){
   currentData = data;
 
-  // ✅ KPI فقط لأوامر المستودعات
   document.getElementById('kpiTotal').textContent =
     data.inPacking.length + data.waiting.length;
 
@@ -206,41 +301,92 @@ function render(data){
 }
 
 function renderTables(){
- const s1=searchInPacking.value.toLowerCase();
- const s2=searchWaiting.value.toLowerCase();
- const s3=searchDistributed.value.toLowerCase();
+  const s1 = searchInPacking.value.toLowerCase();
+  const s2 = searchWaiting.value.toLowerCase();
+  const s3 = searchDistributed.value.toLowerCase();
 
- const inP=currentData.inPacking.filter(r=>r.order.toLowerCase().includes(s1) || r.warehouse.toLowerCase().includes(s1));
- const wait=currentData.waiting.filter(r=>r.order.toLowerCase().includes(s2) || r.warehouse.toLowerCase().includes(s2));
+  // فلترة البحث
+  const inP = currentData.inPacking.filter(r => 
+    r.order.toLowerCase().includes(s1) || r.warehouse.toLowerCase().includes(s1)
+  );
+  const wait = currentData.waiting.filter(r => 
+    r.order.toLowerCase().includes(s2) || r.warehouse.toLowerCase().includes(s2)
+  );
 
- inPacking.innerHTML = inP.slice(0,limits.inPacking).map(r=>`<tr><td>${r.order}</td><td>${r.received}</td><td>${r.warehouse}</td></tr>`).join('');
- waiting.innerHTML = wait.slice(0,limits.waiting).map(r=>`<tr><td>${r.order}</td><td>${r.warehouse}</td><td>${r.location}</td></tr>`).join('');
+  // عرض In-Packing
+  inPacking.innerHTML = inP.slice(0, limits.inPacking)
+    .map(r => `<tr><td>${r.order}</td><td>${r.received}</td><td>${r.warehouse}</td></tr>`)
+    .join('');
 
- document.getElementById('inPackingCount').textContent = inP.length;
- document.getElementById('waitingCount').textContent = wait.length;
+  // عرض Waiting
+  waiting.innerHTML = wait.slice(0, limits.waiting)
+    .map(r => `<tr><td>${r.order}</td><td>${r.warehouse}</td><td>${r.location}</td></tr>`)
+    .join('');
 
- const map={};
- currentData.distributed.forEach(r=>{if(!map[r.company]) map[r.company]=[]; map[r.company].push(r);});
- const companies = Object.keys(map).filter(c=>c.toLowerCase().includes(s3));
- distributed.innerHTML = companies.slice(0,limits.distributed).map(c=>`<tr><td>${c}</td><td><a onclick="alert('${map[c].map(o=>o.order).join(', ')}')">${map[c].length}</a></td></tr>`).join('');
- document.getElementById('distributedCount').textContent = companies.length;
+  // تحديث العدادات
+  document.getElementById('inPackingCount').textContent = inP.length;
+  document.getElementById('waitingCount').textContent = wait.length;
 
- seeMoreInPacking.style.display = inP.length > limits.inPacking ? 'inline-block' : 'none';
- seeMoreWaiting.style.display = wait.length > limits.waiting ? 'inline-block' : 'none';
- seeMoreDistributed.style.display = companies.length > limits.distributed ? 'inline-block' : 'none';
+  // ===== عرض Distributed Orders مع تفاصيل الطلبات =====
+  const map = {};
+  currentData.distributed.forEach(r => {
+    if(!map[r.company]) map[r.company] = [];
+    map[r.company].push(r);
+  });
+
+  const companies = Object.keys(map).filter(c => c.toLowerCase().includes(s3));
+
+  distributed.innerHTML = companies.slice(0, limits.distributed).map(c => {
+  // فرز الطلبات حسب الوقت HH:MM
+  const sortedOrders = map[c].slice().sort((a, b) => {
+    const tA = a.time ? a.time.split(':') : [0,0];
+    const tB = b.time ? b.time.split(':') : [0,0];
+    return (+tA[0]*60 + +tA[1]) - (+tB[0]*60 + +tB[1]);
+  });
+
+  // تجهيز تفاصيل الطلبات
+  const details = sortedOrders.map(o => `${o.order} | ${o.time || '-'}`).join('\n');
+
+  // نستخدم backticks مع escape للأسطر الجديدة
+  const escapedDetails = details.replace(/`/g,'\\`').replace(/\$/g,'\\$');
+
+  return `<tr>
+    <td>${c}</td>
+    <td>
+      <a href="javascript:void(0)" onclick="showOrdersDetails('${c}','${escapedDetails}')">
+        ${map[c].length}
+      </a>
+    </td>
+  </tr>`;
+});
+
+function showOrdersDetails(company, details){
+  const w = window.open('', '_blank', 'width=400,height=600,scrollbars=1');
+  w.document.write(`<pre>${details.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>`);
+  w.document.title = `Orders Details for ${company}`;
 }
 
-seeMoreInPacking.onclick = ()=>{ limits.inPacking += 10; renderTables(); };
-seeMoreWaiting.onclick = ()=>{ limits.waiting += 10; renderTables(); };
-seeMoreDistributed.onclick = ()=>{ limits.distributed += 10; renderTables(); };
+  // أزرار See More
+  seeMoreInPacking.style.display = inP.length > limits.inPacking ? 'inline-block' : 'none';
+  seeMoreWaiting.style.display = wait.length > limits.waiting ? 'inline-block' : 'none';
+  seeMoreDistributed.style.display = companies.length > limits.distributed ? 'inline-block' : 'none';
+}
+
+
+// seeMoreInPacking.onclick = ()=>{ limits.inPacking += 10; renderTables(); };
+// seeMoreWaiting.onclick = ()=>{ limits.waiting += 10; renderTables(); };
+// seeMoreDistributed.onclick = ()=>{ limits.distributed += 10; renderTables(); };
 
 function setToday(){
- const today = new Date();
- const yyyy = today.getFullYear();
- const mm = String(today.getMonth()+1).padStart(2,'0');
- const dd = String(today.getDate()).padStart(2,'0');
- from.value = to.value = `${yyyy}-${mm}-${dd}`;
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+
+  from.value = `${yyyy}-${mm}-${dd}`;
+  to.value = `${yyyy}-${mm}-${dd}`;
 }
+
 
 // function applyDateFilter(){
 //  let filtered = [...allRows];
@@ -256,6 +402,30 @@ function setToday(){
 //    if(el===from||el===to) applyDateFilter(); else renderTables();
 //  });
 // });
+function apply(){
+  let filtered = [...allRows];
+  let filteredDistribution = [...distributionRows];
+
+  if(from.value){
+    const f = new Date(from.value);
+    f.setHours(0,0,0,0);
+    filtered = filtered.filter(r => r.date && r.date >= f);
+    filteredDistribution = filteredDistribution.filter(r => r.date && r.date >= f);
+  }
+
+  if(to.value){
+    const t = new Date(to.value);
+    t.setHours(23,59,59,999);
+    filtered = filtered.filter(r => r.date && r.date <= t);
+    filteredDistribution = filteredDistribution.filter(r => r.date && r.date <= t);
+  }
+
+  render(
+    classify(filtered, summaryMap, filteredDistribution)
+  );
+}
+from.oninput = apply;
+to.oninput = apply;
 
 async function fetchSummary(){
   const res = await fetch(summary);
@@ -296,77 +466,71 @@ function analyzeOrders(summaryRows){
 async function init(){
   allRows = await fetchCSV();
   const summaryRows = await fetchSummary();
-  const summaryMap = analyzeOrders(summaryRows);
-  distributionRows = await fetchDistribution();
+  summaryMap = analyzeOrders(summaryRows);
+  distributionRows = await fetchDistribution(); // هنا يتم التحويل للـ date
 
+  // الآن كل شيء جاهز، يمكن تطبيق الفلاتر
   setToday();
 
-function apply(){
-  let filtered = [...allRows];
-  let filteredDistribution = [...distributionRows];
-
-  if(from.value){
-    const f = new Date(from.value);
-
-    filtered = filtered.filter(r=>r.date && r.date >= f);
-    filteredDistribution = filteredDistribution.filter(
-      d => d.date && d.date >= f
-    );
-  }
-
-  if(to.value){
-    const t = new Date(to.value);
-    t.setHours(23,59,59,999);
-
-    filtered = filtered.filter(r=>r.date && r.date <= t);
-    filteredDistribution = filteredDistribution.filter(
-      d => d.date && d.date <= t
-    );
-  }
-
-  render(
-    classify(filtered, summaryMap, filteredDistribution)
-  );
-}
-
-
+  // الاستماع للتغييرات
   from.oninput = apply;
   to.oninput = apply;
   searchInPacking.oninput = renderTables;
   searchWaiting.oninput = renderTables;
   searchDistributed.oninput = renderTables;
 
-  apply();
+  apply(); // ← هنا يتم فلترة كل شيء بعد تحميل البيانات
 }
+function apply(){
+  const f = from.value ? new Date(from.value) : null;
+  if(f) f.setHours(0,0,0,0);
+  const t = to.value ? new Date(to.value) : null;
+  if(t) t.setHours(23,59,59,999);
+
+  const filtered = allRows.filter(r => {
+    if(!r.date) return false;
+    if(f && r.date < f) return false;
+    if(t && r.date > t) return false;
+    return true;
+  });
+
+  const filteredDistribution = distributionRows.filter(r => {
+    if(!r.date) return false;
+    if(f && r.date < f) return false;
+    if(t && r.date > t) return false;
+    return true;
+  });
+
+  render(classify(filtered, summaryMap, filteredDistribution));
+}
+
 function parseAnyDate(v){
   if(!v) return null;
-
   v = v.trim();
 
-  // ISO or YYYY/MM/DD or YYYY-MM-DD
-  if (/^\d{4}[\/-]\d{1,2}[\/-]\d{1,2}/.test(v)) {
-    const d = new Date(v.replace(/-/g,'/'));
-    return isNaN(d) ? null : d;
+  // DD/MM/YYYY أو DD-MM-YYYY مع أو بدون وقت
+  let m = v.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+  if(m){
+    const day = +m[1], month = +m[2]-1, year = +m[3];
+    const hour = +m[4]||0, min = +m[5]||0, sec = +m[6]||0;
+    return new Date(year, month, day, hour, min, sec);
   }
 
-  // DD/MM/YYYY or MM/DD/YYYY
-  if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/.test(v)) {
-    const [a,b,c] = v.split(/[\/-]/).map(Number);
-
-    // if first > 12 → DD/MM/YYYY
-    if (a > 12) return new Date(c, b-1, a);
-
-    // if second > 12 → MM/DD/YYYY
-    if (b > 12) return new Date(c, a-1, b);
-
-    // ambiguous → assume MM/DD/YYYY
-    return new Date(c, a-1, b);
+  // YYYY-MM-DD مع أو بدون وقت
+  m = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+  if(m){
+    const year = +m[1], month = +m[2]-1, day = +m[3];
+    const hour = +m[4]||0, min = +m[5]||0, sec = +m[6]||0;
+    return new Date(year, month, day, hour, min, sec);
   }
 
   // fallback
   const d = new Date(v);
   return isNaN(d) ? null : d;
 }
+
+
+
 
 async function fetchDistribution(){
   const res = await fetch(DISTRIBUTION_SHEET);
@@ -375,25 +539,21 @@ async function fetchDistribution(){
   const lines = text
     .split("\n")
     .map(l => l.trim())
-    .filter(l => l && !l.toLowerCase().includes("requestnumber"));
+    .filter(l => l && !l.toLowerCase().includes("request number")); // تجاهل الهيدر
 
   return lines.map(l=>{
-    const r = l.split(",");
-    const date = parseAnyDate(r[1]);
-
+    const r = l.split(",").map(c=>c.trim());
     return {
-      order: r[0]?.trim(),
-      rawDate: r[1]?.trim(),
-      date,
-      time: r[3]?.trim(),
-      company: r[4]?.trim().toLowerCase()
+      order: r[0] || null,               // REQUEST NUMBER
+      rawDate: r[1] || null,             // REQUEST REGISTRATION DATE TIME
+      date: parseAnyDate(r[1]),          // تحويل التاريخ هنا للتصفية
+      clientAddress: r[2] || null,       // Client Address
+      time: r[3] || null,                // TIME
+      company: r[r.length-1]?.trim() || null  // آخر عمود هو الشركة
     };
-  }).filter(r =>
-    r.order &&
-    r.company &&
-    (r.company === "lmd" || r.company === "wakilni")
-  );
+  }).filter(r => r.order && r.company); // كل الشركات
 }
+
 
 
 function parseDistributionDate(v){
