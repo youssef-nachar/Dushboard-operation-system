@@ -781,77 +781,53 @@ window.addEventListener('DOMContentLoaded', () => {
             const map = {};
 
             rows.forEach(r => {
+    const orderId      = r[0];
+    const receivedDate = r[1];
+    const warehouseRaw = r[2];
 
-                const orderId       = r[0];
-const receivedDate  = r[1]; // ✅ التاريخ
-const warehouseRaw  = r[2]; // ✅ المستودع
-// const distribution  = r[3];
-// const comment       = r[4];
-                if (!orderId) return;
+    if (!orderId || !warehouseRaw) return;
 
-                if (!map[orderId]) {
-                    map[orderId] = {
-                        orderNo: orderId,
-                        date: formatDateForInput(receivedDate),
-                        wh: {}
-                    };
-                }
+    if (!map[orderId]) {
+        map[orderId] = {
+            orderNo: orderId,
+            date: formatDateForInput(receivedDate),
+            wh: {}
+        };
+    }
 
-                let wh = warehouseRaw.toLowerCase();
-                let base = wh.replace(/---pack/g, "").replace(/\s*wh/g, "").trim();
+    const wh = warehouseRaw.toLowerCase();
+    const base = wh.replace(/---pack/g, "").replace(/\s*wh/g, "").trim();
 
-                if (!map[orderId].wh[base]) {
-                    map[orderId].wh[base] = {
-                        base,
-                        packed: false,
-                        distributed: false,
-                        distributor: null,
-                        comment: ""
-                    };
-                }
+    if (!map[orderId].wh[base]) {
+        map[orderId].wh[base] = {
+            base,
+            packed: false
+        };
+    }
 
-                if (comment) {
-                    map[orderId].wh[base].comment = comment;
-                }
+    if (wh.includes("---pack")) {
+        map[orderId].wh[base].packed = true;
+    }
+});
 
-                if (wh.includes("pack")) {
-                    map[orderId].wh[base].packed = true;
-                }
-
-                // const d = distribution.toUpperCase();
-                // if (["LMD", "WAKILNI", "EMPLOYEE"].includes(d)) {
-                //     map[orderId].wh[base].distributed = true;
-                //     map[orderId].wh[base].distributor = d;
-                //     map[orderId].wh[base].distributedTime = receivedDate;
-                // }
-            });
 
             allOrders = Object.values(map).map(o => {
-                const warehouses = Object.values(o.wh);
-                const packedCount = warehouses.filter(w => w.packed).length;
-                let status = "pending";
-                if(packedCount === warehouses.length){
-                    status="completed"
-                }else if(packedCount > 0){
-                    status = "partial"
-                }
+    const warehouses = Object.values(o.wh);
+    const packedCount = warehouses.filter(w => w.packed).length;
 
-                const distWH = warehouses.find(w => w.distributed);
-                const distributor = distWH ? distWH.distributor : null;
-                const distributedTime = distWH ? distWH.distributedTime : null;
+    let status = "pending";
+    if (packedCount === warehouses.length) status = "completed";
+    else if (packedCount > 0) status = "partial";
 
-                warehouses.forEach(w => w.distributed = false);
-                if (distWH) distWH.distributed = true;
+    return {
+        ...o,
+        status,
+        warehouses,
+        warehouseCount: warehouses.length,
+        distributor: null
+    };
+});
 
-                return {
-                    ...o,
-                    status,
-                    warehouses,
-                    warehouseCount: warehouses.length,
-                    distributor,
-                    distributedTime
-                };
-            });
 
             initDate();
             updateDashboard();
@@ -897,7 +873,7 @@ function initDate() {
     });
 }
 
-filteredOrders = Object.values(unique);
+// filteredOrders = Object.values(unique);
     // UPDATE DASHBOARD KPIS
     function updateDashboard() {
         const o = applyFilters();
@@ -907,7 +883,7 @@ filteredOrders = Object.values(unique);
         // Pending KPI only counts non-distributed pending/partial orders
         pending.textContent = o.filter(x => (x.status === "pending" || x.status === "partial") && !x.distributor).length;
 
-        distributed.textContent = o.filter(x => x.status === "distributed").length;
+  distributed.textContent = 0; // or hide this KPI
 
         renderWarehouseBreakdown(o);
         renderMultiWHOrders(o);
@@ -1172,6 +1148,7 @@ function normalizeWarehouse(name) {
 </body>
 
 </html> 
+
 
 
 
