@@ -724,156 +724,120 @@ window.addEventListener('DOMContentLoaded', () => {
     loadData(); // تحميل البيانات
 };
     // FORMAT DATE
-    function formatDateForInput(value) {
-    if (!value) return "";
-
-    // لو هو Date جاهز
-    if (value instanceof Date && !isNaN(value)) {
-        return value.toISOString().slice(0, 10);
-    }
+function formatDateForInput(value) {
+    if (!value) return null; // بدل ""
 
     let v = String(value).trim();
 
-    // yyyy-mm-dd (جاهز)
-    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
-        return v;
-    }
+    // YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
 
-    // yyyy/mm/dd
+    // YYYY/MM/DD
     if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(v)) {
         const [y, m, d] = v.split("/");
         return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+        if (!isNaN(Date.parse(v))) return new Date(v).toISOString().slice(0, 10);
+
     }
 
-    // dd/mm/yyyy أو d/m/yyyy
+    // DD/MM/YYYY
     if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v)) {
         const [d, m, y] = v.split("/");
         return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
     }
 
-    // dd-mm-yyyy
+    // DD-MM-YYYY
     if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(v)) {
         const [d, m, y] = v.split("-");
         return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
     }
 
-    // Date with time (Excel / Google Sheets)
+    // حاول التحويل الافتراضي
     const parsed = new Date(v);
-    if (!isNaN(parsed)) {
-        return parsed.toISOString().slice(0, 10);
-    }
+    if (!isNaN(parsed)) return parsed.toISOString().slice(0, 10);
 
-    return "";
+    return null;
 }
+
 
     function loadData() {
     fetch(sheetURL)
         .then(r => r.text())
         .then(csv => {
-
-            const parsed = Papa.parse(csv, {
-                skipEmptyLines: true
-            });
-
+            const parsed = Papa.parse(csv, { skipEmptyLines: true });
             const rows = parsed.data;
-            rows.shift(); // إزالة header
+            rows.shift(); // remove header
 
             const map = {};
 
             rows.forEach(r => {
-    const orderId      = r[0];
-    const receivedDate = r[1];
-    const warehouseRaw = r[2];
+                const orderId = r[0];
+                const receivedDate = r[1];
+                const warehouseRaw = r[2];
 
-    if (!orderId || !warehouseRaw) return;
+                if (!orderId) return;
 
-    if (!map[orderId]) {
-        map[orderId] = {
-            orderNo: orderId,
-           const normalizedDate = formatDateForInput(receivedDate);
+                if (!map[orderId]) {
+                    map[orderId] = {
+                        orderNo: orderId,
+                        date: formatDateForInput(receivedDate),
+                        wh: {}
+                    };
+                }
 
-map[orderId] = {
-    orderNo: orderId,
-    rawDate: receivedDate,          // keep original
-    date: normalizedDate || null,   // normalized YYYY-MM-DD
-    wh: {}
-};
-        };
-    }
+                const whNormalized = normalizeWarehouse(warehouseRaw);
+                const base = whNormalized.base;
+                const packed = whNormalized.packed;
 
-    const wh = warehouseRaw.toLowerCase();
-    const base = wh.replace(/---pack/g, "").replace(/\s*wh/g, "").trim();
-
-    if (!map[orderId].wh[base]) {
-        map[orderId].wh[base] = {
-            base,
-            packed: false
-        };
-    }
-
-    if (wh.includes("---pack")) {
-        map[orderId].wh[base].packed = true;
-    }
-});
-
+                if (!map[orderId].wh[base]) {
+                    map[orderId].wh[base] = { base, packed };
+                } else {
+                    map[orderId].wh[base].packed = map[orderId].wh[base].packed || packed;
+                }
+            });
 
             allOrders = Object.values(map).map(o => {
-    const warehouses = Object.values(o.wh);
-    const packedCount = warehouses.filter(w => w.packed).length;
+                const warehouses = Object.values(o.wh);
+                const packedCount = warehouses.filter(w => w.packed).length;
 
-    let status = "pending";
-    if (packedCount === warehouses.length) status = "completed";
-    else if (packedCount > 0) status = "partial";
+                let status;
+                if (packedCount === warehouses.length) status = "completed";
+                else if (packedCount > 0) status = "partial";
+                else status = "pending";
 
-    return {
-        ...o,
-        status,
-        warehouses,
-        warehouseCount: warehouses.length,
-        distributor: null
-    };
-});
-
+                return {
+                    ...o,
+                    status,
+                    warehouses,
+                    warehouseCount: warehouses.length
+                };
+            });
 
             initDate();
             updateDashboard();
             loadingOverlay.classList.add("hidden");
             dashboard.classList.remove("hidden");
         })
-        .catch(err => {
-            console.error(err);
-        });
+        .catch(err => console.error(err));
 }
-
     // INIT DATE FILTER
+
 function initDate() {
-    const dates = allOrders
-        .map(o => o.date)
-        .filter(Boolean)
-        .sort();
-
-    if (!dates.length) return;
-
-    dateFrom.value = dates[0];
-    dateTo.value   = dates[dates.length - 1];
-
+    const today = new Date().toISOString().slice(0, 10);
+    dateFrom.value = today;
+    dateTo.value = today;
     updateDashboard();
 }
 
-   function applyFilters() {
-    const from = dateFrom.value
-        ? new Date(dateFrom.value + "T00:00:00")
-        : null;
 
-    const to = dateTo.value
-        ? new Date(dateTo.value + "T23:59:59")
-        : null;
+function applyFilters() {
+    const from = dateFrom.value ? new Date(dateFrom.value) : null;
+    const to = dateTo.value ? new Date(dateTo.value) : null;
 
     return allOrders.filter(o => {
-        if (!o.date) return true; // ✅ DO NOT DROP orders without date
-
-        const orderDate = new Date(o.date + "T12:00:00"); // avoid TZ bug
-        if (isNaN(orderDate)) return true;
+        if (!o.date) return false;
+        const orderDate = new Date(o.date);
+        if (isNaN(orderDate)) return false;
 
         if (from && orderDate < from) return false;
         if (to && orderDate > to) return false;
@@ -882,22 +846,23 @@ function initDate() {
     });
 }
 
-// filteredOrders = Object.values(unique);
+
+filteredOrders = Object.values(unique);
     // UPDATE DASHBOARD KPIS
-    function updateDashboard() {
-        const o = applyFilters();
-        total.textContent = o.length;
-        completed.textContent = o.filter(x => x.status === "completed").length;
+function updateDashboard() {
+    const o = applyFilters();
 
-        // Pending KPI only counts non-distributed pending/partial orders
-        pending.textContent = o.filter(x => (x.status === "pending" || x.status === "partial") && !x.distributor).length;
+    total.textContent = o.length;
+    completed.textContent = o.filter(x => x.status === "completed").length;
+    pending.textContent = o.filter(x => x.status === "pending" || x.status === "partial").length;
 
-  distributed.textContent = 0; // or hide this KPI
+    distributed.textContent = 0; // removed dependency on distributor
 
-        renderWarehouseBreakdown(o);
-        renderMultiWHOrders(o);
-        renderSingleWHOrders(o);
-    }
+    renderWarehouseBreakdown(o);
+    renderMultiWHOrders(o);
+    renderSingleWHOrders(o);
+}
+
 
     // WAREHOUSE BREAKDOWN
     function renderWarehouseBreakdown(orders) {
@@ -1125,22 +1090,13 @@ ${Object.entries(m).map(([k, v]) => `
         URL.revokeObjectURL(url);
     }
 function normalizeWarehouse(name) {
-    if (!name) return "";
+    if (!name) return { base: "", packed: false };
 
     const raw = name.toLowerCase();
-
     const isPacked = raw.includes('---pack');
+    const base = raw.replace(/---pack/gi, "").replace(/\bwh\b/gi, "").replace(/\s+/g, " ").trim();
 
-    const base = raw
-        .replace(/---pack/gi, "")
-        .replace(/\bwh\b/gi, "")
-        .replace(/\s+/g, " ")
-        .trim();
-
-    return {
-        base,       // loreal lux
-        packed: isPacked
-    };
+    return { base, packed: isPacked };
 }
     // SHOW WAREHOUSES PAGE
     function showWarehouses() { }
@@ -1157,11 +1113,4 @@ function normalizeWarehouse(name) {
 </body>
 
 </html> 
-
-
-
-
-
-
-
 
