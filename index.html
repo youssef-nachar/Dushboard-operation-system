@@ -818,12 +818,12 @@ const warehouseRaw  = r[2]; // ✅ المستودع
                     map[orderId].wh[base].packed = true;
                 }
 
-                const d = distribution.toUpperCase();
-                if (["LMD", "WAKILNI", "EMPLOYEE"].includes(d)) {
-                    map[orderId].wh[base].distributed = true;
-                    map[orderId].wh[base].distributor = d;
-                    map[orderId].wh[base].distributedTime = receivedDate;
-                }
+                // const d = distribution.toUpperCase();
+                // if (["LMD", "WAKILNI", "EMPLOYEE"].includes(d)) {
+                //     map[orderId].wh[base].distributed = true;
+                //     map[orderId].wh[base].distributor = d;
+                //     map[orderId].wh[base].distributedTime = receivedDate;
+                // }
             });
 
             allOrders = Object.values(map).map(o => {
@@ -1172,6 +1172,7 @@ function normalizeWarehouse(name) {
 </body>
 
 </html> 
+
 
 
 
