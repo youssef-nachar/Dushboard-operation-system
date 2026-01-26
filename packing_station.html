@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,6 +16,8 @@
  --accent:#22d3ee;
  --hover:#1c2433;
 }
+
+
 *{box-sizing:border-box;font-family:Inter,sans-serif}
 body{margin:0;background:var(--bg);color:var(--text)}
 .container{max-width:1400px;margin:auto;padding:32px}
@@ -105,6 +108,11 @@ aside nav a.active{color:var(--accent);font-weight:700}
 <script>
 // ==== JavaScript كما في النسخة السابقة مع lazy loading وSee More ====
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=457547473&single=true&output=csv";
+const summary="https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?output=csv"
+const DISTRIBUTION_SHEET ="https://docs.google.com/spreadsheets/d/e/2PACX-1vTecpCEwZ10-Ncz2y0xSsAnNdLXcWDGt_GiAeJlbWYhgg9B8zlhvJ1DeDH8H0NDSg/pub?output=csv";
+
+let distributionRows = [];
+
 
 let allRows = [];
 let currentData = { inPacking:[], waiting:[], distributed:[] };
@@ -133,27 +141,68 @@ async function fetchCSV(){
    };
  }).filter(r=>r.order);
 }
+function classify(rows, summaryMap, distributionRows){
+  const inPacking=[], waiting=[], distributed=[];
+  const seenWaiting = new Set();
+  const seenDistributed = new Set();
 
-function classify(rows){
- const inPacking=[], waiting=[], distributed=[];
- rows.forEach(r=>{
-   const c=r.comment.toLowerCase();
-   if(c.includes('dhl')||c.includes('aramex')){
-     r.company=c.includes('dhl')?'DHL':'Aramex';
-     distributed.push(r); return;
-   }
-   if(r.received) inPacking.push(r);
-   else waiting.push(r);
- });
- return { inPacking, waiting, distributed };
+  // ✅ 1) Distribution sheet لها أولوية
+  distributionRows.forEach(d=>{
+    distributed.push({
+      order: d.order,
+      company: d.company.toUpperCase(),
+      time: d.time
+    });
+    seenDistributed.add(d.order);
+  });
+
+  rows.forEach(r=>{
+    if(seenDistributed.has(r.order)) return;
+
+    const c = r.comment.toLowerCase();
+
+    // DHL / Aramex
+    if(c.includes('dhl') || c.includes('aramex')){
+      r.company = c.includes('dhl') ? 'DHL' : 'Aramex';
+      distributed.push(r);
+      return;
+    }
+
+    if(r.received){
+      inPacking.push(r);
+      return;
+    }
+
+    const info = summaryMap[r.order];
+    if(!info) return;
+
+    const isMultiWH = info.warehouses.size > 1;
+    const hasNonPackWH = info.nonPackCount > 0;
+
+    if(isMultiWH && hasNonPackWH && !seenWaiting.has(r.order)){
+      waiting.push(r);
+      seenWaiting.add(r.order);
+    }
+  });
+
+  return { inPacking, waiting, distributed };
 }
 
+
 function render(data){
- currentData=data;
- document.getElementById('kpiTotal').textContent = data.inPacking.length + data.waiting.length + data.distributed.length;
- document.getElementById('kpiInPacking').textContent = data.inPacking.length;
- document.getElementById('kpiPending').textContent = data.waiting.length;
- renderTables();
+  currentData = data;
+
+  // ✅ KPI فقط لأوامر المستودعات
+  document.getElementById('kpiTotal').textContent =
+    data.inPacking.length + data.waiting.length;
+
+  document.getElementById('kpiInPacking').textContent =
+    data.inPacking.length;
+
+  document.getElementById('kpiPending').textContent =
+    data.waiting.length;
+
+  renderTables();
 }
 
 function renderTables(){
@@ -193,28 +242,170 @@ function setToday(){
  from.value = to.value = `${yyyy}-${mm}-${dd}`;
 }
 
-function applyDateFilter(){
- let filtered = [...allRows];
- const fromVal = from.value;
- const toVal = to.value;
- if(fromVal){ const f = new Date(fromVal); filtered = filtered.filter(r=>r.date && r.date >= f);}
- if(toVal){ const t = new Date(toVal); t.setHours(23,59,59,999); filtered = filtered.filter(r=>r.date && r.date <= t);}
- render(classify(filtered));
+// function applyDateFilter(){
+//  let filtered = [...allRows];
+//  const fromVal = from.value;
+//  const toVal = to.value;
+//  if(fromVal){ const f = new Date(fromVal); filtered = filtered.filter(r=>r.date && r.date >= f);}
+//  if(toVal){ const t = new Date(toVal); t.setHours(23,59,59,999); filtered = filtered.filter(r=>r.date && r.date <= t);}
+//  render(classify(filtered));
+// }
+
+// [from,to,searchInPacking,searchWaiting,searchDistributed].forEach(el=>{
+//  el.addEventListener('input',()=>{
+//    if(el===from||el===to) applyDateFilter(); else renderTables();
+//  });
+// });
+
+async function fetchSummary(){
+  const res = await fetch(summary);
+  const text = await res.text();
+  const lines = text.trim().split("\n");
+  return lines.slice(1).map(l=>{
+    const r = l.split(",");
+    return {
+      order: r[0]?.trim(),
+      warehouse: r[2]?.trim()
+    };
+  }).filter(r=>r.order && r.warehouse);
+
 }
 
-[from,to,searchInPacking,searchWaiting,searchDistributed].forEach(el=>{
- el.addEventListener('input',()=>{
-   if(el===from||el===to) applyDateFilter(); else renderTables();
- });
-});
+function analyzeOrders(summaryRows){
+  const map = {};
+
+  summaryRows.forEach(r=>{
+    if(!map[r.order]){
+      map[r.order] = {
+        warehouses: new Set(),
+        nonPackCount: 0
+      };
+    }
+
+    const cleanWH = r.warehouse.replace(/---Pack/i,'').trim();
+    map[r.order].warehouses.add(cleanWH);
+
+    if(!/---Pack/i.test(r.warehouse)){
+      map[r.order].nonPackCount++;
+    }
+  });
+
+  return map;
+}
 
 async function init(){
- allRows = await fetchCSV();
- setToday();
- applyDateFilter();
+  allRows = await fetchCSV();
+  const summaryRows = await fetchSummary();
+  const summaryMap = analyzeOrders(summaryRows);
+  distributionRows = await fetchDistribution();
+
+  setToday();
+
+function apply(){
+  let filtered = [...allRows];
+  let filteredDistribution = [...distributionRows];
+
+  if(from.value){
+    const f = new Date(from.value);
+
+    filtered = filtered.filter(r=>r.date && r.date >= f);
+    filteredDistribution = filteredDistribution.filter(
+      d => d.date && d.date >= f
+    );
+  }
+
+  if(to.value){
+    const t = new Date(to.value);
+    t.setHours(23,59,59,999);
+
+    filtered = filtered.filter(r=>r.date && r.date <= t);
+    filteredDistribution = filteredDistribution.filter(
+      d => d.date && d.date <= t
+    );
+  }
+
+  render(
+    classify(filtered, summaryMap, filteredDistribution)
+  );
 }
 
+
+  from.oninput = apply;
+  to.oninput = apply;
+  searchInPacking.oninput = renderTables;
+  searchWaiting.oninput = renderTables;
+  searchDistributed.oninput = renderTables;
+
+  apply();
+}
+function parseAnyDate(v){
+  if(!v) return null;
+
+  v = v.trim();
+
+  // ISO or YYYY/MM/DD or YYYY-MM-DD
+  if (/^\d{4}[\/-]\d{1,2}[\/-]\d{1,2}/.test(v)) {
+    const d = new Date(v.replace(/-/g,'/'));
+    return isNaN(d) ? null : d;
+  }
+
+  // DD/MM/YYYY or MM/DD/YYYY
+  if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/.test(v)) {
+    const [a,b,c] = v.split(/[\/-]/).map(Number);
+
+    // if first > 12 → DD/MM/YYYY
+    if (a > 12) return new Date(c, b-1, a);
+
+    // if second > 12 → MM/DD/YYYY
+    if (b > 12) return new Date(c, a-1, b);
+
+    // ambiguous → assume MM/DD/YYYY
+    return new Date(c, a-1, b);
+  }
+
+  // fallback
+  const d = new Date(v);
+  return isNaN(d) ? null : d;
+}
+
+async function fetchDistribution(){
+  const res = await fetch(DISTRIBUTION_SHEET);
+  const text = await res.text();
+
+  const lines = text
+    .split("\n")
+    .map(l => l.trim())
+    .filter(l => l && !l.toLowerCase().includes("requestnumber"));
+
+  return lines.map(l=>{
+    const r = l.split(",");
+    const date = parseAnyDate(r[1]);
+
+    return {
+      order: r[0]?.trim(),
+      rawDate: r[1]?.trim(),
+      date,
+      time: r[3]?.trim(),
+      company: r[4]?.trim().toLowerCase()
+    };
+  }).filter(r =>
+    r.order &&
+    r.company &&
+    (r.company === "lmd" || r.company === "wakilni")
+  );
+}
+
+
+function parseDistributionDate(v){
+  if(!v) return null;
+  // مثال متوقع: 2024-01-15 14:30:00
+  const d = new Date(v);
+  return isNaN(d) ? null : d;
+}
+
+console.table(distributionRows);
 init();
+
 </script>
 </body>
 </html>
