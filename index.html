@@ -785,8 +785,8 @@ window.addEventListener('DOMContentLoaded', () => {
                 const orderId       = r[0];
 const receivedDate  = r[1]; // ✅ التاريخ
 const warehouseRaw  = r[2]; // ✅ المستودع
-const distribution  = r[3];
-const comment       = r[4];
+// const distribution  = r[3];
+// const comment       = r[4];
                 if (!orderId) return;
 
                 if (!map[orderId]) {
@@ -1172,5 +1172,6 @@ function normalizeWarehouse(name) {
 </body>
 
 </html> 
+
 
 
