@@ -829,12 +829,12 @@ const warehouseRaw  = r[2]; // ✅ المستودع
             allOrders = Object.values(map).map(o => {
                 const warehouses = Object.values(o.wh);
                 const packedCount = warehouses.filter(w => w.packed).length;
-                const isDistributed = warehouses.some(w => w.distributed);
-
                 let status = "pending";
-                if (isDistributed) status = "distributed";
-                else if (packedCount === warehouses.length) status = "completed";
-                else if (packedCount > 0) status = "partial";
+                if(packedCount === warehouses.length){
+                    status="completed"
+                }else if(packedCount > 0){
+                    status = "partial"
+                }
 
                 const distWH = warehouses.find(w => w.distributed);
                 const distributor = distWH ? distWH.distributor : null;
@@ -1172,6 +1172,7 @@ function normalizeWarehouse(name) {
 </body>
 
 </html> 
+
 
 
 
