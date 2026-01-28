@@ -623,7 +623,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const users = [{ username: "manager", password: "123456" }];
     const sheetURL =  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?output=csv";  let allOrders = [];
-    let lastDisplayedOrders = [];
+ // const sheetURL=""
+
+  let lastDisplayedOrders = [];
 
     function updateSearch() {
         const query = document.getElementById("orderSearch").value.trim().toLowerCase();
@@ -725,22 +727,18 @@ window.addEventListener('DOMContentLoaded', () => {
 };
     // FORMAT DATE
 function formatDateForInput(value) {
-    if (!value) return null; // بدل ""
+    if (!value) return null;
 
     let v = String(value).trim();
+
+    // إزالة الوقت إن وجد
+    // 27/01/2026 12:54:26  -->  27/01/2026
+    v = v.split(" ")[0];
 
     // YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
 
-    // YYYY/MM/DD
-    if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(v)) {
-        const [y, m, d] = v.split("/");
-        return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
-        if (!isNaN(Date.parse(v))) return new Date(v).toISOString().slice(0, 10);
-
-    }
-
-    // DD/MM/YYYY
+    // DD/MM/YYYY  ✅ (الحالة الموجودة في الصورة)
     if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v)) {
         const [d, m, y] = v.split("/");
         return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
@@ -752,8 +750,14 @@ function formatDateForInput(value) {
         return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
     }
 
-    // حاول التحويل الافتراضي
-    const parsed = new Date(v);
+    // YYYY/MM/DD
+    if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(v)) {
+        const [y, m, d] = v.split("/");
+        return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+    }
+
+    // fallback
+    const parsed = new Date(value);
     if (!isNaN(parsed)) return parsed.toISOString().slice(0, 10);
 
     return null;
@@ -761,38 +765,74 @@ function formatDateForInput(value) {
 
 
     function loadData() {
+    let ignoredOrdersCount = 0; // عداد للطلبات بدون تاريخ
+
     fetch(sheetURL)
         .then(r => r.text())
         .then(csv => {
             const parsed = Papa.parse(csv, { skipEmptyLines: true });
             const rows = parsed.data;
-            rows.shift(); // remove header
+
+            if (!rows.length) return;
+
+            // ===== HEADER MAP =====
+            const headers = rows.shift().map(h => h.toString().trim().toLowerCase());
+
+            const col = {};
+            headers.forEach((h, i) => col[h] = i);
+
+            const ORDER_COL     = col["shopify order#"];
+            const DATE_COL      = col["order received in wh"];
+            const WAREHOUSE_COL = col["warehouse name"];
+
+            if (ORDER_COL === undefined || DATE_COL === undefined || WAREHOUSE_COL === undefined) {
+                console.error("❌ Columns not found", col);
+                return;
+            }
 
             const map = {};
 
             rows.forEach(r => {
-                const orderId = r[0];
-                const receivedDate = r[1];
-                const warehouseRaw = r[2];
+                const orderId      = r[ORDER_COL];
+                const receivedDate = r[DATE_COL];
+                const warehouseRaw = r[WAREHOUSE_COL];
 
                 if (!orderId) return;
 
+                const formattedDate = formatDateForInput(receivedDate);
+
+                // ===========================
+                // ✅ إذا order جديد بلا تاريخ → تجاهل بالكامل + زيادة العداد
                 if (!map[orderId]) {
+                    if (!formattedDate) {
+                        ignoredOrdersCount++;
+                        return; // تجاهل
+                    }
+
                     map[orderId] = {
                         orderNo: orderId,
-                        date: formatDateForInput(receivedDate),
+                        date: formattedDate,
                         wh: {}
                     };
+
+                } else {
+                    // إذا order موجود مسبقًا، صف بلا تاريخ → تجاهل فقط
+                    if (!formattedDate) {
+                        ignoredOrdersCount++;
+                        return;
+                    }
                 }
 
-                const whNormalized = normalizeWarehouse(warehouseRaw);
-                const base = whNormalized.base;
-                const packed = whNormalized.packed;
+                const wh = normalizeWarehouse(warehouseRaw);
+                if (!wh.base) return;
 
-                if (!map[orderId].wh[base]) {
-                    map[orderId].wh[base] = { base, packed };
+                if (!map[orderId].wh[wh.base]) {
+                    map[orderId].wh[wh.base] = {
+                        base: wh.base,
+                        packed: wh.packed
+                    };
                 } else {
-                    map[orderId].wh[base].packed = map[orderId].wh[base].packed || packed;
+                    map[orderId].wh[wh.base].packed ||= wh.packed;
                 }
             });
 
@@ -800,23 +840,27 @@ function formatDateForInput(value) {
                 const warehouses = Object.values(o.wh);
                 const packedCount = warehouses.filter(w => w.packed).length;
 
-                let status;
+                let status = "pending";
                 if (packedCount === warehouses.length) status = "completed";
                 else if (packedCount > 0) status = "partial";
-                else status = "pending";
 
                 return {
                     ...o,
-                    status,
                     warehouses,
-                    warehouseCount: warehouses.length
+                    warehouseCount: warehouses.length,
+                    status
                 };
             });
 
-            initDate();
-            updateDashboard();
+            // ===== INIT =====
+            initDate();          // اليوم by default
+            updateDashboard();   // فلترة + عرض
             loadingOverlay.classList.add("hidden");
             dashboard.classList.remove("hidden");
+
+            if (ignoredOrdersCount > 0) {
+                console.warn(`${ignoredOrdersCount} orders ignored بسبب missing date`);
+            }
         })
         .catch(err => console.error(err));
 }
@@ -831,16 +875,15 @@ function initDate() {
 
 
 function applyFilters() {
-    const from = dateFrom.value ? new Date(dateFrom.value) : null;
-    const to = dateTo.value ? new Date(dateTo.value) : null;
+    const from = dateFrom.value || null;
+    const to   = dateTo.value || null;
 
     return allOrders.filter(o => {
         if (!o.date) return false;
-        const orderDate = new Date(o.date);
-        if (isNaN(orderDate)) return false;
 
-        if (from && orderDate < from) return false;
-        if (to && orderDate > to) return false;
+        // o.date أصلاً بصيغة YYYY-MM-DD
+        if (from && o.date < from) return false;
+        if (to && o.date > to) return false;
 
         return true;
     });
@@ -1113,4 +1156,3 @@ function normalizeWarehouse(name) {
 </body>
 
 </html> 
-
