@@ -454,53 +454,53 @@
     }).filter(r => r.order);
   }
 
-function getWaitingOrders(summaryMap, rows, seenDistributed) {
+function getWaitingOrders(summaryMap, rows, seenDistributed, fromDate, toDate) {
   const waiting = [];
   const seen = new Set();
 
   Object.entries(summaryMap).forEach(([order, info]) => {
     if (seenDistributed.has(order)) return;
 
-    const whs = Array.from(info.warehouses);
+    // جلب كل الصفوف المرتبطة بهذا الطلب
+    const relatedRows = rows.filter(r => r.order === order);
 
-    // Multi-Warehouse فقط
-    if (whs.length <= 1) return;
+    // فلترة حسب التاريخ
+    const rowsInRange = relatedRows.filter(r => {
+      if (!r.date) return false;
+      if (fromDate && r.date < fromDate) return false;
+      if (toDate && r.date > toDate) return false;
+      return true;
+    });
 
-    // هل يوجد Pack؟
-    const hasPack = whs.some(w => /---Pack/i.test(w));
-    if (!hasPack) return;
+    if (rowsInRange.length === 0) return; // لا يوجد شيء ضمن النطاق
 
     // المستودعات التي لم تصبح Pack
-    const waitingWH = whs
+    const waitingWH = Array.from(info.warehouses)
       .filter(w => !/---Pack/i.test(w))
       .map(w => w.replace(/---Pack/i, '').trim());
 
-    waitingWH.forEach(wh => {
-      rows
-        .filter(r => r.order === order && r.warehouse === wh)
-        .forEach(r => {
-          const key = order + wh;
-          if (!seen.has(key)) {
-            waiting.push(r);
-            seen.add(key);
-          }
-        });
-    });
+    if (waitingWH.length === 0) return;
+
+    if (!seen.has(order)) {
+      waiting.push({
+        order: order,
+        warehouses: waitingWH.join(', '),
+        location: rowsInRange[0].location || '-' // نأخذ أول صف ضمن التاريخ
+      });
+      seen.add(order);
+    }
   });
 
   return waiting;
 }
 
-  function classify(rows, summaryMap, distributionRows) {
+function classify(rows, summaryMap, distributionRows, fromDate, toDate) {
     const inPacking = [];
     const distributed = [];
 
     const seenDistributed = new Set();
     const seenInPacking = new Set();
 
-    // ===============================
-    // 1) توزيع من distribution sheet
-    // ===============================
     distributionRows.forEach(d => {
       if (!seenDistributed.has(d.order)) {
         distributed.push({
@@ -514,28 +514,19 @@ function getWaitingOrders(summaryMap, rows, seenDistributed) {
       }
     });
 
-    // ===============================
-    // 2) تصنيف باقي الطلبات
-    // ===============================
     rows.forEach(r => {
       if (seenDistributed.has(r.order)) return;
 
       const comment = (r.comment || '').toLowerCase();
-
-      // توزيع حسب comment
       if (comment.includes('dhl') || comment.includes('aramex')) {
         const company = comment.includes('dhl') ? 'DHL' : 'Aramex';
         if (!seenDistributed.has(r.order)) {
-          distributed.push({
-            ...r,
-            company
-          });
+          distributed.push({ ...r, company });
           seenDistributed.add(r.order);
         }
         return;
       }
 
-      // In-Packing Orders
       if (r.received && !seenInPacking.has(r.order)) {
         inPacking.push(r);
         seenInPacking.add(r.order);
@@ -544,13 +535,39 @@ function getWaitingOrders(summaryMap, rows, seenDistributed) {
     });
 
     // ===============================
-    // 3) Waiting Other Warehouses
+    // Waiting Other Warehouses مع فلترة التاريخ
     // ===============================
-const waiting = getWaitingOrders(summaryMap, rows, seenDistributed);
-
+    const waiting = getWaitingOrders(summaryMap, rows, seenDistributed, fromDate, toDate);
 
     return { inPacking, waiting, distributed };
-  }
+}
+
+function getWaitingOrders(summaryMap, rows, seenDistributed) {
+  const waiting = [];
+  const seen = new Set();
+
+  Object.entries(summaryMap).forEach(([order, info]) => {
+    if (seenDistributed.has(order)) return;
+
+    const whs = Array.from(info.warehouses);
+    if (whs.length <= 1) return; // Multi-Warehouse فقط
+
+    const waitingWH = whs.filter(w => !/---Pack/i.test(w)).map(w => w.replace(/---Pack/i, '').trim());
+    if (waitingWH.length === 0) return;
+
+    if (!seen.has(order)) {
+      const rowExample = rows.find(r => r.order === order) || {};
+      waiting.push({
+        order: order,
+        warehouses: waitingWH.join(', '),
+        location: rowExample.location || '-'
+      });
+      seen.add(order);
+    }
+  });
+
+  return waiting;
+}
 
   function render(data) {
     currentData = data;
@@ -710,15 +727,15 @@ const waiting = getWaitingOrders(summaryMap, rows, seenDistributed);
   seeMoreWaiting.onclick = () => { limits.waiting += 7; renderTables(); };
   seeMoreDistributed.onclick = () => { limits.distributed += 7; renderTables(); };
 
-  function setToday() {
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
+function setToday() {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
 
-    from.value = `${yyyy}-${mm}-${dd}`;
-    to.value = `${yyyy}-${mm}-${dd}`;
-  }
+  from.value = `${yyyy}-${mm}-${dd}`;
+  to.value = `${yyyy}-${mm}-${dd}`;
+}
 
 
   // function applyDateFilter(){
@@ -737,78 +754,82 @@ const waiting = getWaitingOrders(summaryMap, rows, seenDistributed);
   // });
   // 
 
-  async function fetchSummary() {
-    const res = await fetch(summary);
-    const text = await res.text();
-    const lines = text.trim().split("\n");
-    return lines.slice(1).map(l => {
-      const r = l.split(",");
-      return {
-        order: r[0]?.trim(),
-        warehouse: r[2]?.trim()
+ async function fetchSummary() {
+  const res = await fetch(summary);
+  const text = await res.text();
+  const lines = text.trim().split("\n");
+
+  return lines.slice(1).map(l => {
+    const r = l.split(",");
+    return {
+      order: r[0]?.trim(),
+      warehouse: r[2]?.trim(),
+      receivedDate: r[1]?.trim(), // Order Received in WH
+      date: parseAnyDate(r[1])   // تحويل التاريخ لدالة Date
+    };
+  }).filter(r => r.order && r.warehouse && r.date);
+}
+
+function analyzeOrders(summaryRows) {
+  const map = {};
+
+  summaryRows.forEach(r => {
+    if (!map[r.order]) {
+      map[r.order] = {
+        warehouses: new Set(),
+        dates: new Set()
       };
-    }).filter(r => r.order && r.warehouse);
+    }
 
-  }
+    map[r.order].warehouses.add(r.warehouse.trim());
+    if (r.date) map[r.order].dates.add(r.date);
+  });
 
-  function analyzeOrders(summaryRows) {
-    const map = {};
+  return map;
+}
 
-    summaryRows.forEach(r => {
-      if (!map[r.order]) {
-        map[r.order] = {
-          warehouses: new Set()
-        };
-      }
+async function init() {
+  allRows = await fetchCSV();
+  const summaryRows = await fetchSummary();
+  summaryMap = analyzeOrders(summaryRows);
+  distributionRows = await fetchDistribution();
 
-      // لا تزيل ---Pack هنا
-      map[r.order].warehouses.add(r.warehouse.trim());
-    });
+  // ضع التاريخ اليوم تلقائياً
+  setToday();
 
-    return map;
-  }
+  // الاستماع للتغييرات
+  from.oninput = apply;
+  to.oninput = apply;
+  searchInPacking.oninput = renderTables;
+  searchWaiting.oninput = renderTables;
+  searchDistributed.oninput = renderTables;
 
-  async function init() {
-    allRows = await fetchCSV();
-    const summaryRows = await fetchSummary();
-    summaryMap = analyzeOrders(summaryRows);
-    distributionRows = await fetchDistribution(); // هنا يتم التحويل للـ date
+  apply(); // ← تطبيق الفلاتر بعد تحميل البيانات
+}
 
-    // الآن كل شيء جاهز، يمكن تطبيق الفلاتر
-    setToday();
 
-    // الاستماع للتغييرات
-    from.oninput = apply;
-    to.oninput = apply;
-    searchInPacking.oninput = renderTables;
-    searchWaiting.oninput = renderTables;
-    searchDistributed.oninput = renderTables;
+function apply() {
+  const f = from.value ? new Date(from.value) : null;
+  if (f) f.setHours(0,0,0,0);
+  const t = to.value ? new Date(to.value) : null;
+  if (t) t.setHours(23,59,59,999);
 
-    apply(); // ← هنا يتم فلترة كل شيء بعد تحميل البيانات
-  }
-  function apply() {
-    const f = from.value ? new Date(from.value) : null;
-    if (f) f.setHours(0, 0, 0, 0);
-    const t = to.value ? new Date(to.value) : null;
-    if (t) t.setHours(23, 59, 59, 999);
+  const filteredRows = allRows.filter(r => {
+    if (!r.date) return false;
+    if (f && r.date < f) return false;
+    if (t && r.date > t) return false;
+    return true;
+  });
 
-    const filtered = allRows.filter(r => {
-      if (!r.date) return false;
-      if (f && r.date < f) return false;
-      if (t && r.date > t) return false;
-      return true;
-    });
+  const filteredDistribution = distributionRows.filter(r => {
+    if (!r.date) return false;
+    if (f && r.date < f) return false;
+    if (t && r.date > t) return false;
+    return true;
+  });
 
-    const filteredDistribution = distributionRows.filter(r => {
-      if (!r.date) return false;
-      if (f && r.date < f) return false;
-      if (t && r.date > t) return false;
-      return true;
-    });
-
-    render(classify(filtered, summaryMap, filteredDistribution));
-  }
-
+  render(classify(filteredRows, summaryMap, filteredDistribution, f, t));
+}
 
   document.getElementById('btnRefresh').onclick = async () => {
     // يمكن تعطيل الزر أثناء التحميل لتفادي الضغط المتكرر
