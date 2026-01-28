@@ -1,569 +1,938 @@
-
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<title>Packing Station Dashboard</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-<style>
-/* ===== existing variables ===== */
-:root{
- --bg:#0b1220;
- --card:#0f172a;
- --border:#1e293b;
- --text:#e5e7eb;
- --muted:#94a3b8;
- --accent:#22d3ee;
- --hover:#1c2433;
-}
-
-/* ===== layout ===== */
-body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,sans-serif}
-.container{max-width:1400px;margin:auto;padding:32px}
-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:32px}
-.filters{display:flex;gap:16px}
-input{background:var(--card);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:12px;transition:0.2s}
-input:focus{outline:none;border-color:var(--accent)}
-
-/* ===== KPI ===== */
-.kpis{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-  gap:24px;
-  margin-bottom:36px;
-}
-.kpi{
-  background:linear-gradient(180deg,#0f172a,#020617);
-  padding:28px 24px;
-  border-radius:20px;
-  border:1px solid var(--border);
-  box-shadow:0 12px 30px rgba(0,0,0,.4);
-  transition:0.3s;
-  text-align:center;
-}
-.kpi:hover{transform:translateY(-3px);box-shadow:0 14px 35px rgba(0,0,0,.5)}
-.kpi span{color:var(--muted);font-size:14px;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em}
-.kpi h2{margin:0;font-size:36px;font-weight:700;color:var(--accent)}
-
-/* ===== Sections / Tables ===== */
-.sections-container{
-  display:grid;
-  grid-template-columns:1fr; /* default mobile */
-  gap:28px;
-}
-.section{
-  background:var(--card);
-  padding:26px;
-  border-radius:20px;
-  border:1px solid var(--border);
-  box-shadow:0 8px 20px rgba(0,0,0,.3);
-}
-.section h3{margin:0 0 16px;font-size:20px;font-weight:600}
-.section .search{margin-bottom:14px;width:100%;padding:10px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--text)}
-
-table{width:100%;border-collapse:separate;border-spacing:0;box-shadow:0 4px 12px rgba(0,0,0,.2);border-radius:12px;overflow:hidden}
-th,td{padding:14px 16px;border-bottom:1px solid var(--border)}
-th{color:var(--muted);font-size:14px;text-transform:uppercase;letter-spacing:.04em;text-align:left;background:var(--card)}
-tr:hover{background:var(--hover)}
-a{color:var(--accent);font-weight:600;text-decoration:none}
-a:hover{text-decoration:underline}
-button{padding:8px 18px;margin-top:8px;border:none;border-radius:12px;background:var(--accent);color:#000;font-weight:700;cursor:pointer;transition:0.2s}
-button:hover{opacity:0.9;transform:translateY(-2px)}
-
-/* ===== Aside / Sidebar ===== */
-aside{width:260px;background:#020617;border-right:1px solid var(--border);padding:24px;flex-shrink:0}
-aside h2{margin:0 0 24px;color:var(--accent)}
-aside nav{display:flex;flex-direction:column;gap:14px}
-aside nav a{color:var(--text);font-weight:500;text-decoration:none;transition:0.2s}
-aside nav a:hover{color:var(--accent)}
-aside nav a.active{color:var(--accent);font-weight:700}
-.quick-dates {
-  display: flex;
-  gap: 8px;
-}
-
-.quick-dates button {
-  padding: 6px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--card);
-  color: var(--text);
-  cursor: pointer;
-  font-weight: 500;
-  transition: 0.2s;
-}
-
-.quick-dates button:hover {
-  background: var(--hover);
-  color: var(--accent);
-}
-
-/* ===== Responsive ===== */
-@media(min-width:1024px){
-  .sections-container{grid-template-columns:repeat(2,1fr)} /* جدولين جنب بعض على اللابتوب */
-}
-@media(max-width:1024px){.kpi h2{font-size:28px}.section h3{font-size:18px}}
-@media(max-width:768px){header{flex-direction:column;align-items:flex-start;gap:12px}.kpi h2{font-size:26px}}
-</style>
-
-</head>
-<body>
-<div style="display:flex;min-height:100vh">
-<aside>
-  <h2>Dashboard</h2>
-  <nav>
-    <a href="index.html">Summary</a>
-    <a href="p&c.html">Warehouses</a>
-    <a href="packing.html" class="active">Packing Station</a>
-  </nav>
-</aside>
-
-<div class="container">
-
-<header>
- <h1>Packing Station</h1>
-<div class="filters">
-  <input type="date" id="from">
-  <input type="date" id="to">
-
-  <div class="quick-dates">
-    <button type="button" id="btnToday">today</button>
-    <button type="button" id="btnYesterday">yesterday</button>
-    <button type="button" id="btnLast7"> last 7 days</button>
-  </div>
-</div>
-
-</header>
-
-<div class="kpis">
- <div class="kpi"><span>Total Orders</span><h2 id="kpiTotal">0</h2></div>
- <div class="kpi"><span>In‑Packing Orders</span><h2 id="kpiInPacking">0</h2></div>
- <div class="kpi"><a href="#searchDistributed"><span>Pending (Other WH)</span><h2 id="kpiPending">0</h2></div></a>
-</div>
-<div class="sections-container">
-<div class="section">
-<h3>In‑Packing Orders</h3>
-<input class="search" id="searchInPacking" placeholder="Search by order or warehouse">
-<table><thead><tr><th>Order</th><th>Received at Packing</th><th>Warehouse</th></tr></thead><tbody id="inPacking"></tbody></table>
-<div style="margin-top:8px;color:var(--muted)">Count: <span id="inPackingCount">0</span></div>
-<button id="seeMoreInPacking">See More</button>
-</div>
-
-<div class="section">
-<h3>Waiting Other Warehouses</h3>
-<input class="search" id="searchWaiting" placeholder="Search by order or warehouse">
-<table><thead><tr><th>Order</th><th>Warehouse</th><th>Location</th></tr></thead><tbody id="waiting"></tbody></table>
-<div style="margin-top:8px;color:var(--muted)">Count: <span id="waitingCount">0</span></div>
-<button id="seeMoreWaiting">See More</button>
-</div>
-
-<div class="section">
-<h3>Distributed Orders</h3>
-<input class="search" id="searchDistributed" placeholder="Search by company">
-<table><thead><tr><th>Company</th><th>Orders</th></tr></thead><tbody id="distributed"></tbody></table>
-<div style="margin-top:8px;color:var(--muted)">Count: <span id="distributedCount">0</span></div>
-<button id="seeMoreDistributed">See More</button>
-</div>
-</div>
-</div>
-
-<script>
- 
- //const pharma=  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=875574333&single=true&output=csv";
- 
-//const pnc ="https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=228371932&single=true&output=csv"
-//const retail = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=274206&single=true&output=csv";
-//const beesline = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=1278749068&single=true&output=csv";
-//const lux = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=884068351&single=true&output=csv";
-
- ///const WAREHOUSE_SHEETS = {
-//  "p&c": "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=228371932&single=true&output=csv",
-////  "beesline": "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=1278749068&single=true&output=csv",
-//  "lux": "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=884068351&single=true&output=csv",
-//"retail" : "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=274206&single=true&output=csv",
-//"pharma": "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=875574333&single=true&output=csv";
-// };
- 
- 
- 
- 
- 
-// ==== JavaScript كما في النسخة السابقة مع lazy loading وSee More ====
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=457547473&single=true&output=csv";
-const summary="https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?output=csv"
-const DISTRIBUTION_SHEET ="https://docs.google.com/spreadsheets/d/e/2PACX-1vTecpCEwZ10-Ncz2y0xSsAnNdLXcWDGt_GiAeJlbWYhgg9B8zlhvJ1DeDH8H0NDSg/pub?output=csv";
-
-let distributionRows = [];
-
-function setDateRange(fromDate, toDate){
-  const yyyy1 = fromDate.getFullYear();
-  const mm1 = String(fromDate.getMonth() + 1).padStart(2,'0');
-  const dd1 = String(fromDate.getDate()).padStart(2,'0');
-
-  const yyyy2 = toDate.getFullYear();
-  const mm2 = String(toDate.getMonth() + 1).padStart(2,'0');
-  const dd2 = String(toDate.getDate()).padStart(2,'0');
-
-  from.value = `${yyyy1}-${mm1}-${dd1}`;
-  to.value = `${yyyy2}-${mm2}-${dd2}`;
-
-  apply(); // تحديث الجداول
-}
-
-// زر "اليوم"
-document.getElementById('btnToday').onclick = () => {
-  const today = new Date();
-  setDateRange(today, today);
-};
-
-document.getElementById('btnYesterday').onclick = () => {
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  setDateRange(yesterday, yesterday);
-};
+  <meta charset="UTF-8">
+  <title>Packing Station Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
 
-document.getElementById('btnLast7').onclick = () => {
-  const today = new Date();
-  const last7 = new Date();
-  last7.setDate(today.getDate() - 6);  
-  setDateRange(last7, today);
-};
-
-let allRows = [];
-let currentData = { inPacking:[], waiting:[], distributed:[] };
-let limits = { inPacking:10, waiting:10, distributed:10 };
-
-function parseDate(v){
- if(!v) return null;
- const parts = v.split(' ')[0].split('/');
- if(parts.length!==3) return null;
- return new Date(+parts[2], parts[1]-1, +parts[0]);
-}
-
-async function fetchCSV(){
- const res = await fetch(CSV_URL);
- const text = await res.text();
- const lines = text.trim().split("\n");
- return lines.slice(1).map(l=>{
-   const r = l.split(",");
-   return {
-     order:r[0]?.trim(),
-     received:r[1]?.trim(),
-     warehouse:r[2]?.replace(/---Pack/i,'').trim(),
-     location:r[4]?.trim()||'-',
-     comment:r[5]?.trim()||"",
-     date: parseAnyDate(r[1])
-   };
- }).filter(r=>r.order);
-}
-function classify(rows, summaryMap, distributionRows){
-  const inPacking = [];
-  const waiting = [];
-  const distributed = [];
-  const seenInPacking = new Set();
-  const seenWaiting = new Set();
-  const seenDistributed = new Set();
-
-  distributionRows.forEach(d=>{
-    distributed.push(d);
-    seenDistributed.add(d.order);
-  });
-
-  rows.forEach(r=>{
-    if(seenDistributed.has(r.order)) return;
-
-    const info = summaryMap[r.order];
-    if(!info) return;
-
-    // In-Packing
-    if(info.packWH.size > 0 && !seenInPacking.has(r.order)){
-      inPacking.push(r);
-      seenInPacking.add(r.order);
+  <style>
+    :root {
+      --bg: #0f172a;
+      --sidebar: #020617;
+      --card: #111827;
+      --accent: #22c55e;
+      --warning: #f59e0b;
+      --info: #3b82f6;
+      --text: #e5e7eb;
+      --border: #1f2937;
     }
 
-    // Waiting
-    info.pendingWH.forEach(wh=>{
-      const key = r.order + '|' + wh;
-      if(seenWaiting.has(key)) return;
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Inter, sans-serif;
+    }
 
-      waiting.push({
-        order: r.order,
-        warehouse: wh,
-        location: r.location || '-'
-      });
-      seenWaiting.add(key);
+    body {
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    /* ===== Layout ===== */
+    .app {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      min-height: 100vh;
+    }
+
+    aside {
+      background: var(--sidebar);
+      padding: 20px;
+    }
+
+    aside h2 {
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+
+    aside a {
+      color: var(--text);
+      text-decoration: none;
+      padding: 10px;
+      border-radius: 8px;
+      display: block;
+    }
+
+    aside a:hover,
+    aside a.active {
+      background: #111827;
+      color: var(--accent);
+    }
+
+    .container {
+      padding: 20px;
+    }
+
+    /* ===== KPI ===== */
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .kpi {
+      background: #020617;
+      padding: 18px;
+      border-radius: 14px;
+      text-align: center;
+    }
+
+    .kpi span {
+      font-size: 13px;
+      color: #9ca3af;
+    }
+
+    .kpi h2 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-top: 6px;
+      color: var(--accent);
+    }
+
+    /* ===== Sections / Cards ===== */
+    .section {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    .sections-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+
+    /* ===== Tables ===== */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+
+    th,
+    td {
+      border: 1px solid #333;
+      padding: 8px;
+      text-align: center;
+    }
+
+    th {
+      background: #111827;
+      color: var(--accent);
+    }
+
+    /* ===== Inputs ===== */
+    input {
+      width: 100%;
+      padding: 8px;
+      border-radius: 8px;
+      background: #020617;
+      border: 1px solid var(--border);
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    /* ===== Buttons ===== */
+    button {
+      background: var(--accent);
+      border: none;
+      color: #020617;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    button:hover {
+      opacity: .85;
+    }
+
+    input {
+      width: 200px;
+    }
+
+    .filters {
+      display: flex;
+      gap: 16px
+    }
+
+    .quick-dates button:hover {
+      background: var(--hover);
+      color: var(--accent);
+    }
+
+    a {
+      color: white;
+      text-decoration: none;
+    }
+
+    #orderDetailsPopup {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+
+    #orderDetailsContent {
+      background: var(--card);
+      color: var(--text);
+      padding: 20px;
+      border-radius: 12px;
+      width: 500px;
+      max-height: 80%;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    #orderDetailsContent button#closePopup {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: var(--accent);
+      border: none;
+      color: #000;
+      font-size: 18px;
+      cursor: pointer;
+      border-radius: 6px;
+      width: 32px;
+      height: 32px;
+    }
+
+    #popupTable {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    #popupTable th,
+    #popupTable td {
+      border: 1px solid #333;
+      padding: 6px 10px;
+      text-align: center;
+    }
+
+    #popupTable th {
+      background: #111827;
+      color: var(--accent);
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 1024px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      aside {
+        position: fixed;
+        left: -260px;
+        top: 0;
+        height: 100vh;
+        width: 240px;
+        transition: left .3s;
+        z-index: 1000;
+      }
+
+      aside.open {
+        left: 0;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+
+
+
+    <aside>
+      <h2>Dashboard</h2>
+      <nav>
+        <a href="index.html">Summary</a>
+        <a href="p&c.html">Warehouses</a>
+        <a href="packing.html" class="active">Packing Station</a>
+      </nav>
+    </aside>
+
+    <div class="container">
+
+      <header>
+        <h1>Packing Station</h1>
+        <div class="filters">
+          <input type="date" id="from">
+          <input type="date" id="to">
+
+
+          <div class="quick-dates">
+            <button type="button" id="btnToday">today</button>
+            <button type="button" id="btnYesterday">yesterday</button>
+            <button type="button" id="btnLast7"> last 7 days</button>
+          </div>
+          <div class="quick-dates">
+            <button id="btnRefresh" type="button">Refresh Data</button>
+          </div>
+        </div>
+
+      </header>
+
+      <div class="kpis">
+        <!-- <div class="kpi"><span>Total Orders</span><h2 id="kpiTotal">0</h2></div> -->
+        <div class="kpi"><span>In‑Packing Orders</span>
+          <h2 id="kpiInPacking">0</h2>
+        </div>
+        <div class="kpi"><span>Pending (Other WH)</span>
+          <h2 id="kpiPending">0</h2>
+        </div>
+        <a href="#searchDistributed">
+          <div class="kpi"> <span>Distributed Orders</span>
+            <h2 id="kpiDistributed">0</h2>
+          </div>
+        </a>
+
+
+      </div>
+      <div class="sections-container">
+        <div class="section">
+          <h3>In‑Packing Orders</h3>
+          <input class="search" id="searchInPacking" placeholder="Search by order or warehouse">
+          <table>
+            <thead>
+              <tr>
+                <th>Order</th>
+                <th>Received at Packing</th>
+                <th>Warehouse</th>
+              </tr>
+            </thead>
+            <tbody id="inPacking"></tbody>
+          </table>
+          <div style="margin-top:8px;color:var(--muted)">Count: <span id="inPackingCount">0</span></div>
+          <button id="seeMoreInPacking">See More</button>
+        </div>
+
+        <div class="section">
+          <h3>Waiting Other Warehouses</h3>
+          <input class="search" id="searchWaiting" placeholder="Search by order or warehouse">
+          <table>
+            <thead>
+              <tr>
+                <th>Order</th>
+                <th>Warehouse</th>
+                <th>Location</th>
+              </tr>
+            </thead>
+            <tbody id="waiting"></tbody>
+          </table>
+          <div style="margin-top:8px;color:var(--muted)">Count: <span id="waitingCount">0</span></div>
+          <button id="seeMoreWaiting">See More</button>
+        </div>
+
+        <div class="section">
+          <h3>Distributed Orders</h3>
+          <input class="search" id="searchDistributed" placeholder="Search by company">
+          <table>
+            <thead>
+              <tr>
+                <th>Company</th>
+                <th>Orders</th>
+              </tr>
+            </thead>
+            <tbody id="distributed"></tbody>
+          </table>
+          <div style="margin-top:8px;color:var(--muted)">Count: <span id="distributedCount">0</span></div>
+          <button id="seeMoreDistributed">See More</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popup / Modal for Order Details -->
+  <!-- Popup / Modal for Order Details -->
+  <div id="orderDetailsPopup" style="display:none;">
+    <div id="orderDetailsContent">
+      <button id="closePopup">&times;</button>
+      <h3 id="popupTitle">Order Details</h3>
+      <table id="popupTable">
+        <thead>
+          <tr>
+            <th>Order</th>
+            <th>Time</th>
+            <th>Client Address</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- سيتم ملؤه بالديناميكي -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</body>
+<script>
+  // ==== JavaScript كما في النسخة السابقة مع lazy loading وSee More ====
+  const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=457547473&single=true&output=csv";
+  const summary = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?output=csv"
+  const DISTRIBUTION_SHEET = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTecpCEwZ10-Ncz2y0xSsAnNdLXcWDGt_GiAeJlbWYhgg9B8zlhvJ1DeDH8H0NDSg/pub?output=csv";
+
+  let distributionRows = [];
+
+  function setDateRange(fromDate, toDate) {
+    const yyyy1 = fromDate.getFullYear();
+    const mm1 = String(fromDate.getMonth() + 1).padStart(2, '0');
+    const dd1 = String(fromDate.getDate()).padStart(2, '0');
+
+    const yyyy2 = toDate.getFullYear();
+    const mm2 = String(toDate.getMonth() + 1).padStart(2, '0');
+    const dd2 = String(toDate.getDate()).padStart(2, '0');
+
+    from.value = `${yyyy1}-${mm1}-${dd1}`;
+    to.value = `${yyyy2}-${mm2}-${dd2}`;
+
+    apply(); // تحديث الجداول
+  }
+
+  // زر "اليوم"
+  document.getElementById('btnToday').onclick = () => {
+    const today = new Date();
+    setDateRange(today, today);
+  };
+
+  document.getElementById('btnYesterday').onclick = () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    setDateRange(yesterday, yesterday);
+  };
+
+
+  document.getElementById('btnLast7').onclick = () => {
+    const today = new Date();
+    const last7 = new Date();
+    last7.setDate(today.getDate() - 6);
+    setDateRange(last7, today);
+  };
+
+  let allRows = [];
+  let currentData = { inPacking: [], waiting: [], distributed: [] };
+  let limits = { inPacking: 10, waiting: 10, distributed: 10 };
+
+  function parseDate(v) {
+    if (!v) return null;
+    const parts = v.split(' ')[0].split('/');
+    if (parts.length !== 3) return null;
+    return new Date(+parts[2], parts[1] - 1, +parts[0]);
+  }
+
+  async function fetchCSV() {
+    const res = await fetch(CSV_URL);
+    const text = await res.text();
+    const lines = text.trim().split("\n");
+    return lines.slice(1).map(l => {
+      const r = l.split(",");
+      return {
+        order: r[0]?.trim(),
+        received: r[1]?.trim(),
+        warehouse: r[2]?.replace(/---Pack/i, '').trim(),
+        location: r[4]?.trim() || '-',
+        comment: r[5]?.trim() || "",
+        date: parseDate(r[1])
+      };
+    }).filter(r => r.order);
+  }
+
+function getWaitingOrders(summaryMap, rows, seenDistributed) {
+  const waiting = [];
+  const seen = new Set();
+
+  Object.entries(summaryMap).forEach(([order, info]) => {
+    if (seenDistributed.has(order)) return;
+
+    const whs = Array.from(info.warehouses);
+
+    // Multi-Warehouse فقط
+    if (whs.length <= 1) return;
+
+    // هل يوجد Pack؟
+    const hasPack = whs.some(w => /---Pack/i.test(w));
+    if (!hasPack) return;
+
+    // المستودعات التي لم تصبح Pack
+    const waitingWH = whs
+      .filter(w => !/---Pack/i.test(w))
+      .map(w => w.replace(/---Pack/i, '').trim());
+
+    waitingWH.forEach(wh => {
+      rows
+        .filter(r => r.order === order && r.warehouse === wh)
+        .forEach(r => {
+          const key = order + wh;
+          if (!seen.has(key)) {
+            waiting.push(r);
+            seen.add(key);
+          }
+        });
     });
   });
 
-  return { inPacking, waiting, distributed };
+  return waiting;
 }
 
-function render(data){
-  currentData = data;
+  function classify(rows, summaryMap, distributionRows) {
+    const inPacking = [];
+    const distributed = [];
 
-  const uniqueOrders = new Set([
-  ...data.inPacking.map(o => o.order),
-  ...data.waiting.map(o => o.order)
-]);
+    const seenDistributed = new Set();
+    const seenInPacking = new Set();
 
-document.getElementById('kpiTotal').textContent = uniqueOrders.size;
-  document.getElementById('kpiInPacking').textContent =
-    data.inPacking.length;
+    // ===============================
+    // 1) توزيع من distribution sheet
+    // ===============================
+    distributionRows.forEach(d => {
+      if (!seenDistributed.has(d.order)) {
+        distributed.push({
+          order: d.order,
+          company: d.company?.toUpperCase() || '',
+          time: d.time,
+          clientAddress: d.clientAddress,
+          date: d.date
+        });
+        seenDistributed.add(d.order);
+      }
+    });
 
-  document.getElementById('kpiPending').textContent =
-    data.waiting.length;
+    // ===============================
+    // 2) تصنيف باقي الطلبات
+    // ===============================
+    rows.forEach(r => {
+      if (seenDistributed.has(r.order)) return;
 
-  renderTables();
-}
+      const comment = (r.comment || '').toLowerCase();
 
-function renderTables(){
-  const s1 = searchInPacking.value.toLowerCase();
-  const s2 = searchWaiting.value.toLowerCase();
-  const s3 = searchDistributed.value.toLowerCase();
+      // توزيع حسب comment
+      if (comment.includes('dhl') || comment.includes('aramex')) {
+        const company = comment.includes('dhl') ? 'DHL' : 'Aramex';
+        if (!seenDistributed.has(r.order)) {
+          distributed.push({
+            ...r,
+            company
+          });
+          seenDistributed.add(r.order);
+        }
+        return;
+      }
 
-  // فلترة البحث
-  const inP = currentData.inPacking.filter(r => 
-    r.order.toLowerCase().includes(s1) || r.warehouse.toLowerCase().includes(s1)
-  );
-  const wait = currentData.waiting.filter(r => 
-    r.order.toLowerCase().includes(s2) || r.warehouse.toLowerCase().includes(s2)
-  );
+      // In-Packing Orders
+      if (r.received && !seenInPacking.has(r.order)) {
+        inPacking.push(r);
+        seenInPacking.add(r.order);
+        return;
+      }
+    });
 
-  // عرض In-Packing
-  inPacking.innerHTML = inP.slice(0, limits.inPacking)
-    .map(r => `<tr><td>${r.order}</td><td>${r.received}</td><td>${r.warehouse}</td></tr>`)
-    .join('');
-
-  // عرض Waiting
-  waiting.innerHTML = wait.slice(0, limits.waiting)
-    .map(r => `<tr><td>${r.order}</td><td>${r.warehouse}</td><td>${r.location}</td></tr>`)
-    .join('');
-
-  // تحديث العدادات
-  document.getElementById('inPackingCount').textContent = inP.length;
-  document.getElementById('waitingCount').textContent = wait.length;
-
-  // ===== عرض Distributed Orders مع تفاصيل الطلبات =====
-  const map = {};
-  currentData.distributed.forEach(r => {
-    if(!map[r.company]) map[r.company] = [];
-    map[r.company].push(r);
-  });
-
-  const companies = Object.keys(map).filter(c => c.toLowerCase().includes(s3));
-
-  distributed.innerHTML = companies.slice(0, limits.distributed).map(c => {
-  // فرز الطلبات حسب الوقت HH:MM
-  const sortedOrders = map[c].slice().sort((a, b) => {
-    const tA = a.time ? a.time.split(':') : [0,0];
-    const tB = b.time ? b.time.split(':') : [0,0];
-    return (+tA[0]*60 + +tA[1]) - (+tB[0]*60 + +tB[1]);
-  });
-
-  // تجهيز تفاصيل الطلبات
-  const details = sortedOrders.map(o => `${o.order} | ${o.time || '-'}`).join('\n');
-
-  // نستخدم backticks مع escape للأسطر الجديدة
-  const escapedDetails = details.replace(/`/g,'\\`').replace(/\$/g,'\\$');
-
-  return `<tr>
-    <td>${c}</td>
-    <td>
-      <a href="javascript:void(0)" onclick="showOrdersDetails('${c}','${escapedDetails}')">
-        ${map[c].length}
-      </a>
-    </td>
-  </tr>`;
-});
-
-function showOrdersDetails(company, details){
-  const w = window.open('', '_blank', 'width=400,height=600,scrollbars=1');
-  w.document.write(`<pre>${details.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>`);
-  w.document.title = `Orders Details for ${company}`;
-}
-
-  // أزرار See More
-  seeMoreInPacking.style.display = inP.length > limits.inPacking ? 'inline-block' : 'none';
-  seeMoreWaiting.style.display = wait.length > limits.waiting ? 'inline-block' : 'none';
-  seeMoreDistributed.style.display = companies.length > limits.distributed ? 'inline-block' : 'none';
-}
+    // ===============================
+    // 3) Waiting Other Warehouses
+    // ===============================
+const waiting = getWaitingOrders(summaryMap, rows, seenDistributed);
 
 
- seeMoreInPacking.onclick = ()=>{ limits.inPacking += 10; renderTables(); };
- seeMoreWaiting.onclick = ()=>{ limits.waiting += 10; renderTables(); };
- seeMoreDistributed.onclick = ()=>{ limits.distributed += 10; renderTables(); };
+    return { inPacking, waiting, distributed };
+  }
 
-function setToday(){
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth() + 1).padStart(2, '0');
-  const dd = String(today.getDate()).padStart(2, '0');
+  function render(data) {
+    currentData = data;
 
-  from.value = `${yyyy}-${mm}-${dd}`;
-  to.value = `${yyyy}-${mm}-${dd}`;
-}
+    document.getElementById('kpiInPacking').textContent =
+      data.inPacking.length;
+
+    document.getElementById('kpiPending').textContent =
+      data.waiting.length;
+
+    document.getElementById('kpiDistributed').textContent =
+      data.distributed.length;
+
+    renderTables();
+  }
 
 
-// function applyDateFilter(){
-//  let filtered = [...allRows];
-//  const fromVal = from.value;
-//  const toVal = to.value;
-//  if(fromVal){ const f = new Date(fromVal); filtered = filtered.filter(r=>r.date && r.date >= f);}
-//  if(toVal){ const t = new Date(toVal); t.setHours(23,59,59,999); filtered = filtered.filter(r=>r.date && r.date <= t);}
-//  render(classify(filtered));
-// }
+  function renderTables() {
+    const s1 = searchInPacking.value.toLowerCase();
+    const s2 = searchWaiting.value.toLowerCase();
+    const s3 = searchDistributed.value.toLowerCase().trim();
 
-// [from,to,searchInPacking,searchWaiting,searchDistributed].forEach(el=>{
-//  el.addEventListener('input',()=>{
-//    if(el===from||el===to) applyDateFilter(); else renderTables();
-//  });
-// });
+    /* ===============================
+       In-Packing
+    =============================== */
+    const inP = currentData.inPacking.filter(r =>
+      r.order.toLowerCase().includes(s1) ||
+      r.warehouse.toLowerCase().includes(s1)
+    );
 
-from.oninput = apply;
-to.oninput = apply;
+    inPacking.innerHTML = inP.slice(0, limits.inPacking)
+      .map(r => `
+      <tr>
+        <td>${r.order}</td>
+        <td>${r.received}</td>
+        <td>${r.warehouse}</td>
+      </tr>
+    `)
+      .join('');
 
-async function fetchSummary(){
-  const res = await fetch(summary);
-  const text = await res.text();
-  const lines = text.trim().split("\n");
-  return lines.slice(1).map(l=>{
-    const r = l.split(",");
-    return {
-      order: r[0]?.trim(),
-      warehouse: r[2]?.trim()
-    };
-  }).filter(r=>r.order && r.warehouse);
+    document.getElementById('inPackingCount').textContent = inP.length;
 
-}
 
-function analyzeOrders(summaryRows){
-  const map = {};
+    /* ===============================
+       Waiting Other Warehouses
+    =============================== */
+    const wait = currentData.waiting.filter(r =>
+      r.order.toLowerCase().includes(s2) ||
+      r.warehouse.toLowerCase().includes(s2)
+    );
 
-  summaryRows.forEach(r=>{
-    if(!map[r.order]){
-      map[r.order] = {
-        packWH: new Set(),
-        pendingWH: new Set()
-      };
-    }
+    waiting.innerHTML = wait.slice(0, limits.waiting)
+      .map(r => `
+      <tr>
+        <td>${r.order}</td>
+        <td>${r.warehouse}</td>
+        <td>${r.location}</td>
+      </tr>
+    `)
+      .join('');
 
-    if(/---Pack/i.test(r.warehouse)){
-      map[r.order].packWH.add(
-        r.warehouse.replace(/---Pack/i,'').trim()
+    document.getElementById('waitingCount').textContent = wait.length;
+
+
+    /* ===============================
+       Distributed Orders
+    =============================== */
+    const map = {};
+    currentData.distributed.forEach(r => {
+      if (!map[r.company]) map[r.company] = [];
+      map[r.company].push(r);
+    });
+
+    const companies = Object.keys(map).filter(company => {
+      if (!s3) return true;
+
+      if (company.toLowerCase().includes(s3)) return true;
+
+      return map[company].some(o =>
+        o.order && o.order.toLowerCase().includes(s3)
       );
-    }else{
-      map[r.order].pendingWH.add(r.warehouse.trim());
+    });
+
+    distributed.innerHTML = companies.slice(0, limits.distributed).map(company => {
+
+      const orders = map[company];
+
+      // ترتيب حسب الوقت
+      const sortedOrders = orders.slice().sort((a, b) => {
+        const [hA, mA] = (a.time || '00:00').split(':').map(Number);
+        const [hB, mB] = (b.time || '00:00').split(':').map(Number);
+        return (hA * 60 + mA) - (hB * 60 + mB);
+      });
+
+
+
+
+      return `
+      <tr>
+        <td>${company}</td>
+        <td><a href="#" class="show-details" data-company="${company}"> ${sortedOrders.length} </a></td>
+      </tr>
+    `;
+    }).join('');
+
+    document.getElementById('distributedCount').textContent = companies.length;
+
+    // ربط حدث البوب أب بعد التوليد
+    document.querySelectorAll('#distributed .show-details').forEach(el => {
+      el.onclick = e => {
+        e.preventDefault();
+        const company = el.dataset.company;
+        const orders = currentData.distributed.filter(o => o.company === company);
+        showOrdersDetails(company, orders);
+      };
+    });
+
+    /* ===============================
+       See More buttons
+    =============================== */
+    seeMoreInPacking.style.display =
+      inP.length > limits.inPacking ? 'inline-block' : 'none';
+
+    seeMoreWaiting.style.display =
+      wait.length > limits.waiting ? 'inline-block' : 'none';
+
+    seeMoreDistributed.style.display =
+      companies.length > limits.distributed ? 'inline-block' : 'none';
+  }
+
+  // ==============================
+  // تحديث البوب أب لإظهار عمود الوقت
+  // ==============================
+  function showOrdersDetails(company, detailsArray) {
+    const popup = document.getElementById('orderDetailsPopup');
+    const title = document.getElementById('popupTitle');
+    const tbody = document.querySelector('#popupTable tbody');
+
+    title.textContent = `Order Details for ${company}`;
+    tbody.innerHTML = ''; // مسح أي بيانات سابقة
+
+    detailsArray.forEach(o => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+  <td>${o.order}</td>
+  <td>${o.time || '-'}</td>
+  <td>${o.clientAddress || '-'}</td>
+`;
+
+      tbody.appendChild(tr);
+    });
+
+    popup.style.display = 'flex';
+  }
+
+  seeMoreInPacking.onclick = () => { limits.inPacking += 7; renderTables(); };
+  seeMoreWaiting.onclick = () => { limits.waiting += 7; renderTables(); };
+  seeMoreDistributed.onclick = () => { limits.distributed += 7; renderTables(); };
+
+  function setToday() {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+
+    from.value = `${yyyy}-${mm}-${dd}`;
+    to.value = `${yyyy}-${mm}-${dd}`;
+  }
+
+
+  // function applyDateFilter(){
+  //  let filtered = [...allRows];
+  //  const fromVal = from.value;
+  //  const toVal = to.value;
+  //  if(fromVal){ const f = new Date(fromVal); filtered = filtered.filter(r=>r.date && r.date >= f);}
+  //  if(toVal){ const t = new Date(toVal); t.setHours(23,59,59,999); filtered = filtered.filter(r=>r.date && r.date <= t);}
+  //  render(classify(filtered));
+  // }
+
+  // [from,to,searchInPacking,searchWaiting,searchDistributed].forEach(el=>{
+  //  el.addEventListener('input',()=>{
+  //    if(el===from||el===to) applyDateFilter(); else renderTables();
+  //  });
+  // });
+  // 
+
+  async function fetchSummary() {
+    const res = await fetch(summary);
+    const text = await res.text();
+    const lines = text.trim().split("\n");
+    return lines.slice(1).map(l => {
+      const r = l.split(",");
+      return {
+        order: r[0]?.trim(),
+        warehouse: r[2]?.trim()
+      };
+    }).filter(r => r.order && r.warehouse);
+
+  }
+
+  function analyzeOrders(summaryRows) {
+    const map = {};
+
+    summaryRows.forEach(r => {
+      if (!map[r.order]) {
+        map[r.order] = {
+          warehouses: new Set()
+        };
+      }
+
+      // لا تزيل ---Pack هنا
+      map[r.order].warehouses.add(r.warehouse.trim());
+    });
+
+    return map;
+  }
+
+  async function init() {
+    allRows = await fetchCSV();
+    const summaryRows = await fetchSummary();
+    summaryMap = analyzeOrders(summaryRows);
+    distributionRows = await fetchDistribution(); // هنا يتم التحويل للـ date
+
+    // الآن كل شيء جاهز، يمكن تطبيق الفلاتر
+    setToday();
+
+    // الاستماع للتغييرات
+    from.oninput = apply;
+    to.oninput = apply;
+    searchInPacking.oninput = renderTables;
+    searchWaiting.oninput = renderTables;
+    searchDistributed.oninput = renderTables;
+
+    apply(); // ← هنا يتم فلترة كل شيء بعد تحميل البيانات
+  }
+  function apply() {
+    const f = from.value ? new Date(from.value) : null;
+    if (f) f.setHours(0, 0, 0, 0);
+    const t = to.value ? new Date(to.value) : null;
+    if (t) t.setHours(23, 59, 59, 999);
+
+    const filtered = allRows.filter(r => {
+      if (!r.date) return false;
+      if (f && r.date < f) return false;
+      if (t && r.date > t) return false;
+      return true;
+    });
+
+    const filteredDistribution = distributionRows.filter(r => {
+      if (!r.date) return false;
+      if (f && r.date < f) return false;
+      if (t && r.date > t) return false;
+      return true;
+    });
+
+    render(classify(filtered, summaryMap, filteredDistribution));
+  }
+
+
+  document.getElementById('btnRefresh').onclick = async () => {
+    // يمكن تعطيل الزر أثناء التحميل لتفادي الضغط المتكرر
+    const btn = document.getElementById('btnRefresh');
+    btn.disabled = true;
+    btn.textContent = 'Refreshing...';
+
+    try {
+      await init();  // إعادة تحميل البيانات وتحديث الواجهة
+    } catch (e) {
+      console.error('Error refreshing data:', e);
+      alert('Failed to refresh data.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Refresh Data';
     }
-  });
+  };
 
-  return map;
-}
-let summaryMap = {};
-async function init(){
-  allRows = await fetchCSV();
-  const summaryRows = await fetchSummary();
-  summaryMap = analyzeOrders(summaryRows);
-  distributionRows = await fetchDistribution(); // هنا يتم التحويل للـ date
 
-  // الآن كل شيء جاهز، يمكن تطبيق الفلاتر
-  setToday();
 
-  // الاستماع للتغييرات
-  from.oninput = apply;
-  to.oninput = apply;
-  searchInPacking.oninput = renderTables;
-  searchWaiting.oninput = renderTables;
-  searchDistributed.oninput = renderTables;
 
-  apply(); // ← هنا يتم فلترة كل شيء بعد تحميل البيانات
-}
-function apply(){
-  const f = from.value ? new Date(from.value) : null;
-  if(f) f.setHours(0,0,0,0);
-  const t = to.value ? new Date(to.value) : null;
-  if(t) t.setHours(23,59,59,999);
 
-  const filtered = allRows.filter(r => {
-    if(!r.date) return false;
-    if(f && r.date < f) return false;
-    if(t && r.date > t) return false;
-    return true;
-  });
 
-  const filteredDistribution = distributionRows.filter(r => {
-    if(!r.date) return false;
-    if(f && r.date < f) return false;
-    if(t && r.date > t) return false;
-    return true;
-  });
 
-  render(classify(filtered, summaryMap, filteredDistribution));
-}
 
-function parseAnyDate(v){
-  if(!v) return null;
-  v = v.trim();
 
-  // DD/MM/YYYY أو DD-MM-YYYY مع أو بدون وقت
-  let m = v.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
-  if(m){
-    const day = +m[1], month = +m[2]-1, year = +m[3];
-    const hour = +m[4]||0, min = +m[5]||0, sec = +m[6]||0;
-    return new Date(year, month, day, hour, min, sec);
+
+  function parseAnyDate(v) {
+    if (!v) return null;
+    v = v.trim();
+
+    // DD/MM/YYYY أو DD-MM-YYYY مع أو بدون وقت
+    let m = v.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+    if (m) {
+      const day = +m[1], month = +m[2] - 1, year = +m[3];
+      const hour = +m[4] || 0, min = +m[5] || 0, sec = +m[6] || 0;
+      return new Date(year, month, day, hour, min, sec);
+    }
+
+    // YYYY-MM-DD مع أو بدون وقت
+    m = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+    if (m) {
+      const year = +m[1], month = +m[2] - 1, day = +m[3];
+      const hour = +m[4] || 0, min = +m[5] || 0, sec = +m[6] || 0;
+      return new Date(year, month, day, hour, min, sec);
+    }
+
+    // fallback
+    const d = new Date(v);
+    return isNaN(d) ? null : d;
   }
 
-  // YYYY-MM-DD مع أو بدون وقت
-  m = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
-  if(m){
-    const year = +m[1], month = +m[2]-1, day = +m[3];
-    const hour = +m[4]||0, min = +m[5]||0, sec = +m[6]||0;
-    return new Date(year, month, day, hour, min, sec);
+
+
+
+  async function fetchDistribution() {
+    const res = await fetch(DISTRIBUTION_SHEET);
+    const text = await res.text();
+
+    const parsed = Papa.parse(text, {
+      delimiter: ",",
+      skipEmptyLines: true,
+    });
+
+    // Ignore header if موجود (عادة أول سطر فيه عنوان الأعمدة)
+    let data = parsed.data;
+    if (data.length && data[0][0].toLowerCase().includes("request number")) {
+      data = data.slice(1);
+    }
+
+    return data.map(r => ({
+      order: r[0] || null,
+      rawDate: r[1] || null,
+      date: parseAnyDate(r[1]),
+      clientAddress: r[2] || '-',
+      time: r[3] || '-',
+      company: r[4] || null
+    })).filter(r => r.order && r.company);
   }
 
-  // fallback
-  const d = new Date(v);
-  return isNaN(d) ? null : d;
-}
+  function showOrdersDetails(company, detailsArray) {
+    const popup = document.getElementById('orderDetailsPopup');
+    const title = document.getElementById('popupTitle');
+    const tbody = document.querySelector('#popupTable tbody');
+
+    title.textContent = `Order Details for ${company}`;
+    tbody.innerHTML = ''; // مسح أي بيانات 
+
+    detailsArray.forEach(o => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+    <td>${o.order}</td>
+    <td>${o.time || '-'}</td>   <!-- حرف صغير -->
+    <td>${o.clientAddress || '-'}</td>
+  `;
+      tbody.appendChild(tr);
+    });
 
 
+    popup.style.display = 'flex';
+  }
+
+  // زر إغلاق البوب أب
+  document.getElementById('closePopup').onclick = () => {
+    document.getElementById('orderDetailsPopup').style.display = 'none';
+  }
+
+  // إغلاق عند الضغط خارج المحتوى
+  document.getElementById('orderDetailsPopup').onclick = e => {
+    if (e.target.id === 'orderDetailsPopup') {
+      document.getElementById('orderDetailsPopup').style.display = 'none';
+    }
+  }
 
 
-async function fetchDistribution(){
-  const res = await fetch(DISTRIBUTION_SHEET);
-  const text = await res.text();
+  function parseDistributionDate(v) {
+    if (!v) return null;
+    const d = new Date(v);
+    return isNaN(d) ? null : d;
+  }
 
-  const lines = text
-    .split("\n")
-    .map(l => l.trim())
-    .filter(l => l && !l.toLowerCase().includes("request number")); // تجاهل الهيدر
-
-  return lines.map(l=>{
-    const r = l.split(",").map(c=>c.trim());
-    return {
-      order: r[0] || null,               // REQUEST NUMBER
-      rawDate: r[1] || null,             // REQUEST REGISTRATION DATE TIME
-      date: parseAnyDate(r[1]),          // تحويل التاريخ هنا للتصفية
-      clientAddress: r[2] || null,       // Client Address
-      time: r[3] || null,                // TIME
-      company: r[r.length-1]?.trim() || null  // آخر عمود هو الشركة
-    };
-  }).filter(r => r.order && r.company); // كل الشركات
-}
-
-
-
-function parseDistributionDate(v){
-  if(!v) return null;
-  // مثال متوقع: 2024-01-15 14:30:00
-  const d = new Date(v);
-  return isNaN(d) ? null : d;
-}
-
-console.table(distributionRows);
-init();
+  console.table(distributionRows);
+  init();
 
 </script>
-</body>
+
 </html>
