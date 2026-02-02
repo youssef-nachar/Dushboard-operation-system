@@ -918,7 +918,7 @@ function applyFilters() {
 function updateDashboard() {
     const o = applyFilters();
 
-    total.textContent = o.length + distributedOrders.size; // اجمالي الطلبات
+    total.textContent = o.length; // اجمالي الطلبات
     completed.textContent = o.filter(x => x.status === "completed").length;
     pending.textContent = o.filter(x => (x.status === "pending" || x.status === "partial")).length;
     distributed.textContent = applyFilters().filter(o => o.status === "distributed").length;   renderWarehouseBreakdown(o);
@@ -1267,6 +1267,7 @@ function stopAutoRefresh() {
 </body>
 
 </html> 
+
 
 
 
