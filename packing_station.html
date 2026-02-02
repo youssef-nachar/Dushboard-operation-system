@@ -327,6 +327,7 @@
 
         <div class="section">
           <h3>Waiting Other Warehouses</h3>
+          <button id="exportWaiting">Export to Excel</button>
           <input class="search" id="searchWaiting" placeholder="Search by order or warehouse">
           <table>
             <thead>
@@ -446,128 +447,164 @@
       return {
         order: r[0]?.trim(),
         received: r[1]?.trim(),
-        warehouse: r[2]?.replace(/---Pack/i, '').trim(),
-        location: r[4]?.trim() || '-',
+        warehouse: r[2]?.trim(),     
+        location: r[5]?.trim() || '-',
         comment: r[5]?.trim() || "",
         date: parseDate(r[1])
       };
     }).filter(r => r.order);
   }
-
-function getWaitingOrders(summaryMap, rows, seenDistributed, fromDate, toDate) {
-  const waiting = [];
-  const seen = new Set();
-
-  Object.entries(summaryMap).forEach(([order, info]) => {
-    if (seenDistributed.has(order)) return;
-
-    // جلب كل الصفوف المرتبطة بهذا الطلب
-    const relatedRows = rows.filter(r => r.order === order);
-
-    // فلترة حسب التاريخ
-    const rowsInRange = relatedRows.filter(r => {
-      if (!r.date) return false;
-      if (fromDate && r.date < fromDate) return false;
-      if (toDate && r.date > toDate) return false;
-      return true;
-    });
-
-    if (rowsInRange.length === 0) return; // لا يوجد شيء ضمن النطاق
-
-    // المستودعات التي لم تصبح Pack
-    const waitingWH = Array.from(info.warehouses)
-      .filter(w => !/---Pack/i.test(w))
-      .map(w => w.replace(/---Pack/i, '').trim());
-
-    if (waitingWH.length === 0) return;
-
-    if (!seen.has(order)) {
-      waiting.push({
-        order: order,
-        warehouses: waitingWH.join(', '),
-        location: rowsInRange[0].location || '-' // نأخذ أول صف ضمن التاريخ
-      });
-      seen.add(order);
-    }
-  });
-
-  return waiting;
+function normalizeWarehouseName(name) {
+  return name
+    .toLowerCase()
+    .replace(/---\s*pack/g, '')
+    .replace(/\bwh\b/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
-function classify(rows, summaryMap, distributionRows, fromDate, toDate) {
-    const inPacking = [];
-    const distributed = [];
 
-    const seenDistributed = new Set();
-    const seenInPacking = new Set();
 
-    distributionRows.forEach(d => {
-      if (!seenDistributed.has(d.order)) {
-        distributed.push({
-          order: d.order,
-          company: d.company?.toUpperCase() || '',
-          time: d.time,
-          clientAddress: d.clientAddress,
-          date: d.date
+function baseWarehouseName(name) {
+  return name
+    .toLowerCase()
+    .replace(/---\s*pack/g, '')
+    .replace(/\bwh\b/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getWaitingOrders(summaryMap, rows, fromDate, toDate) {
+  const waitingMap = new Map(); // Map لحفظ كل طلب مرة واحدة
+
+  Object.entries(summaryMap).forEach(([order, info]) => {
+    const whMap = new Map();
+
+    [...info.warehouses].forEach(raw => {
+      const key = normalizeWarehouseName(raw);
+      if (!key) return;
+
+      if (!whMap.has(key)) {
+        whMap.set(key, {
+          key,
+          name: key.toUpperCase(),
+          packed: false
         });
-        seenDistributed.add(d.order);
+      }
+
+      if (/---\s*pack/i.test(raw)) {
+        whMap.get(key).packed = true;
       }
     });
 
-    rows.forEach(r => {
-      if (seenDistributed.has(r.order)) return;
+    const warehouses = [...whMap.values()];
+    if (warehouses.length <= 1) return;
 
-      const comment = (r.comment || '').toLowerCase();
-      if (comment.includes('dhl') || comment.includes('aramex')) {
-        const company = comment.includes('dhl') ? 'DHL' : 'Aramex';
-        if (!seenDistributed.has(r.order)) {
-          distributed.push({ ...r, company });
-          seenDistributed.add(r.order);
-        }
-        return;
-      }
+    // فلترة سجلات الطلب حسب التاريخ
+    const orderRows = rows.filter(r =>
+      r.order === order &&
+      r.date &&
+      (!fromDate || r.date >= fromDate) &&
+      (!toDate || r.date <= toDate)
+    );
 
-      if (r.received && !seenInPacking.has(r.order)) {
-        inPacking.push(r);
-        seenInPacking.add(r.order);
-        return;
+    if (!orderRows.length) return;
+
+    // تحديث حالة packed من الجدول الفعلي
+    orderRows.forEach(r => {
+      if (/---\s*pack/i.test(r.warehouse)) {
+        const key = normalizeWarehouseName(r.warehouse);
+        if (whMap.has(key)) whMap.get(key).packed = true;
       }
     });
 
-    // ===============================
-    // Waiting Other Warehouses مع فلترة التاريخ
-    // ===============================
-    const waiting = getWaitingOrders(summaryMap, rows, seenDistributed, fromDate, toDate);
+    if (warehouses.every(w => w.packed)) return; // إذا كلهم packed لا نضيف
 
-    return { inPacking, waiting, distributed };
-}
-
-function getWaitingOrders(summaryMap, rows, seenDistributed) {
-  const waiting = [];
-  const seen = new Set();
-
-  Object.entries(summaryMap).forEach(([order, info]) => {
-    if (seenDistributed.has(order)) return;
-
-    const whs = Array.from(info.warehouses);
-    if (whs.length <= 1) return; // Multi-Warehouse فقط
-
-    const waitingWH = whs.filter(w => !/---Pack/i.test(w)).map(w => w.replace(/---Pack/i, '').trim());
-    if (waitingWH.length === 0) return;
-
-    if (!seen.has(order)) {
-      const rowExample = rows.find(r => r.order === order) || {};
-      waiting.push({
-        order: order,
-        warehouses: waitingWH.join(', '),
-        location: rowExample.location || '-'
+    // دمج الطلب في الخريطة لضمان عدم التكرار
+    if (!waitingMap.has(order)) {
+      waitingMap.set(order, {
+        order,
+        warehouses,
+        location: orderRows[0].location || '-'
       });
-      seen.add(order);
     }
   });
 
-  return waiting;
+  return Array.from(waitingMap.values());
 }
+
+    
+   
+    
+   
+
+  
+function classify(rows, summaryMap, distributionRows, fromDate, toDate) {
+
+  /* =========================
+     Distributed Orders
+  ========================= */
+  const distributed = [];
+  const seenDistributed = new Set();
+
+  distributionRows.forEach(d => {
+    if (!seenDistributed.has(d.order)) {
+      distributed.push({
+        order: d.order,
+        company: d.company?.toUpperCase() || '',
+        time: d.time,
+        clientAddress: d.clientAddress,
+        date: d.date
+      });
+      seenDistributed.add(d.order);
+    }
+  });
+
+
+  /* =========================
+     In-Packing (تجميع المستودعات)
+  ========================= */
+  const inPackingMap = {};
+
+  rows.forEach(r => {
+    if (seenDistributed.has(r.order)) return;
+    if (!r.received) return;
+
+    if (!inPackingMap[r.order]) {
+      inPackingMap[r.order] = {
+        order: r.order,
+        received: r.received,
+        warehouses: new Set()
+      };
+    }
+
+    // تنظيف اسم المستودع وإزالة ---Pack
+    const cleanWH = r.warehouse
+      ? r.warehouse.replace(/---\s*pack/i, '').trim()
+      : '';
+
+    if (cleanWH) {
+      inPackingMap[r.order].warehouses.add(cleanWH);
+    }
+  });
+
+  const inPacking = Object.values(inPackingMap).map(o => ({
+    order: o.order,
+    received: o.received,
+    warehouse: Array.from(o.warehouses).join(' , ')
+  }));
+
+
+  /* =========================
+     Waiting Other Warehouses
+  ========================= */
+  const waiting = getWaitingOrders(summaryMap, rows, fromDate, toDate);
+
+
+  return { inPacking, waiting, distributed };
+}
+
+
 
   function render(data) {
     currentData = data;
@@ -583,7 +620,9 @@ function getWaitingOrders(summaryMap, rows, seenDistributed) {
 
     renderTables();
   }
-
+function displayWarehouse(name) {
+  return name ? name.replace(/---\s*pack/i, '').trim() : '';
+}
 
   function renderTables() {
     const s1 = searchInPacking.value.toLowerCase();
@@ -603,7 +642,7 @@ function getWaitingOrders(summaryMap, rows, seenDistributed) {
       <tr>
         <td>${r.order}</td>
         <td>${r.received}</td>
-        <td>${r.warehouse}</td>
+       <td>${displayWarehouse(r.warehouse)}</td>
       </tr>
     `)
       .join('');
@@ -616,18 +655,33 @@ function getWaitingOrders(summaryMap, rows, seenDistributed) {
     =============================== */
     const wait = currentData.waiting.filter(r =>
       r.order.toLowerCase().includes(s2) ||
-      r.warehouse.toLowerCase().includes(s2)
+      r.warehouses.toLowerCase().includes(s2)
     );
 
-    waiting.innerHTML = wait.slice(0, limits.waiting)
-      .map(r => `
-      <tr>
-        <td>${r.order}</td>
-        <td>${r.warehouse}</td>
-        <td>${r.location}</td>
-      </tr>
-    `)
-      .join('');
+   waiting.innerHTML = wait.slice(0, limits.waiting)
+  .map(r => `
+    <tr>
+      <td>${r.order}</td>
+      <td>
+        ${r.warehouses.map(w => `
+          <span style="
+            display:inline-block;
+            margin:2px;
+            padding:4px 8px;
+            border-radius:6px;
+            font-size:12px;
+            font-weight:600;
+            background:${w.packed ? '#22c55e' : '#7c2d12'};
+            color:${w.packed ? '#000' : '#f59e0b'};
+          ">
+            ${w.name}
+          </span>
+        `).join('')}
+      </td>
+      <td>${r.location}</td>
+    </tr>
+  `)
+  .join('');
 
     document.getElementById('waitingCount').textContent = wait.length;
 
@@ -777,12 +831,12 @@ function analyzeOrders(summaryRows) {
     if (!map[r.order]) {
       map[r.order] = {
         warehouses: new Set(),
-        dates: new Set()
+        dates: []   // ⬅️ خزن التواريخ
       };
     }
 
     map[r.order].warehouses.add(r.warehouse.trim());
-    if (r.date) map[r.order].dates.add(r.date);
+    if (r.date) map[r.order].dates.push(r.date);
   });
 
   return map;
@@ -943,7 +997,29 @@ function apply() {
       document.getElementById('orderDetailsPopup').style.display = 'none';
     }
   }
+document.getElementById('exportWaiting').onclick = () => {
+  const wait = currentData.waiting;
 
+  // تجهيز البيانات للـ CSV
+  const csvData = wait.map(r => ({
+    Order: r.order,
+    Warehouses: r.warehouses.map(w => `${w.name} (${w.packed ? 'Packed' : 'Pending'})`).join(' , '),
+    Location: r.location
+  }));
+
+  // تحويل JSON إلى CSV باستخدام PapaParse
+  const csv = Papa.unparse(csvData);
+
+  // إنشاء رابط تحميل مؤقت
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Waiting_Other_Warehouses_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+};
 
   function parseDistributionDate(v) {
     if (!v) return null;
@@ -956,4 +1032,4 @@ function apply() {
 
 </script>
 
-</html>
+            </html>
