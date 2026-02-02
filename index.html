@@ -1264,8 +1264,83 @@ function stopAutoRefresh() {
     }
 }
 
+        async function loadData() {
+
+    await loadDistributedOrders();
+
+    fetch(sheetURL)
+        .then(r => r.text())
+        .then(csv => {
+            const parsed = Papa.parse(csv, { skipEmptyLines: true });
+            const rows = parsed.data;
+            if (!rows.length) return;
+
+            const headers = rows.shift().map(h => h.toLowerCase().trim());
+            const col = {};
+            headers.forEach((h, i) => col[h] = i);
+
+            const ORDER = col["shopify order#"];
+            const DATE  = col["order received in wh"];
+            const WH    = col["warehouse name"];
+
+            const map = {};
+
+            rows.forEach(r => {
+                const orderNo = r[ORDER];
+                const date = formatDateForInput(r[DATE]);
+                const whRaw = r[WH];
+                if (!orderNo || !date) return;
+
+                if (!map[orderNo]) {
+                    map[orderNo] = { orderNo, date, wh: {} };
+                }
+
+                const w = normalizeWarehouse(whRaw);
+                if (!w.base) return;
+
+                if (!map[orderNo].wh[w.base]) {
+                    map[orderNo].wh[w.base] = { base: w.base, packed: w.packed };
+                } else {
+                    map[orderNo].wh[w.base].packed ||= w.packed;
+                }
+            });
+
+            allOrders = Object.values(map).map(o => {
+                const warehouses = Object.values(o.wh);
+                const packedCount = warehouses.filter(w => w.packed).length;
+
+                let status = "pending";
+                if (packedCount === warehouses.length) status = "completed";
+                else if (packedCount > 0) status = "partial";
+
+                return {
+                    ...o,
+                    warehouses,
+                    warehouseCount: warehouses.length,
+                    status
+                };
+            });
+
+            /* APPLY DISTRIBUTION */
+            allOrders.forEach(o => {
+                if (distributedOrdersMap[o.orderNo]) {
+                    o.status = "distributed";
+                    o.distributedTime = distributedOrdersMap[o.orderNo];
+                    o.warehouses.forEach(w => w.distributed = true);
+                }
+            });
+
+            initDate();
+            updateDashboard();
+        })
+        .catch(err => {
+            console.error("❌ Load data error:", err);
+        });
+    }
+
 </script>
 </body>
 
 </html> 
+
 
