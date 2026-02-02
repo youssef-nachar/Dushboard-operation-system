@@ -814,6 +814,8 @@ function formatDateForInput(value) {
     return null;
 }
 async function loadData() {
+
+    const loadingOverlay = document.getElementById("loadingOverlay");
     loadingOverlay.classList.remove("hidden");
 
     await loadDistributedOrders();
@@ -914,7 +916,7 @@ function applyFilters() {
 }
 
 
-filteredOrders = Object.values(unique);
+//filteredOrders = Object.values(unique);
     // UPDATE DASHBOARD KPIS
 function updateDashboard() {
     const o = applyFilters();
@@ -1266,3 +1268,4 @@ function stopAutoRefresh() {
 </body>
 
 </html> 
+
