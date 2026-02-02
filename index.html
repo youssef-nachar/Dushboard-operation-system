@@ -856,30 +856,26 @@ function formatDateForInput(value) {
                 }
             });
 
-            allOrders = Object.values(map).map(o => {
-                const warehouses = Object.values(o.wh);
-                const packedCount = warehouses.filter(w => w.packed).length;
+   allOrders = Object.values(map).map(o => {
+    const warehouses = Object.values(o.wh).map(w => ({ ...w })); // نسخ جديد
+    const packedCount = warehouses.filter(w => w.packed).length;
 
-                let status = "pending";
-                if (packedCount === warehouses.length) status = "completed";
-                else if (packedCount > 0) status = "partial";
+    let status = "pending";
+    if (packedCount === warehouses.length) status = "completed";
+    else if (packedCount > 0) status = "partial";
 
-                return {
-                    ...o,
-                    warehouses,
-                    warehouseCount: warehouses.length,
-                    status
-                };
-            });
+    return { ...o, warehouses, warehouseCount: warehouses.length, status };
+});
 
             /* APPLY DISTRIBUTION */
-            allOrders.forEach(o => {
-                if (distributedOrdersMap[o.orderNo]) {
-                    o.status = "distributed";
-                    o.distributedTime = distributedOrdersMap[o.orderNo];
-                    o.warehouses.forEach(w => w.distributed = true);
-                }
-            });
+          allOrders.forEach(o => {
+    const distDate = distributedOrdersMap[o.orderNo];
+    if (distDate) {
+        o.status = "distributed";
+        o.distributedTime = distDate;
+        o.warehouses = o.warehouses.map(w => ({ ...w, distributed: true }));
+    }
+});
 
             initDate();
             updateDashboard();
@@ -1264,30 +1260,14 @@ function stopAutoRefresh() {
         autoRefreshInterval = null;
     }
 }
-allOrders = Object.values(map).map(o => {
-    const warehouses = Object.values(o.wh).map(w => ({ ...w })); // نسخ جديد
-    const packedCount = warehouses.filter(w => w.packed).length;
 
-    let status = "pending";
-    if (packedCount === warehouses.length) status = "completed";
-    else if (packedCount > 0) status = "partial";
 
-    return { ...o, warehouses, warehouseCount: warehouses.length, status };
-});
-    allOrders.forEach(o => {
-    const distDate = distributedOrdersMap[o.orderNo];
-    if (distDate) {
-        o.status = "distributed";
-        o.distributedTime = distDate;
-        o.warehouses = o.warehouses.map(w => ({ ...w, distributed: true }));
-    }
-});
-     
 
 </script>
 </body>
 
 </html> 
+
 
 
 
