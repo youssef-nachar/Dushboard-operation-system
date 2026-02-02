@@ -619,6 +619,8 @@ window.addEventListener('DOMContentLoaded', () => {
         loginContainer.style.display = "flex";
         dashboard.classList.add("hidden");
     }
+    loadData(true);
+    startAutoRefresh()
 });
 
     const users = [{ username: "manager", password: "123456" }];
@@ -773,7 +775,7 @@ function loadDistributedOrders() {
     loginContainer.style.display = "none";
     dashboard.classList.remove("hidden");
 
-    loadData();
+    loadData(true);
     startAutoRefresh(); // ✅ هنا
 };
     // FORMAT DATE
@@ -1269,6 +1271,7 @@ function stopAutoRefresh() {
 </body>
 
 </html> 
+
 
 
 
