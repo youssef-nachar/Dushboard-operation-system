@@ -816,74 +816,72 @@ function formatDateForInput(value) {
     return null;
 }
    async function loadData() {
+async function loadData() {
+    try {
+        await loadDistributedOrders(); // تحميل CSV التوزيع وتحديث distributedOrdersMap
 
-    await loadDistributedOrders();
+        const res = await fetch(sheetURL);
+        const text = await res.text();
+        const parsed = Papa.parse(text, { skipEmptyLines: true });
+        const rows = parsed.data;
+        if (!rows.length) return;
 
-    fetch(sheetURL)
-        .then(r => r.text())
-        .then(csv => {
-            const parsed = Papa.parse(csv, { skipEmptyLines: true });
-            const rows = parsed.data;
-            if (!rows.length) return;
+        const headers = rows.shift().map(h => h.toLowerCase().trim());
+        const col = {};
+        headers.forEach((h, i) => col[h] = i);
 
-            const headers = rows.shift().map(h => h.toLowerCase().trim());
-            const col = {};
-            headers.forEach((h, i) => col[h] = i);
+        const ORDER = col["shopify order#"];
+        const DATE  = col["order received in wh"];
+        const WH    = col["warehouse name"];
 
-            const ORDER = col["shopify order#"];
-            const DATE  = col["order received in wh"];
-            const WH    = col["warehouse name"];
+        const map = {};
 
-            const map = {};
+        rows.forEach(r => {
+            const orderNo = r[ORDER];
+            const date = formatDateForInput(r[DATE]);
+            const whRaw = r[WH];
+            if (!orderNo || !date) return;
 
-            rows.forEach(r => {
-                const orderNo = r[ORDER];
-                const date = formatDateForInput(r[DATE]);
-                const whRaw = r[WH];
-                if (!orderNo || !date) return;
+            if (!map[orderNo]) map[orderNo] = { orderNo, date, wh: {} };
 
-                if (!map[orderNo]) {
-                    map[orderNo] = { orderNo, date, wh: {} };
-                }
+            const w = normalizeWarehouse(whRaw);
+            if (!w.base) return;
 
-                const w = normalizeWarehouse(whRaw);
-                if (!w.base) return;
-
-                if (!map[orderNo].wh[w.base]) {
-                    map[orderNo].wh[w.base] = { base: w.base, packed: w.packed };
-                } else {
-                    map[orderNo].wh[w.base].packed ||= w.packed;
-                }
-            });
-
-   allOrders = Object.values(map).map(o => {
-    const warehouses = Object.values(o.wh).map(w => ({ ...w })); // نسخ جديد
-    const packedCount = warehouses.filter(w => w.packed).length;
-
-    let status = "pending";
-    if (packedCount === warehouses.length) status = "completed";
-    else if (packedCount > 0) status = "partial";
-
-    return { ...o, warehouses, warehouseCount: warehouses.length, status };
-});
-
-            /* APPLY DISTRIBUTION */
-          allOrders.forEach(o => {
-    const distDate = distributedOrdersMap[o.orderNo];
-    if (distDate) {
-        o.status = "distributed";
-        o.distributedTime = distDate;
-        o.warehouses = o.warehouses.map(w => ({ ...w, distributed: true }));
-    }
-});
-
-            initDate();
-            updateDashboard();
-        })
-        .catch(err => {
-            console.error("❌ Load data error:", err);
+            // نسخ جديد لكل Refresh
+            map[orderNo].wh[w.base] = { ...w };
         });
+
+        // بناء allOrders جديد من الصفر
+        allOrders = Object.values(map).map(o => {
+            const warehouses = Object.values(o.wh);
+            const packedCount = warehouses.filter(w => w.packed).length;
+
+            let status = "pending";
+            if (packedCount === warehouses.length) status = "completed";
+            else if (packedCount > 0) status = "partial";
+
+            // نسخ جديد لكل warehouse
+            const newWarehouses = warehouses.map(w => ({ ...w }));
+
+            return { ...o, warehouses: newWarehouses, warehouseCount: warehouses.length, status };
+        });
+
+        // تطبيق توزيع بطريقة ثابتة
+        allOrders.forEach(o => {
+            const distDate = distributedOrdersMap[o.orderNo];
+            if (distDate) {
+                o.status = "distributed";
+                o.distributedTime = distDate;
+                o.warehouses = o.warehouses.map(w => ({ ...w, distributed: true }));
+            }
+        });
+
+        initDate();          // ضبط التاريخ
+        updateDashboard();   // عرض النتائج
+    } catch (err) {
+        console.error("❌ Load data error:", err);
     }
+                }
     // INIT DATE FILTER
 
 function initDate() {
@@ -1267,6 +1265,7 @@ function stopAutoRefresh() {
 </body>
 
 </html> 
+
 
 
 
