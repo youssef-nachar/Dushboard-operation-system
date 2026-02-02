@@ -1264,13 +1264,31 @@ function stopAutoRefresh() {
         autoRefreshInterval = null;
     }
 }
+allOrders = Object.values(map).map(o => {
+    const warehouses = Object.values(o.wh).map(w => ({ ...w })); // نسخ جديد
+    const packedCount = warehouses.filter(w => w.packed).length;
 
+    let status = "pending";
+    if (packedCount === warehouses.length) status = "completed";
+    else if (packedCount > 0) status = "partial";
+
+    return { ...o, warehouses, warehouseCount: warehouses.length, status };
+});
+    allOrders.forEach(o => {
+    const distDate = distributedOrdersMap[o.orderNo];
+    if (distDate) {
+        o.status = "distributed";
+        o.distributedTime = distDate;
+        o.warehouses = o.warehouses.map(w => ({ ...w, distributed: true }));
+    }
+});
      
 
 </script>
 </body>
 
 </html> 
+
 
 
 
