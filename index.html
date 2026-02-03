@@ -887,8 +887,11 @@ async function loadData() {
       }
     });
 
-    updateDashboard();  // تحديث الواجهة فقط بعد انتهاء التحميل
-  } catch (err) {
+    updateDashboard();
+    if (!userOpenedDetails) {
+  lastDisplayedOrders = [];  // تحديث الواجهة فقط بعد انتهاء التحميل
+} }
+    catch (err) {
     console.error("❌ Load data error:", err);
   } finally {
     isLoading = false;
@@ -1053,9 +1056,12 @@ function renderSingleWHOrders(orders) {
 </table>`;
 }
 
+let userOpenedDetails = false;
 
     // SHOW ORDER DETAILS
 function showOrderDetails(type) {
+      userOpenedDetails = true;
+
     let o = applyFilters();
     if (type === "completed") o = o.filter(x => x.status === "completed");
     if (type === "pending") o = o.filter(x => (x.status === "pending" || x.status === "partial") && !x.distributor);
@@ -1100,6 +1106,8 @@ function showWarehouseOrders(warehouse, type) {
     }
 
   function displayOrders(orders, title = "Order Details") {
+      if (!userOpenedDetails) return; // 🚫 لا تفتحها مع auto refresh
+
   const orderList = document.getElementById("orderList");
   lastDisplayedOrders = orders; // مهم للتصدير
 
@@ -1193,9 +1201,11 @@ if (order.status !== "distributed") {
     // });
 
     // CLOSE MODAL
-    function closeOrderDetails() { orderDetails.classList.add("hidden"); }
-
-    // EXPORT TO EXCEL
+  function closeOrderDetails() {
+  userOpenedDetails = false;
+  orderDetails.classList.add("hidden");
+}
+// EXPORT TO EXCEL
     function exportOrderDetailsToExcel() {
         if (!lastDisplayedOrders.length) {
             alert("No orders to export!");
@@ -1273,14 +1283,15 @@ function getOrderStatus(order) {
 }
 
 function startAutoRefresh() {
-  if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+autoRefreshInterval = setInterval(() => {
+  if (!isLoading) {
+    userOpenedDetails = false;
+    closeOrderDetails();
+    loadData();
+  }
+}, 20000);
 
-  autoRefreshInterval = setInterval(() => {
-    if (!isLoading) {
-      console.log("🔄 Auto refresh data...");
-      loadData();
-    }
-  }, 15000); // 15 ثانية (وقت ممتاز بدون ضغط على الجوجل شيت)
+   // 15 ثانية (وقت ممتاز بدون ضغط على الجوجل شيت)
 }
 
 function stopAutoRefresh() {
