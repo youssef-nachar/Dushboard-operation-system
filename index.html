@@ -610,32 +610,32 @@ const loginContainer = document.getElementById("loginContainer");
 const dashboard = document.getElementById("dashboard");
 window.addEventListener('DOMContentLoaded', () => {
     const loggedIn = localStorage.getItem("isLoggedIn");
+
     if (loggedIn === "true") {
         loginContainer.style.display = "none";
         dashboard.classList.remove("hidden");
-        loadData();
-        startAutoRefresh(); // ✅ هنا
+
+        initDate();        // فقط مرة واحدة
+        loadData();        // تحميل أول مرة
+        startAutoRefresh();
     } else {
         loginContainer.style.display = "flex";
         dashboard.classList.add("hidden");
     }
-    loadData(true);
-    startAutoRefresh()
 });
 
     const users = [{ username: "manager", password: "123456" }];
-    const sheetURL =  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?output=csv";  let allOrders = [];
+    const sheetURL =  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?output=csv";
+      let allOrders = [];
+
+
+
  // const sheetURL=""
 
 const distributionSheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTecpCEwZ10-Ncz2y0xSsAnNdLXcWDGt_GiAeJlbWYhgg9B8zlhvJ1DeDH8H0NDSg/pub?output=csv";
 let distributedOrders = new Set(); // قائمة الطلبات الموزعة
 
 let distributedOrdersMap = {}; 
-// الشكل النهائي:
-// {
-//   "#L3029": "10:00",
-//   "#M48717": "10:00"
-// }
 
 function loadDistributedOrders() {
     return fetch(distributionSheetURL)
@@ -679,79 +679,93 @@ function loadDistributedOrders() {
 }
 
 
+
+function getLastStatus(order) {
+
+    if (order.status === "distributed") {
+        return "Distributed";
+    }
+
+    if (
+        Array.isArray(order.warehouses) &&
+        order.warehouses.length > 0 &&
+        order.warehouses.every(w => w.packed === true)
+    ) {
+        return "In-Packing";
+    }
+
+    return "Pending";
+}
+
+
+
  let lastDisplayedOrders = [];
 
-    function updateSearch() {
-        const query = document.getElementById("orderSearch").value.trim().toLowerCase();
-        const resultsDiv = document.getElementById("searchResultsCard");
-        const tableDiv = document.getElementById("searchResultsTable");
+function updateSearch() {
+    const query = document.getElementById("orderSearch").value.trim().toLowerCase();
+    const resultsDiv = document.getElementById("searchResultsCard");
+    const tableDiv = document.getElementById("searchResultsTable");
 
-        if (!query) {
-            resultsDiv.style.display = "none";
-            return;
-        }
+    if (!query) {
+        resultsDiv.style.display = "none";
+        return;
+    }
 
-        const filtered = allOrders.filter(o =>
-            o.orderNo.toLowerCase().includes(query)
-        );
+    const filtered = allOrders.filter(o =>
+        o.orderNo.toLowerCase().includes(query)
+    );
 
-        if (!filtered.length) {
-            tableDiv.innerHTML =
-                "<p style='color:var(--warning)'>No matching orders found.</p>";
-            resultsDiv.style.display = "block";
-            return;
-        }
+    if (!filtered.length) {
+        tableDiv.innerHTML =
+            "<p style='color:var(--warning)'>No matching orders found.</p>";
+        resultsDiv.style.display = "block";
+        return;
+    }
 
-        tableDiv.innerHTML = `
+    tableDiv.innerHTML = `
 <table>
-    <tr>
-        <th>Order #</th>
-        <th>Warehouse</th>
-        <th>Status</th>
-        <th>Note</th>
-    </tr>
+  <tr>
+    <th>Order #</th>
+    <th>Warehouses</th>
+    <th>Last Status</th>
+    <th>Note</th>
+  </tr>
 
- ${filtered.map(o =>
-    o.warehouses.map(w => {
+  ${filtered.map(o => {
 
-        // STATUS مع distributed يأخذ الأولوية
-        let status;
-        if (o.status === "distributed") {
-            status = "Completed"; // <-- أو "Distributed" حسب ما تريد
-        } else {
-            status = w.packed ? "In-Packing" : "Pending";
-        }
+    let status = "Pending";
 
-        const time = formatDateForInput(w["Order Received in WH"]);
-        return `
-        <tr>
-            <td>${o.orderNo}</td>
-            <td>${w.base}</td>
-            <td>${status}</td>
-            <td>${w.comment || ""}</td>
-        </tr>
+    if (o.status === "distributed") {
+        status = "Distributed";
+    } else if (o.warehouses.every(w => w.packed)) {
+        status = "In-Packing";
+    }
 
-        ${(
-                o.status === "distributed" &&
-                w.distributed &&
-                o.distributor
-            ) ? `
-        <tr style="background:#020617;color:#22c55e;font-weight:600">
-            <td colspan="4">
-                <i class="fa-solid fa-truck"></i>
-                Distributed to: ${o.distributor} ? <span style="margin-left:12px; color:#9ca3af"><i class="fa-regular fa-clock"></i>${o.distributedTime}</span>
-            </td>
-        </tr>
-        ` : ""}
+    const warehouses = o.warehouses
+        .map(w => w.base.toUpperCase())
+        .join(" , ");
+
+    return `
+      <tr>
+        <td>${o.orderNo}</td>
+        <td>${warehouses}</td>
+        <td style="font-weight:600;color:${
+            status === "Distributed" ? "#22c55e" :
+            status === "In-Packing" ? "#38bdf8" :
+            "#f59e0b"
+        }">
+          ${status}
+        </td>
+        <td>${o.comment || ""}</td>
+      </tr>
     `;
-    }).join("")
-).join("")}
+  }).join("")}
+
 </table>
 `;
 
-        resultsDiv.style.display = "block";
-    }
-
+    resultsDiv.style.display = "block";
+}
 
 
 
@@ -783,106 +797,107 @@ function formatDateForInput(value) {
     if (!value) return null;
 
     let v = String(value).trim();
-
-    // إزالة الوقت إن وجد
-    // 27/01/2026 12:54:26  -->  27/01/2026
     v = v.split(" ")[0];
 
-    // YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
 
-    // DD/MM/YYYY  ✅ (الحالة الموجودة في الصورة)
     if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v)) {
         const [d, m, y] = v.split("/");
         return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
     }
 
-    // DD-MM-YYYY
     if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(v)) {
         const [d, m, y] = v.split("-");
         return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
     }
 
-    // YYYY/MM/DD
     if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(v)) {
         const [y, m, d] = v.split("/");
         return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
     }
 
-    // fallback
     const parsed = new Date(value);
     if (!isNaN(parsed)) return parsed.toISOString().slice(0, 10);
 
     return null;
 }
-   
+
+
+let isLoading = false;  // 🔥 لمنع التداخل
+
 async function loadData() {
-    try {
-        await loadDistributedOrders(); // تحميل CSV التوزيع وتحديث distributedOrdersMap
+  if (isLoading) return; // 🚫 إذا التحميل شغال لا تعيد تشغيله
+  isLoading = true;
 
-        const res = await fetch(sheetURL);
-        const text = await res.text();
-        const parsed = Papa.parse(text, { skipEmptyLines: true });
-        const rows = parsed.data;
-        if (!rows.length) return;
+  showLoadingOverlay(true);
 
-        const headers = rows.shift().map(h => h.toLowerCase().trim());
-        const col = {};
-        headers.forEach((h, i) => col[h] = i);
+  try {
+    await loadDistributedOrders();
 
-        const ORDER = col["shopify order#"];
-        const DATE  = col["order received in wh"];
-        const WH    = col["warehouse name"];
+    const res = await fetch(cacheBustedUrl(sheetURL));
+    const text = await res.text();
+    const parsed = Papa.parse(text, { skipEmptyLines: true });
+    const rows = parsed.data;
+    if (!rows.length) return;
 
-        const map = {};
+    const headers = rows.shift().map(h => h.toLowerCase().trim());
+    const col = {};
+    headers.forEach((h, i) => col[h] = i);
 
-        rows.forEach(r => {
-            const orderNo = r[ORDER];
-            const date = formatDateForInput(r[DATE]);
-            const whRaw = r[WH];
-            if (!orderNo || !date) return;
+    const ORDER = col["shopify order#"];
+    const DATE  = col["order received in wh"];
+    const WH    = col["warehouse name"];
 
-            if (!map[orderNo]) map[orderNo] = { orderNo, date, wh: {} };
+    const map = {};
 
-            const w = normalizeWarehouse(whRaw);
-            if (!w.base) return;
+    rows.forEach(r => {
+      const orderNo = r[ORDER];
+      const date = formatDateForInput(r[DATE]);
+      const whRaw = r[WH];
+      if (!orderNo || !date) return;
 
-            // نسخ جديد لكل Refresh
-            map[orderNo].wh[w.base] = { ...w };
-        });
+      if (!map[orderNo]) map[orderNo] = { orderNo, date, wh: {} };
 
-        // بناء allOrders جديد من الصفر
-        allOrders = Object.values(map).map(o => {
-            const warehouses = Object.values(o.wh);
-            const packedCount = warehouses.filter(w => w.packed).length;
+      const w = normalizeWarehouse(whRaw);
+      if (!w.base) return;
 
-            let status = "pending";
-            if (packedCount === warehouses.length) status = "completed";
-            else if (packedCount > 0) status = "partial";
+      map[orderNo].wh[w.base] = { ...w };
+    });
 
-            // نسخ جديد لكل warehouse
-            const newWarehouses = warehouses.map(w => ({ ...w }));
+    allOrders = Object.values(map).map(o => {
+      const warehouses = Object.values(o.wh);
+      const packedCount = warehouses.filter(w => w.packed).length;
 
-            return { ...o, warehouses: newWarehouses, warehouseCount: warehouses.length, status };
-        });
+      let status = "pending";
+      if (packedCount === warehouses.length) status = "completed";
+      else if (packedCount > 0) status = "partial";
 
-        // تطبيق توزيع بطريقة ثابتة
-        allOrders.forEach(o => {
-            const distDate = distributedOrdersMap[o.orderNo];
-            if (distDate) {
-                o.status = "distributed";
-                o.distributedTime = distDate;
-                o.warehouses = o.warehouses.map(w => ({ ...w, distributed: true }));
-            }
-        });
+      const newWarehouses = warehouses.map(w => ({ ...w }));
 
-        initDate();          // ضبط التاريخ
-        updateDashboard();   // عرض النتائج
-    } catch (err) {
-        console.error("❌ Load data error:", err);
-    }
-                }
-    // INIT DATE FILTER
+      return { ...o, warehouses: newWarehouses, warehouseCount: warehouses.length, status };
+    });
+
+    // تحديث حالة distributed
+    allOrders.forEach(o => {
+      const distDate = distributedOrdersMap[o.orderNo];
+      if (distDate) {
+        o.status = "distributed";
+        o.distributedTime = distDate;
+        o.warehouses = o.warehouses.map(w => ({ ...w, distributed: true }));
+      }
+    });
+
+    updateDashboard();  // تحديث الواجهة فقط بعد انتهاء التحميل
+  } catch (err) {
+    console.error("❌ Load data error:", err);
+  } finally {
+    isLoading = false;
+    showLoadingOverlay(false);
+  }
+}
+
+   
+                // INIT DATE FILTER
 
 function initDate() {
     const today = new Date().toISOString().slice(0, 10);
@@ -914,15 +929,19 @@ function applyFilters() {
 //filteredOrders = Object.values(unique);
     // UPDATE DASHBOARD KPIS
 function updateDashboard() {
-    const o = applyFilters();
+  const o = applyFilters();
 
-    total.textContent = o.length; // اجمالي الطلبات
-    completed.textContent = o.filter(x => x.status === "completed").length;
-    pending.textContent = o.filter(x => (x.status === "pending" || x.status === "partial")).length;
-    distributed.textContent = applyFilters().filter(o => o.status === "distributed").length;   renderWarehouseBreakdown(o);
-    renderMultiWHOrders(o);
-    renderSingleWHOrders(o);
+  total.textContent = o.length;
+
+  completed.textContent = o.filter(x => getOrderStatus(x) === "completed").length;
+  pending.textContent = o.filter(x => getOrderStatus(x) === "pending" || getOrderStatus(x) === "partial").length;
+  distributed.textContent = o.filter(x => getOrderStatus(x) === "distributed").length;
+
+  renderWarehouseBreakdown(o);
+  renderMultiWHOrders(o);
+  renderSingleWHOrders(o);
 }
+
 
 function showDistributedOrders() {
     const from = dateFrom.value || null;
@@ -941,12 +960,11 @@ function showDistributedOrders() {
     displayOrders(orders, "Distributed Orders");
 }
 
-  function renderWarehouseBreakdown(orders) {
+function renderWarehouseBreakdown(orders) {
   const warehouseMap = {};
   const grandTotal = { t: 0, c: 0, p: 0, d: 0 };
 
   orders.forEach(order => {
-    // الطلب يُحسب مرة واحدة
     grandTotal.t++;
 
     const isDistributed = order.status === "distributed";
@@ -961,13 +979,12 @@ function showDistributedOrders() {
       if (isDistributed) {
         warehouseMap[w.base].d++;
       } else if (w.packed) {
-        warehouseMap[w.base].c++; // In-Packing
+        warehouseMap[w.base].c++;
       } else {
-        warehouseMap[w.base].p++; // Pending
+        warehouseMap[w.base].p++;
       }
     });
 
-    // grand totals
     if (isDistributed) {
       grandTotal.d++;
     } else if (order.warehouses.every(w => w.packed)) {
@@ -992,7 +1009,7 @@ function showDistributedOrders() {
       <td>${wh.toUpperCase()}</td>
       <td><a href="#" onclick="showWarehouseOrders('${wh}','total')">${v.t}</a></td>
       <td><a href="#" onclick="showWarehouseOrders('${wh}','completed')">${v.c}</a></td>
-      <td><a href="#" onclick="showWarehouseOrders('${wh}','pending')">${v.p}</a></td>
+      <td><a href="#" onclick="showWarehouseOrders('${wh}','pending')"> ${v.p} </a></td>
       <td><a href="#" onclick="showWarehouseOrders('${wh}','distributed')">${v.d}</a></td>
     </tr>
   `).join("")}
@@ -1010,9 +1027,9 @@ function showDistributedOrders() {
 
 
     // MULTI-WAREHOUSE ORDERS
-    function renderMultiWHOrders(orders) {
-        const m = orders.filter(x => x.warehouseCount > 1);
-        multiWHTable.innerHTML = `
+function renderMultiWHOrders(orders) {
+    const m = orders.filter(x => x.warehouseCount > 1);
+    multiWHTable.innerHTML = `
 <table>
 <tr><th>Type</th><th>Orders</th></tr>
 <tr><td>Total</td><td><a href="#" onclick="showMultiWHOrders('total')">${m.length}</a></td></tr>
@@ -1020,12 +1037,13 @@ function showDistributedOrders() {
 <tr><td>Pending / partial </td><td><a href="#" onclick="showMultiWHOrders('pending')">${m.filter(x => (x.status === "pending" || x.status === "partial") && !x.distributor).length}</a></td></tr>
 <tr><td>Distributed</td><td><a href="#" onclick="showMultiWHOrders('distributed')">${m.filter(x => x.status === "distributed").length}</a></td></tr>
 </table>`;
-    }
+}
+
 
     // SINGLE-WAREHOUSE ORDERS
-    function renderSingleWHOrders(orders) {
-        const s = orders.filter(x => x.warehouseCount === 1);
-        singleWHTable.innerHTML = `
+function renderSingleWHOrders(orders) {
+    const s = orders.filter(x => x.warehouseCount === 1);
+    singleWHTable.innerHTML = `
 <table>
 <tr><th>Type</th><th>Orders</th></tr>
 <tr><td>Total</td><td><a href="#" onclick="showSingleWHOrders('total')">${s.length}</a></td></tr>
@@ -1033,19 +1051,21 @@ function showDistributedOrders() {
 <tr><td>Pending</td><td><a href="#" onclick="showSingleWHOrders('pending')">${s.filter(x => (x.status === "pending" || x.status === "partial") && !x.distributor).length}</a></td></tr>
 <tr><td>Distributed</td><td><a href="#" onclick="showSingleWHOrders('distributed')">${s.filter(x => x.status === "distributed").length}</a></td></tr>
 </table>`;
-    }
+}
+
 
     // SHOW ORDER DETAILS
-    function showOrderDetails(type) {
-        let o = applyFilters();
-        if (type === "completed") o = o.filter(x => x.status === "completed");
-        if (type === "pending") o = o.filter(x => (x.status === "pending" || x.status === "partial") && !x.distributor);
-        if (type === "distributed") o = o.filter(x => x.status === "distributed");
-        displayOrders(o);
-    }
+function showOrderDetails(type) {
+    let o = applyFilters();
+    if (type === "completed") o = o.filter(x => x.status === "completed");
+    if (type === "pending") o = o.filter(x => (x.status === "pending" || x.status === "partial") && !x.distributor);
+    if (type === "distributed") o = o.filter(x => x.status === "distributed");
+    displayOrders(o);
+}
+
 
     // SHOW WAREHOUSE ORDERS
-   function showWarehouseOrders(warehouse, type) {
+function showWarehouseOrders(warehouse, type) {
     let o = applyFilters();
 
     if (warehouse !== 'all') {
@@ -1057,7 +1077,7 @@ function showDistributedOrders() {
     if (type === "completed") o = o.filter(x => x.status === "completed");
     if (type === "pending") o = o.filter(x => (x.status === "pending" || x.status === "partial") && !x.distributor);
     if (type === "distributed") o = o.filter(x => x.status === "distributed");
-    if (type === "total") o = o; // all filtered orders
+    if (type === "total") o = o;
 
     displayOrders(o, warehouse === 'all' ? 'All Warehouses' : `Warehouse: ${warehouse}`);
 }
@@ -1241,22 +1261,41 @@ function normalizeWarehouse(name) {
 }
 
 let autoRefreshInterval = null;
+function getOrderStatus(order) {
+  if (order.status === "distributed") return "distributed";
+
+  const allPacked = order.warehouses.every(w => w.packed);
+  const anyPacked = order.warehouses.some(w => w.packed);
+
+  if (allPacked) return "completed";
+  if (anyPacked) return "partial";
+  return "pending";
+}
 
 function startAutoRefresh() {
-    // تأكد ما في interval شغال
-    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+  if (autoRefreshInterval) clearInterval(autoRefreshInterval);
 
-    autoRefreshInterval = setInterval(() => {
-        console.log("🔄 Auto refresh data...");
-        loadData();
-    }, 5000); // 5 ثواني
+  autoRefreshInterval = setInterval(() => {
+    if (!isLoading) {
+      console.log("🔄 Auto refresh data...");
+      loadData();
+    }
+  }, 15000); // 15 ثانية (وقت ممتاز بدون ضغط على الجوجل شيت)
 }
 
 function stopAutoRefresh() {
-    if (autoRefreshInterval) {
-        clearInterval(autoRefreshInterval);
-        autoRefreshInterval = null;
-    }
+  if (autoRefreshInterval) {
+    clearInterval(autoRefreshInterval);
+    autoRefreshInterval = null;
+  }
+}
+function cacheBustedUrl(url) {
+  return `${url}&_=${Date.now()}`;
+}
+function showLoadingOverlay(show) {
+  const overlay = document.getElementById("loadingOverlay");
+  if (!overlay) return;
+  overlay.classList.toggle(show, !show);
 }
 
 
@@ -1265,6 +1304,7 @@ function stopAutoRefresh() {
 </body>
 
 </html> 
+
 
 
 
