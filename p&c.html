@@ -2,361 +2,363 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <title>Warehouse Dashboard</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <title>Warehouse Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
-    <style>
-        :root {
-            --bg: #0f172a;
-            --sidebar: #020617;
-            --card: #111827;
-            --accent: #22c55e;
-            --warning: #f59e0b;
-            --text: #e5e7eb;
-        }
+  <style>
+    :root {
+      --bg: #0f172a;
+      --sidebar: #020617;
+      --card: #111827;
+      --accent: #22c55e;
+      --warning: #f59e0b;
+      --text: #e5e7eb;
+    }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: Inter, sans-serif;
-        }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Inter, sans-serif;
+    }
 
-        body {
-            background: var(--bg);
-            color: var(--text);
-        }
+    body {
+      background: var(--bg);
+      color: var(--text);
+    }
 
-        .app {
-            display: grid;
-            grid-template-columns: 240px 1fr;
-            min-height: 100vh;
-        }
+    .app {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      min-height: 100vh;
+    }
 
-        /* SIDEBAR */
-        .sidebar {
-            background: var(--sidebar);
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
+    /* SIDEBAR */
+    .sidebar {
+      background: var(--sidebar);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
 
-        .sidebar h2 {
-            color: var(--accent);
-        }
+    .sidebar h2 {
+      color: var(--accent);
+    }
 
-        .sidebar a {
-            color: var(--text);
-            text-decoration: none;
-            padding: 10px;
-            border-radius: 8px;
-            display: block;
-        }
+    .sidebar a {
+      color: var(--text);
+      text-decoration: none;
+      padding: 10px;
+      border-radius: 8px;
+      display: block;
+    }
 
-        .sidebar a:hover {
-            background: #111827;
-        }
+    .sidebar a:hover {
+      background: #111827;
+    }
 
-        .menu-item>a {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+    .menu-item>a {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
 
-        .submenu,
-        .subsubmenu {
-            display: none;
-            margin-top: 6px;
-            margin-left: 10px;
-        }
+    .submenu,
+    .subsubmenu {
+      display: none;
+      margin-top: 6px;
+      margin-left: 10px;
+    }
 
-        .submenu a,
-        .subsubmenu a {
-            display: block;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 14px;
-        }
+    .submenu a,
+    .subsubmenu a {
+      display: block;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+    }
 
-        .submenu a:hover,
-        .subsubmenu a:hover {
-            background: #111827;
-        }
+    .submenu a:hover,
+    .subsubmenu a:hover {
+      background: #111827;
+    }
 
-        .subsubmenu {
-            margin-left: 14px;
-            border-left: 2px solid #1f2937;
-            padding-left: 10px;
-        }
+    .subsubmenu {
+      margin-left: 14px;
+      border-left: 2px solid #1f2937;
+      padding-left: 10px;
+    }
 
-        .arrow {
-            font-size: 12px;
-            transition: transform 0.2s ease;
-        }
+    .arrow {
+      font-size: 12px;
+      transition: transform 0.2s ease;
+    }
 
-        .menu-open>a .arrow {
-            transform: rotate(180deg);
-        }
+    .menu-open>a .arrow {
+      transform: rotate(180deg);
+    }
 
-        /* MAIN CONTENT */
-        .main-content {
-            padding: 20px;
-        }
+    /* MAIN CONTENT */
+    .main-content {
+      padding: 20px;
+    }
 
-        .kpis {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 16px;
-            margin-bottom: 20px;
-        }
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
 
-        .kpi {
-            background: #020617;
-            padding: 18px;
-            border-radius: 14px;
-            text-align: center;
-        }
+    .kpi {
+      background: #020617;
+      padding: 18px;
+      border-radius: 14px;
+      text-align: center;
+    }
 
-        .kpi .value {
-            font-size: 28px;
-            font-weight: 700;
-            margin-top: 6px;
-        }
+    .kpi .value {
+      font-size: 28px;
+      font-weight: 700;
+      margin-top: 6px;
+    }
 
-        .pnc_warehouse {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
+    .pnc_warehouse {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
 
-        .card {
-            background: var(--card);
-            border-radius: 16px;
-            padding: 20px;
-        }
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 20px;
+    }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 12px;
-        }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
 
-        th,
-        td {
-            border: 1px solid #333;
-            padding: 8px;
-            text-align: center;
-        }
+    th,
+    td {
+      border: 1px solid #333;
+      padding: 8px;
+      text-align: center;
+    }
 
-        th {
-            background: #111827;
-            color: var(--accent);
-        }
+    th {
+      background: #111827;
+      color: var(--accent);
+    }
 
-        input {
-            width: 100%;
-            padding: 8px;
-            border-radius: 8px;
-            background: #020617;
-            border: 1px solid #1f2937;
-            color: white;
-            margin-bottom: 8px;
-        }
+    input {
+      width: 100%;
+      padding: 8px;
+      border-radius: 8px;
+      background: #020617;
+      border: 1px solid #1f2937;
+      color: white;
+      margin-bottom: 8px;
+    }
 
-        .btn {
-            background: #22c55e;
-            border: none;
-            color: #020617;
-            padding: 8px 14px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-        }
+    .btn {
+      background: #22c55e;
+      border: none;
+      color: #020617;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
 
-        .btn:hover {
-            opacity: .85;
-        }
+    .btn:hover {
+      opacity: .85;
+    }
 
-        /* Date inputs side by side & small */
-        .date-inline {
-            display: flex;
-            gap: 6px;
-            align-items: center;
-            width: 350px
-        }
+    /* Date inputs side by side & small */
+    .date-inline {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      width: 350px
+    }
 
-        .date-inline input[type="date"] {
-            width: 140px;
-            padding: 6px 8px;
-            font-size: 13px;
-            margin-bottom: 0;
-            cursor: pointer;
-        }
+    .date-inline input[type="date"] {
+      width: 140px;
+      padding: 6px 8px;
+      font-size: 13px;
+      margin-bottom: 0;
+      cursor: pointer;
+    }
 
-        /* Focus / select effect */
-        .date-inline input[type="date"]:focus {
-            outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.35);
-        }
+    /* Focus / select effect */
+    .date-inline input[type="date"]:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.35);
+    }
 
-        #packingSection {
-            grid-template-columns: repeat(3, 1fr);
-        }
+    #packingSection {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
     .footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 20px;
-  font-size: 13px;
-  color: #9ca3af;
-  background: #020617;
-  border-top: 1px solid #1f2937;
-}
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 20px;
+      font-size: 13px;
+      color: #9ca3af;
+      background: #020617;
+      border-top: 1px solid #1f2937;
+    }
 
-.footer strong {
-  color: #22c55e;
-}
+    .footer strong {
+      color: #22c55e;
+    }
 
-.footer .version {
-  margin-left: 6px;
-  font-size: 12px;
-  color: #6b7280;
-}
+    .footer .version {
+      margin-left: 6px;
+      font-size: 12px;
+      color: #6b7280;
+    }
 
-.footer-center i {
-  margin-right: 6px;
-  color: #22c55e;
-}
-    
+    .footer-center i {
+      margin-right: 6px;
+      color: #22c55e;
+    }
+
     .footer-credit {
-  margin-top: 6px;
-  font-size: 11px;
-  color: #6b7280;
-  text-align: center;
-}
+      margin-top: 6px;
+      font-size: 11px;
+      color: #6b7280;
+      text-align: center;
+    }
 
-@media (max-width: 768px) {
-  .footer {
-    flex-direction: column;
-    gap: 6px;
-    text-align: center;
-  }
-}
-    
+    @media (max-width: 768px) {
+      .footer {
+        flex-direction: column;
+        gap: 6px;
+        text-align: center;
+      }
+    }
 
-        @media (max-width:1024px) {
-            .pnc_warehouse {
-                grid-template-columns: 1fr;
-            }
-        }
+
+    @media (max-width:1024px) {
+      .pnc_warehouse {
+        grid-template-columns: 1fr;
+      }
+    }
+
     /* Mobile menu button */
-.mobile-menu-btn {
-  display: none;
-  background: #020617;
-  border: 1px solid #1f2937;
-  color: #e5e7eb;
-  padding: 8px 12px;
-  border-radius: 10px;
-  cursor: pointer;
-  margin-bottom: 12px;
-}
+    .mobile-menu-btn {
+      display: none;
+      background: #020617;
+      border: 1px solid #1f2937;
+      color: #e5e7eb;
+      padding: 8px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-bottom: 12px;
+    }
 
-/* Mobile behavior */
-@media (max-width: 768px) {
+    /* Mobile behavior */
+    @media (max-width: 768px) {
 
-  .app {
-    grid-template-columns: 1fr;
-  }
+      .app {
+        grid-template-columns: 1fr;
+      }
 
-  .sidebar {
-    position: fixed;
-    top: 0;
-    left: -260px;
-    width: 240px;
-    height: 100vh;
-    z-index: 1000;
-    transition: left 0.3s ease;
-    box-shadow: 10px 0 30px rgba(0,0,0,0.4);
-  }
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: -260px;
+        width: 240px;
+        height: 100vh;
+        z-index: 1000;
+        transition: left 0.3s ease;
+        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.4);
+      }
 
-  .sidebar.open {
-    left: 0;
-  }
+      .sidebar.open {
+        left: 0;
+      }
 
-  .mobile-menu-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-}
-    
+      .mobile-menu-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+    }
+
     /* Mobile Menu Button */
-.mobile-menu-btn {
-  display: none;
-  background: #020617;
-  border: 1px solid #1f2937;
-  color: #e5e7eb;
-  padding: 8px 12px;
-  border-radius: 10px;
-  cursor: pointer;
-  margin: 12px;
-  font-size: 14px;
-  z-index: 1100;
-  position: fixed;
-}
+    .mobile-menu-btn {
+      display: none;
+      background: #020617;
+      border: 1px solid #1f2937;
+      color: #e5e7eb;
+      padding: 8px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin: 12px;
+      font-size: 14px;
+      z-index: 1100;
+      position: fixed;
+    }
 
-/* Overlay */
-#overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.5);
-  z-index: 999;
-}
+    /* Overlay */
+    #overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+    }
 
-/* Mobile Behavior */
-@media (max-width: 768px) {
+    /* Mobile Behavior */
+    @media (max-width: 768px) {
 
-  .app {
-    grid-template-columns: 1fr;
-  }
+      .app {
+        grid-template-columns: 1fr;
+      }
 
-  .sidebar {
-    position: fixed;
-    top: 0;
-    left: -260px;
-    width: 240px;
-    height: 100vh;
-    z-index: 1000;
-    transition: left 0.3s ease;
-    box-shadow: 10px 0 30px rgba(0,0,0,0.4);
-  }
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: -260px;
+        width: 240px;
+        height: 100vh;
+        z-index: 1000;
+        transition: left 0.3s ease;
+        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.4);
+      }
 
-  .sidebar.open {
-    left: 0;
-  }
+      .sidebar.open {
+        left: 0;
+      }
 
-  .mobile-menu-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-      position:absolute;
-      right:-60px
-      ;top:20px
-  }
-}
-    </style>
+      .mobile-menu-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        position: absolute;
+        right: -60px;
+        top: 20px
+      }
+    }
+  </style>
 </head>
 
 <body>
-    
-    <div id="loadingBox" style="
+
+  <div id="loadingBox" style="
   display:none;
   position:fixed;
   inset:0;
@@ -365,7 +367,7 @@
   align-items:center;
   justify-content:center;
 ">
-  <div style="
+    <div style="
     background:#fff;
     padding:20px 30px;
     border-radius:12px;
@@ -373,133 +375,133 @@
     font-weight:600;
     box-shadow:0 10px 30px rgba(0,0,0,0.25);
   ">
-    ⏳ Please wait...
+      ⏳ Please wait...
+    </div>
   </div>
-</div>
-    
-    <!-- Overlay -->
-<div id="overlay" onclick="closeSidebar()" style="display:none;"></div>
 
-<!-- Mobile menu button -->
-<button class="mobile-menu-btn" onclick="toggleSidebar()">
-  <i class="fa-solid fa-bars"></i> Menu
-</button>
-    <div class="app">
+  <!-- Overlay -->
+  <div id="overlay" onclick="closeSidebar()" style="display:none;"></div>
 
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <h2>MYholdal</h2>
-   <a href="index.html"> <button class="btn" onclick="goHome()">Dashboard</button></a>
-            <div class="menu-item">
-                <a href="#" onclick="toggleMenu('warehousesMenu')">
-                    <i class="fa-solid fa-boxes-stacked"></i> Warehouses
-                    <i class="fa-solid fa-chevron-down arrow"></i>
-                </a>
+  <!-- Mobile menu button -->
+  <button class="mobile-menu-btn" onclick="toggleSidebar()">
+    <i class="fa-solid fa-bars"></i> Menu
+  </button>
+  <div class="app">
 
-                <div id="warehousesMenu" class="submenu">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h2>MYholdal</h2>
+      <a href="holdal.html"> <button class="btn" onclick="goHome()">Dashboard</button></a>
+      <div class="menu-item">
+        <a href="#" onclick="toggleMenu('warehousesMenu')">
+          <i class="fa-solid fa-boxes-stacked"></i> Warehouses
+          <i class="fa-solid fa-chevron-down arrow"></i>
+        </a>
 
-                    <!-- P&C -->
-                    <div class="submenu-item">
-                        <a href="#" onclick="toggleMenu('pcMenu')">P&amp;C</a>
-                        <div id="pcMenu" class="subsubmenu">
-                            <a href="#" onclick="selectWarehouse('p&c')">MyHoldal</a>
-                            <a href="#">Return</a>
-                            <a href="#">KPI</a>
-                        </div>
-                    </div>
+        <div id="warehousesMenu" class="submenu">
 
-                    <!-- Pharma -->
-                    <div class="submenu-item">
-                        <a href="#" onclick="toggleMenu('pharmaMenu')">Pharma</a>
-                        <div id="pharmaMenu" class="subsubmenu">
-                            <a href="#" onclick="selectWarehouse('pharma')">MyHoldal</a>
-                            <a href="#">Return</a>
-                            <a href="#">KPI</a>
-                        </div>
-                    </div>
-
-                    <!-- Retail -->
-                    <div class="submenu-item">
-                        <a href="#" onclick="toggleMenu('retailMenu')">Retail</a>
-                        <div id="retailMenu" class="subsubmenu">
-                            <a href="#" onclick="selectWarehouse('retail')">MyHoldal</a>
-                            <a href="#">Return</a>
-                            <a href="#">KPI</a>
-                        </div>
-                    </div>
-
-                    <!-- L’Oréal Lux -->
-                    <div class="submenu-item">
-                        <a href="#" onclick="toggleMenu('lorealMenu')">L’Oréal
-                            Lux</a>
-                        <div id="lorealMenu" class="subsubmenu">
-                            <a href="#" onclick="selectWarehouse('loreallux')">MyHoldal</a>
-                            <a href="#">Return</a>
-                            <a href="#">KPI</a>
-                        </div>
-                    </div>
-
-                    <!-- Beesline -->
-                    <div class="submenu-item">
-                        <a href="#" onclick="toggleMenu('beeslineMenu')">Beesline</a>
-                        <div id="beeslineMenu" class="subsubmenu">
-                            <a href="#" onclick="selectWarehouse('beesline')">MyHoldal</a>
-                            <a href="#">Return</a>
-                            <a href="#">KPI</a>
-                        </div>
-                    </div>
-                    <!-- Packing Station -->
-                    <div class="submenu-item">
-                                <a href="packing_station.html" onclick="selectWarehouse('packing')">Packing Station</a>
-                    </div>
-
-                </div>
+          <!-- P&C -->
+          <div class="submenu-item">
+            <a href="#" onclick="toggleMenu('pcMenu')">P&amp;C</a>
+            <div id="pcMenu" class="subsubmenu">
+              <a href="#" onclick="selectWarehouse('p&c')">MyHoldal</a>
+              <a href="#">Return</a>
+              <a href="#">KPI</a>
             </div>
-        </aside>
+          </div>
 
-        <!-- Main content -->
-        <div class="main-content">
-         
-            <h2 id="currentWarehouseName" style="margin-bottom: 20px; color: #22c55e;">
-                P&C</h2>
-<button class="btn" style="background:#2563eb; margin-top:10px;margin-right:10px" onclick="refreshData()">
-  🔄 
-</button>
-            <!-- KPIs -->
-            <div class="kpis">
-                <div class="kpi">
-                    <div>Total Orders</div>
-                    <div id="totalOrders" class="value">0</div>
-                </div>
-                <div class="kpi">
-                    <div>Issued</div>
-                    <div id="issuedOrders" class="value success">0</div>
-                </div>
-                <div class="kpi">
-                    <div>Pending</div>
-                    <div id="pendingOrders" class="value warning">0</div>
-                </div>
-                <div class="kpi">
-                    <div>Avg Prep Time</div>
-                    <div id="avgPrep" class="value">0 min</div>
-                </div>
+          <!-- Pharma -->
+          <div class="submenu-item">
+            <a href="#" onclick="toggleMenu('pharmaMenu')">Pharma</a>
+            <div id="pharmaMenu" class="subsubmenu">
+              <a href="#" onclick="selectWarehouse('pharma')">MyHoldal</a>
+              <a href="#">Return</a>
+              <a href="#">KPI</a>
             </div>
-            <!-- Date Filter -->
-            <!-- Date Filter -->
-            <div class="card" style="margin-bottom:20px;">
-                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                    <div class="date-inline">
-                        From: <input type="date" id="fromDate">
-                        to: <input type="date" id="toDate">
-                    </div>
+          </div>
 
-                    <button onclick="applyDateFilter()" class="btn">Apply</button>
+          <!-- Retail -->
+          <div class="submenu-item">
+            <a href="#" onclick="toggleMenu('retailMenu')">Retail</a>
+            <div id="retailMenu" class="subsubmenu">
+              <a href="#" onclick="selectWarehouse('retail')">MyHoldal</a>
+              <a href="#">Return</a>
+              <a href="#">KPI</a>
+            </div>
+          </div>
 
-                    <!-- Three dots -->
-                    <div style="position:relative;">
-                        <button class="btn" onclick="toggleQuickMenu()" style="background:#374151;">⋮</button>
+          <!-- L’Oréal Lux -->
+          <div class="submenu-item">
+            <a href="#" onclick="toggleMenu('lorealMenu')">L’Oréal
+              Lux</a>
+            <div id="lorealMenu" class="subsubmenu">
+              <a href="#" onclick="selectWarehouse('loreallux')">MyHoldal</a>
+              <a href="#">Return</a>
+              <a href="#">KPI</a>
+            </div>
+          </div>
 
-                        <div id="quickMenu" style="
+          <!-- Beesline -->
+          <div class="submenu-item">
+            <a href="#" onclick="toggleMenu('beeslineMenu')">Beesline</a>
+            <div id="beeslineMenu" class="subsubmenu">
+              <a href="#" onclick="selectWarehouse('beesline')">MyHoldal</a>
+              <a href="#">Return</a>
+              <a href="#">KPI</a>
+            </div>
+          </div>
+          <!-- Packing Station -->
+          <div class="submenu-item">
+                    <a href="./packingstation.html" onclick="selectWarehouse('packing')">Packing Station</a>
+          </div>
+
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <div class="main-content">
+
+      <h2 id="currentWarehouseName" style="margin-bottom: 20px; color: #22c55e;">
+        P&C</h2>
+      <button class="btn" style="background:#2563eb; margin-top:10px;margin-right:10px" onclick="refreshData()">
+        🔄
+      </button>
+      <!-- KPIs -->
+      <div class="kpis">
+        <div class="kpi">
+          <div>Total Orders</div>
+          <div id="totalOrders" class="value">0</div>
+        </div>
+        <div class="kpi">
+          <div>Issued</div>
+          <div id="issuedOrders" class="value success">0</div>
+        </div>
+        <div class="kpi">
+          <div>Pending</div>
+          <div id="pendingOrders" class="value warning">0</div>
+        </div>
+        <div class="kpi">
+          <div>Avg Prep Time</div>
+          <div id="avgPrep" class="value">0 min</div>
+        </div>
+      </div>
+      <!-- Date Filter -->
+      <!-- Date Filter -->
+      <div class="card" style="margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div class="date-inline">
+            From: <input type="date" id="fromDate">
+            to: <input type="date" id="toDate">
+          </div>
+
+          <button onclick="applyDateFilter()" class="btn">Apply</button>
+
+          <!-- Three dots -->
+          <div style="position:relative;">
+            <button class="btn" onclick="toggleQuickMenu()" style="background:#374151;">⋮</button>
+
+            <div id="quickMenu" style="
         display:none;
         position:absolute;
         right:0;
@@ -511,108 +513,102 @@
         z-index:99;
         min-width:140px;
       ">
-                            <button class="btn" style="width:100%;margin-bottom:6px;"
-                                onclick="quickDate('today')">Today</button>
-                            <button class="btn" style="width:100%;margin-bottom:6px;"
-                                onclick="quickDate('yesterday')">Yesterday</button>
-                            <button class="btn" style="width:100%;margin-bottom:6px;" onclick="quickDate('week')">This
-                                Week</button>
-                            <button class="btn" style="width:100%;margin-bottom:6px;" onclick="quickDate('month')">This
-                                Month</button>
-                            <button class="btn" style="width:100%;background:#374151;"
-                                onclick="quickDate('all')">All</button>
-                        </div>
-                    </div>
-
-                </div>
+              <button class="btn" style="width:100%;margin-bottom:6px;" onclick="quickDate('today')">Today</button>
+              <button class="btn" style="width:100%;margin-bottom:6px;"
+                onclick="quickDate('yesterday')">Yesterday</button>
+              <button class="btn" style="width:100%;margin-bottom:6px;" onclick="quickDate('week')">This
+                Week</button>
+              <button class="btn" style="width:100%;margin-bottom:6px;" onclick="quickDate('month')">This
+                Month</button>
+              <button class="btn" style="width:100%;background:#374151;" onclick="quickDate('all')">All</button>
             </div>
-            <!-- Search + Tables -->
-            <!-- Normal warehouses -->
-            <div id="normalWarehouseSection" class="pnc_warehouse">
-
-                <!-- Issued -->
-                <div class="card">
-                    <h3 style="color:#22c55e;">Issued Orders</h3>
-                    <input type="text" id="issuedSearch" placeholder="Search Order #" oninput="renderIssuedTable()">
-                    <div id="issuedTable"></div>
-                </div>
-
-                <!-- Pending -->
-                <div class="card">
-                    <h3 style="color:#f59e0b;">Pending Orders</h3>
-                    <input type="text" id="pendingSearch" placeholder="Search Order # or Comment"
-                        oninput="renderPendingTable()">
-                    <div id="pendingTable"></div>
-                </div>
-
-            </div>
-
-            <!-- Packing Station (SEPARATE) -->
-            <div id="packingSection" class="pnc_warehouse" style="display:none;grid-template-columns:repeat(3,1fr);">
-
-                <div class="card">
-  <h3 style="color:#22c55e;">Packed Orders</h3>
-
-  <!-- Search bar for Packed Orders -->
-  <input type="text" id="packedSearch" placeholder="Search Order #" 
-         oninput="renderPackedTable()">
-
-  <div id="packedTable"></div>
-</div>
-
-                
-
-              <div class="card">
-  <h3 style="color:#f59e0b;">Waiting Other Warehouse</h3>
-  <!-- Search bar -->
-  <input type="text" id="waitingSearch" placeholder="Search Order #" 
-         oninput="renderWaitingOtherTable()">
-  <div id="waitingOtherTable"></div>
-</div>
-                
-  <div class="card">
-    <h3 style="color:#3b82f6;">Distributed Orders</h3>
-    <div id="distributedTable"></div>
-  </div>
-            </div>
+          </div>
 
         </div>
+      </div>
+      <!-- Search + Tables -->
+      <!-- Normal warehouses -->
+      <div id="normalWarehouseSection" class="pnc_warehouse">
+
+        <!-- Issued -->
+        <div class="card">
+          <h3 style="color:#22c55e;">Issued Orders</h3>
+          <input type="text" id="issuedSearch" placeholder="Search Order #" oninput="renderIssuedTable()">
+          <div id="issuedTable"></div>
+        </div>
+
+        <!-- Pending -->
+        <div class="card">
+          <h3 style="color:#f59e0b;">Pending Orders</h3>
+          <input type="text" id="pendingSearch" placeholder="Search Order # or Comment" oninput="renderPendingTable()">
+          <div id="pendingTable"></div>
+        </div>
+
+      </div>
+
+      <!-- Packing Station (SEPARATE) -->
+      <div id="packingSection" class="pnc_warehouse" style="display:none;grid-template-columns:repeat(3,1fr);">
+
+        <div class="card">
+          <h3 style="color:#22c55e;">Packed Orders</h3>
+
+          <!-- Search bar for Packed Orders -->
+          <input type="text" id="packedSearch" placeholder="Search Order #" oninput="renderPackedTable()">
+
+          <div id="packedTable"></div>
+        </div>
+
+
+
+        <div class="card">
+          <h3 style="color:#f59e0b;">Waiting Other Warehouse</h3>
+          <!-- Search bar -->
+          <input type="text" id="waitingSearch" placeholder="Search Order #" oninput="renderWaitingOtherTable()">
+          <div id="waitingOtherTable"></div>
+        </div>
+
+        <div class="card">
+          <h3 style="color:#3b82f6;">Distributed Orders</h3>
+          <div id="distributedTable"></div>
+        </div>
+      </div>
+
     </div>
+  </div>
+  </div>
+
+
+  <footer class="footer">
+    <div class="footer-left">
+      <strong>MYholdal</strong> dashboard
+      <span class="version">v1.0.0</span>
     </div>
 
+    <div class="footer-center">
+      <i class="fa-solid fa-rotate"></i>
+      Last sync:
+      <span id="lastSync">--</span>
+    </div>
 
-<footer class="footer">
-  <div class="footer-left">
-    <strong>MYholdal</strong> dashboard
-    <span class="version">v1.0.0</span>
-  </div>
-
-  <div class="footer-center">
-    <i class="fa-solid fa-rotate"></i>
-    Last sync:
-    <span id="lastSync">--</span>
-  </div>
-
-  <div class="footer-right">
-    © <span id="year"></span> MYholdal
-  </div>
+    <div class="footer-right">
+      © <span id="year"></span> MYholdal
+    </div>
     <div class="footer-credit">
-  Designed & Developed by Youssef Nachar · Supported by Wael Rizk
-</div>
-    
-    
-</footer>
+      Designed & Developed by Youssef Nachar · Supported by Wael Rizk
+    </div>
+
+
+  </footer>
 
 
 </body>
-    <script>
-function toggleSidebar() {
-  document.querySelector(".sidebar").classList.toggle("open");
-}
+<script>
+
 
 document.addEventListener("click", function (e) {
   const sidebar = document.querySelector(".sidebar");
   const btn = document.querySelector(".mobile-menu-btn");
+  const overlay = document.getElementById("overlay");
 
   if (
     sidebar.classList.contains("open") &&
@@ -620,64 +616,68 @@ document.addEventListener("click", function (e) {
     !btn.contains(e.target)
   ) {
     sidebar.classList.remove("open");
+    if (overlay) overlay.style.display = "none";
   }
 });
+
+
 function toggleSidebar() {
   const sidebar = document.querySelector(".sidebar");
   const overlay = document.getElementById("overlay");
 
   sidebar.classList.toggle("open");
-  overlay.style.display = sidebar.classList.contains("open") ? "block" : "none";
-}
-
-function closeSidebar() {
-  const sidebar = document.querySelector(".sidebar");
-  const overlay = document.getElementById("overlay");
-
-  sidebar.classList.remove("open");
-  overlay.style.display = "none";
-}
-
-// إغلاق القائمة تلقائياً عند اختيار warehouse
-function selectWarehouse(key) {
-  currentWarehouse = key;
-
-  // تحديث العنوان
-  const label = warehouseLabels[key] || key;
-  document.getElementById("currentWarehouseName").textContent =
-    "Warehouse: " + label;
-
-  // اغلاق القائمة إذا كانت مفتوحة على الموبايل
-  closeSidebar();
-
-  // تحميل البيانات
-  loadPackingStation(() => {
-    loadWarehouseData(key);
-  });
+  if (overlay) overlay.style.display = sidebar.classList.contains("open") ? "block" : "none";
 }
 
 
-const warehouseLabels = {
-  "p&c": "P&C – MyHoldal",
-  "pharma": "Pharma – MyHoldal",
-  "retail": "Retail – MyHoldal",
-  "beesline": "Beesline – MyHoldal",
-  "loreallux": "L’Oréal Lux – MyHoldal",
-  "packing": "Packing Station"
-};
-        function checkLogin() {
-            if (sessionStorage.getItem("loggedIn") === "true") {
-                document.getElementById("loginSection").style.display = "none";
-                document.getElementById("dashboardSection").style.display = "block";
-            } else {
-                document.getElementById("loginSection").style.display = "block";
-                document.getElementById("dashboardSection").style.display = "none";
-            }
-        }
+  function closeSidebar() {
+    const sidebar = document.querySelector(".sidebar");
+    const overlay = document.getElementById("overlay");
+
+    sidebar.classList.remove("open");
+    overlay.style.display = "none";
+  }
+
+  // إغلاق القائمة تلقائياً عند اختيار warehouse
+  function selectWarehouse(key) {
+    currentWarehouse = key;
+
+    // تحديث العنوان
+    const label = warehouseLabels[key] || key;
+    document.getElementById("currentWarehouseName").textContent =
+      "Warehouse: " + label;
+
+    // اغلاق القائمة إذا كانت مفتوحة على الموبايل
+    closeSidebar();
+
+    // تحميل البيانات
+    loadPackingStation(() => {
+      loadWarehouseData(key);
+    });
+  }
+
+
+  const warehouseLabels = {
+    "p&c": "P&C – MyHoldal",
+    "pharma": "Pharma – MyHoldal",
+    "retail": "Retail – MyHoldal",
+    "beesline": "Beesline – MyHoldal",
+    "loreallux": "L’Oréal Lux – MyHoldal",
+    "packing": "Packing Station"
+  };
+  function checkLogin() {
+    if (sessionStorage.getItem("loggedIn") === "true") {
+      document.getElementById("loginSection").style.display = "none";
+      document.getElementById("dashboardSection").style.display = "block";
+    } else {
+      document.getElementById("loginSection").style.display = "block";
+      document.getElementById("dashboardSection").style.display = "none";
+    }
+  }
 
   let dateFilter = { from: null, to: null };
 
-        document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("DOMContentLoaded", () => {
     selectWarehouse("p&c");
 
     // ضبط التاريخ على اليوم تلقائيًا
@@ -687,337 +687,330 @@ const warehouseLabels = {
 
     // تفعيل فلتر التاريخ تلقائيًا
     dateFilter.from = new Date(today + " 00:00:00");
-    dateFilter.to = new Date(today + " 23:59:59");
-});
+    dateFilter.to = new Date(today + " 23:59:59.999");
+  });
 
-        
-const pharma=  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=875574333&single=true&output=csv";
- 
-const pnc ="https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?output=csv"
-const retail = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=274206&single=true&output=csv";
-const beesline = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=1278749068&single=true&output=csv";
-const lux = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=884068351&single=true&output=csv";
-const packing_station = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=457547473&single=true&output=csv";
-        
 
-let packingOrdersSet = new Set();
+  const pharma = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=875574333&single=true&output=csv";
 
-function normalizeOrderId(val) {
-  if (!val) return "";
-  return val
-    .toString()
-    .toUpperCase()
-    .replace("#", "")
-    .trim();
-}
-// 🔍 إيجاد العمود الذي يحتوي Order ID تلقائيًا
-function findOrderId(row) {
-  // 1) جرّب أول عمود
-  const first = Object.values(row)[0];
-  if (first && /[A-Za-z0-9]/.test(first)) return first;
+  const pnc = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=228371932&single=true&output=csv"
+  const retail = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=274206&single=true&output=csv";
+  const beesline = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=1278749068&single=true&output=csv";
+  const lux = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=884068351&single=true&output=csv";
+  const packing_station = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=457547473&single=true&output=csv";
 
-  // 2) جرّب أي عمود يحتوي كلمة order أو #
-  const key = Object.keys(row).find(k =>
-    k.toLowerCase().includes("order") ||
-    k.includes("#")
-  );
 
-  return key ? row[key] : null;
-}
+  let packingOrdersSet = new Set();
 
-// 🕒 إيجاد أي عمود وقت خاص بالـ Packing
-function findPackingTime(row) {
-  const key = Object.keys(row).find(k => {
-    const n = k.toLowerCase();
-    return (
-      n.includes("pack") &&
-      (
-        n.includes("receiv") ||
-        n.includes("time") ||
-        n.includes("date") ||
-        n.includes("at")
-      )
+  function normalizeOrderId(val) {
+    if (!val) return "";
+    return val
+      .toString()
+      .toUpperCase()
+      .replace("#", "")
+      .trim();
+  }
+  // 🔍 إيجاد العمود الذي يحتوي Order ID تلقائيًا
+  function findOrderId(row) {
+    // 1) جرّب أول عمود
+    const first = Object.values(row)[0];
+    if (first && /[A-Za-z0-9]/.test(first)) return first;
+
+    // 2) جرّب أي عمود يحتوي كلمة order أو #
+    const key = Object.keys(row).find(k =>
+      k.toLowerCase().includes("order") ||
+      k.includes("#")
     );
-  });
 
-  if (!key) return null;
+    return key ? row[key] : null;
+  }
 
-  const d = new Date(row[key]);
-  return isNaN(d) ? null : d;
-}
-let packingData = [];
+  // 🕒 إيجاد أي عمود وقت خاص بالـ Packing
+  function findPackingTime(row) {
+    const key = Object.keys(row).find(k => {
+      const n = k.toLowerCase();
+      return (
+        n.includes("pack") &&
+        (
+          n.includes("receiv") ||
+          n.includes("time") ||
+          n.includes("date") ||
+          n.includes("at")
+        )
+      );
+    });
 
-let packingMap = new Map();
+    if (!key) return null;
 
-function loadPackingStation(callback) {
-  Papa.parse(packing_station, {
-    download: true,
-    header: true,
-    skipEmptyLines: true,
-    complete: (res) => {
-      packingOrdersSet.clear();
-      packingMap.clear();
-      packingData = res.data;
+    const d = new Date(row[key]);
+    return isNaN(d) ? null : d;
+  }
+  let packingData = [];
 
-      res.data.forEach(row => {
-        const id = normalizeOrderId(findOrderId(row));
-        if (id) {
-          packingOrdersSet.add(id);
-          packingMap.set(id, row); // ✅ Map لكل order للبحث السريع
-        }
-      });
+  let packingMap = new Map();
 
-      callback();
-    }
-  });
-}
-function attachPackingTimes() {
-  allOrders.forEach(o => {
-    const normalizedOrder = normalizeOrderId(o.order);
-    const packRow = packingMap.get(normalizedOrder); // استخدام Map بدل find
+  function loadPackingStation(callback) {
+    Papa.parse(packing_station, {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: (res) => {
+        packingOrdersSet.clear();
+        packingMap.clear();
+        packingData = res.data;
 
-    if (!packRow) return;
+        res.data.forEach(row => {
+          const id = normalizeOrderId(findOrderId(row));
+          if (id) {
+            packingOrdersSet.add(id);
+            packingMap.set(id, row); // ✅ Map لكل order للبحث السريع
+          }
+        });
 
-    const packTime = findPackingTime(packRow);
-    for (const wh in o.warehouses) {
-      o.warehouses[wh].packTime = packTime;
-    }
-  });
-}
+        callback();
+      }
+    });
+  }
+  function attachPackingTimes() {
+    allOrders.forEach(o => {
+      const normalizedOrder = normalizeOrderId(o.order);
+      const packRow = packingMap.get(normalizedOrder); // استخدام Map بدل find
 
+      if (!packRow) return;
 
-
-const warehouseSheets = {
-  "p&c": pnc,
-  "pharma": pharma,
-  "retail": retail,
-  "beesline": beesline,
-  "loreallux": lux,
-  "packing": packing_station
-};
+      const packTime = findPackingTime(packRow);
+      for (const wh in o.warehouses) {
+        o.warehouses[wh].packTime = packTime;
+      }
+    });
+  }
 
 
 
-        let allOrders = [];
-        let currentWarehouse = "p&c";
-        let issuedOrders = [];
-        let pendingOrders = [];
-        let packingOrders = [];
-        let distributedOrders = [];
-        // Normalize warehouse names
-      function normalize(s) {
-  if (!s) return "";
-  return s.toLowerCase().replace(/[^a-z0-9]/g, "");
-}
+  const warehouseSheets = {
+    "p&c": pnc,
+    "pharma": pharma,
+    "retail": retail,
+    "beesline": beesline,
+    "loreallux": lux,
+    "packing": packing_station
+  };
 
-//
-        // Toggle menu
-        function toggleMenu(id) {
-            const el = document.getElementById(id);
-            el.style.display = (el.style.display === 'block') ? 'none' : 'block';
-        }
 
-        // Parse date safely
-        function parseDate(val) {
+
+  let allOrders = [];
+  let currentWarehouse = "p&c";
+  let issuedOrders = [];
+  let pendingOrders = [];
+  let packingOrders = [];
+  let distributedOrders = [];
+  // Normalize warehouse names
+  function normalize(s) {
+    if (!s) return "";
+    return s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  }
+
+  //
+  // Toggle menu
+  function toggleMenu(id) {
+    const el = document.getElementById(id);
+    el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+  }
+
+  // Parse date safely
+function parseDate(val) {
   if (!val) return null;
 
-  // لو هو Date أصلاً
+  // لو هو Date جاهز
   if (val instanceof Date && !isNaN(val)) return val;
 
   let s = val.toString().trim();
   if (!s) return null;
 
-  // 1️⃣ ISO & YYYY-MM-DD & YYYY-MM-DD HH:mm
-  let d = new Date(s);
-  if (!isNaN(d)) return d;
-
-  // 2️⃣ DD/MM/YYYY or DD/MM/YYYY HH:mm
-  let m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);
+  // 1️⃣ DD/MM/YYYY أو DD/MM/YYYY HH:mm  ✅ (الأهم)
+  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);
   if (m) {
     return new Date(
       Number(m[3]),          // year
       Number(m[2]) - 1,      // month
       Number(m[1]),          // day
       Number(m[4] || 0),     // hour
-      Number(m[5] || 0)      // minute
+      Number(m[5] || 0)
     );
   }
 
-  // 3️⃣ MM/DD/YYYY (US format)
-  m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-  if (m) {
-    return new Date(
-      Number(m[3]),
-      Number(m[1]) - 1,
-      Number(m[2])
-    );
-  }
+  // 2️⃣ YYYY-MM-DD أو ISO
+  let d = new Date(s);
+  if (!isNaN(d)) return d;
 
-  // 4️⃣ Google Sheets numeric date
+  // 3️⃣ Google Sheets numeric date
   if (!isNaN(s)) {
     const excelEpoch = new Date(1899, 11, 30);
-    return new Date(excelEpoch.getTime() + Number(s) * 86400000);
+    const days = Math.floor(Number(s));
+    const fraction = Number(s) - days;
+    const ms = fraction * 86400000;
+    return new Date(excelEpoch.getTime() + days * 86400000 + ms);
   }
 
   return null;
 }
 
-        // Calculate minutes difference
-        function minutesDiff(a, b) {
-            if (!a || !b) return 0;
-            return Math.round((b - a) / 60000);
-        }
-async function loadWarehouseData(warehouseKey) {
-  const url = warehouseSheets[warehouseKey];
-  if (!url) return;
+  // Calculate minutes difference
+  function minutesDiff(a, b) {
+    if (!a || !b) return 0;
+    return Math.round((b - a) / 60000);
+  }
+  async function loadWarehouseData(warehouseKey) {
+    const url = warehouseSheets[warehouseKey];
+    if (!url) return;
 
-  fetch(url)
-    .then(r => r.text())
-    .then(csv => {
+    fetch(url)
+      .then(r => r.text())
+      .then(csv => {
 
-      const map = {};
+        const map = {};
 
-      Papa.parse(csv, {
-        header: true,
-        skipEmptyLines: true,
-        step: function(row) {
-          const data = row.data;
+        Papa.parse(csv, {
+          header: true,
+          skipEmptyLines: true,
+          step: function (row) {
+            const data = row.data;
 
-          const id = findOrderId(data);
-          if (!id) return;
+            const id = findOrderId(data);
+            if (!id) return;
 
-          // لا فلترة التاريخ هنا بعد الآن
-          if (!map[id]) map[id] = { order: id, warehouses: {} };
+            // لا فلترة التاريخ هنا بعد الآن
+            if (!map[id]) map[id] = { order: id, warehouses: {} };
 
-          const base = normalize(warehouseKey);
-          if (!map[id].warehouses[base]) {
-            map[id].warehouses[base] = {
-              packed: false,
-              comment: "",
-              whTime: null,
-              packTime: null,
-              distributedBy: ""
-            };
+            const base = normalize(warehouseKey);
+            if (!map[id].warehouses[base]) {
+              map[id].warehouses[base] = {
+                packed: false,
+                comment: "",
+                whTime: null,
+                packTime: null,
+                distributedBy: ""
+              };
+            }
+
+            const w = map[id].warehouses[base];
+
+            if (data["Comment"]) w.comment = data["Comment"];
+
+            const whName = (data["Warehouse Name"] || "").toLowerCase();
+            if (whName.includes("pack")) w.packed = true;
+
+            const time = parseDate(data["Order Received in WH"]);
+            if (time) {
+              if (!w.whTime || time < w.whTime) w.whTime = time;
+            }
+
+            if (data["Distributed By"]) w.distributedBy = data["Distributed By"];
+          },
+          complete: () => {
+            allOrders = Object.values(map);
+
+            // اربط وقت الـ packing بعد تحميل البيانات
+            attachPackingTimes();
+
+            // ثم عرض النتائج
+            selectWarehouseLogic(currentWarehouse);
           }
-
-          const w = map[id].warehouses[base];
-
-          if (data["Comment"]) w.comment = data["Comment"];
-
-          const whName = (data["Warehouse Name"] || "").toLowerCase();
-          if (whName.includes("pack")) w.packed = true;
-
-          const time = parseDate(data["Order Received in WH"]);
-          if (time) {
-            if (!w.whTime || time < w.whTime) w.whTime = time;
-          }
-
-          if (data["Distributed By"]) w.distributedBy = data["Distributed By"];
-        },
-        complete: () => {
-          allOrders = Object.values(map);
-
-          // اربط وقت الـ packing بعد تحميل البيانات
-          attachPackingTimes();
-
-          // ثم عرض النتائج
-          selectWarehouseLogic(currentWarehouse);
-        }
+        });
       });
+  }
+  function selectWarehouse(key) {
+    currentWarehouse = key;
+
+    // 🔹 تحديث اسم المستودع في العنوان
+    const label = warehouseLabels[key] || key;
+    document.getElementById("currentWarehouseName").textContent =
+      "Warehouse: " + label;
+
+    // 🔹 ضبط التاريخ على اليوم تلقائيًا
+    const today = new Date().toISOString().slice(0, 10);
+    document.getElementById("fromDate").value = today;
+    document.getElementById("toDate").value = today;
+
+    dateFilter.from = new Date(today + " 00:00:00");
+    dateFilter.to = new Date(today + " 23:59:59");
+
+    // 🔹 تحميل البيانات
+    loadPackingStation(() => {
+      loadWarehouseData(key);
     });
-}
-function selectWarehouse(key) {
-  currentWarehouse = key;
-
-  // 🔹 تحديث اسم المستودع في العنوان
-  const label = warehouseLabels[key] || key;
-  document.getElementById("currentWarehouseName").textContent =
-    "Warehouse: " + label;
-
-  // 🔹 ضبط التاريخ على اليوم تلقائيًا
-  const today = new Date().toISOString().slice(0, 10);
-  document.getElementById("fromDate").value = today;
-  document.getElementById("toDate").value = today;
-
-  dateFilter.from = new Date(today + " 00:00:00");
-  dateFilter.to   = new Date(today + " 23:59:59");
-
-  // 🔹 تحميل البيانات
-  loadPackingStation(() => {
-    loadWarehouseData(key);
-  });
-}
+  }
 
 
 
-function selectWarehouseLogic(key) {
+  function selectWarehouseLogic(key) {
 
     issuedOrders = [];
     pendingOrders = [];
 
     if (key === "packing") {
-        // show packing tables
-        document.getElementById("packingSection").style.display = "grid";
-        // hide normal warehouse tables
-        document.getElementById("normalWarehouseSection").style.display = "none";
+      // show packing tables
+      document.getElementById("packingSection").style.display = "grid";
+      // hide normal warehouse tables
+      document.getElementById("normalWarehouseSection").style.display = "none";
 
-        allOrders.forEach(o => {
-            const whs = o.warehouses;
-            const whNames = Object.keys(whs);
+      allOrders.forEach(o => {
+        const whs = o.warehouses;
+        const whNames = Object.keys(whs);
 
-            let packedCount = 0;
-            const waitingWH = [];
+        let packedCount = 0;
+        const waitingWH = [];
 
-            whNames.forEach(wh => {
-                if (whs[wh].packed) {
-                    packedCount++;
-                } else {
-                    waitingWH.push(wh);
-                }
-            });
-
-            const totalWH = whNames.length;
-
-            if (totalWH === 1) {
-                const w = whs[whNames[0]];
-                if (w.packed) {
-                    issuedOrders.push({
-                        order: o.order,
-                        packTime: w.packTime || null,
-                        prep: 0,
-                        comment: "Ready to distribute"
-                    });
-                } else {
-                    pendingOrders.push({
-                        order: o.order,
-                        whTime: w.whTime || null,
-                        comment: "Waiting packing"
-                    });
-                }
-            } else {
-                if (packedCount === totalWH) {
-                    issuedOrders.push({
-                        order: o.order,
-                        packTime: Object.values(whs).find(w => w.packed)?.packTime || null,
-                        prep: 0,
-                        comment: "Ready to distribute"
-                    });
-                } else {
-                    pendingOrders.push({
-                        order: o.order,
-                        whTime: Object.values(whs).find(w => !w.packed)?.whTime || null,
-                        comment: "Waiting other warehouse: " + waitingWH.join(", ")
-                    });
-                }
-            }
+        whNames.forEach(wh => {
+          if (whs[wh].packed) {
+            packedCount++;
+          } else {
+            waitingWH.push(wh);
+          }
         });
 
-        renderPackingTables();
-        updateKPIs();
-        return;
-        
-        
-        
+        const totalWH = whNames.length;
+
+        if (totalWH === 1) {
+          const w = whs[whNames[0]];
+          if (w.packed) {
+            issuedOrders.push({
+              order: o.order,
+              packTime: w.packTime || null,
+              prep: 0,
+              comment: "Ready to distribute"
+            });
+          } else {
+            pendingOrders.push({
+              order: o.order,
+              whTime: w.whTime || null,
+              comment: "Waiting packing"
+            });
+          }
+        } else {
+          if (packedCount === totalWH) {
+            issuedOrders.push({
+              order: o.order,
+              packTime: Object.values(whs).find(w => w.packed)?.packTime || null,
+              prep: 0,
+              comment: "Ready to distribute"
+            });
+          } else {
+            pendingOrders.push({
+              order: o.order,
+              whTime: Object.values(whs).find(w => !w.packed)?.whTime || null,
+              comment: "Waiting other warehouse: " + waitingWH.join(", ")
+            });
+          }
+        }
+      });
+
+      renderPackingTables();
+      updateKPIs();
+      return;
+
+
+
     }
 
     // ================= باقي المستودعات =================
@@ -1025,167 +1018,166 @@ function selectWarehouseLogic(key) {
     document.getElementById("normalWarehouseSection").style.display = "grid";
 
     allOrders.forEach(o => {
-        const whData = o.warehouses[normalize(key)];
-        if (!whData) return;
+      const whData = o.warehouses[normalize(key)];
+      if (!whData) return;
 
-        const whTime = whData.whTime || null;
-        const normalizedOrder = normalizeOrderId(o.order);
+      const whTime = whData.whTime || null;
+      const normalizedOrder = normalizeOrderId(o.order);
 
-        if (packingOrdersSet.has(normalizedOrder)) {
-            const packRow = packingData.find(r => {
-                const id = r["Shopify Order#"] || r["#M Order"] || r["Order #"];
-                return normalizeOrderId(id) === normalizedOrder;
-            });
+      if (packingOrdersSet.has(normalizedOrder)) {
+        const packRow = packingData.find(r => {
+          const id = r["Shopify Order#"] || r["#M Order"] || r["Order #"];
+          return normalizeOrderId(id) === normalizedOrder;
+        });
 
-            const packKey = Object.keys(packRow).find(k =>
-                k.toLowerCase().includes("receiv") &&
-                k.toLowerCase().includes("pack")
-            );
+        const packKey = Object.keys(packRow).find(k =>
+          k.toLowerCase().includes("receiv") &&
+          k.toLowerCase().includes("pack")
+        );
 
-            const realPackTime = packKey ? parseDate(packRow[packKey]) : null;
+        const realPackTime = packKey ? parseDate(packRow[packKey]) : null;
 
-            const prep = whTime && realPackTime ? Math.round((realPackTime - whTime) / 60000) : 0;
+        const prep = whTime && realPackTime ? Math.round((realPackTime - whTime) / 60000) : 0;
 
-            issuedOrders.push({
-                order: o.order,
-                whTime,
-                packTime: realPackTime,
-                prep: prep,
-                comment: "Issued via Packing Station"
-            });
-        } else if (whTime) {
-            pendingOrders.push({
-                order: o.order,
-                whTime,
-                comment: whData.comment || ""
-            });
-        }
+        issuedOrders.push({
+          order: o.order,
+          whTime,
+          packTime: realPackTime,
+          prep: prep,
+          comment: "Issued via Packing Station"
+        });
+      } else if (whTime) {
+        pendingOrders.push({
+          order: o.order,
+          whTime,
+          comment: whData.comment || ""
+        });
+      }
     });
 
     renderIssuedTable();
     renderPendingTable();
     updateKPIs();
     renderPackedTable();
-renderWaitingOtherTable();
-}
+    renderWaitingOtherTable();
+  }
 
 
 
 
 
-const TABLE_LIMIT = 10;
-const tableExpanded = {}; // لكل جدول حالته
+  const TABLE_LIMIT = 10;
+  const tableExpanded = {}; // لكل جدول حالته
 
-function buildTable(rows, headers, renderRowFn, tableId) {
-  const expanded = tableExpanded[tableId] === true;
-  const visibleRows = expanded ? rows : rows.slice(0, TABLE_LIMIT);
+  function buildTable(rows, headers, renderRowFn, tableId) {
+    const expanded = tableExpanded[tableId] === true;
+    const visibleRows = expanded ? rows : rows.slice(0, TABLE_LIMIT);
 
-  let html = `<table><tr>${headers.map(h => `<th>${h}</th>`).join("")}</tr>`;
-  html += visibleRows.map(renderRowFn).join("");
-  html += `</table>`;
+    let html = `<table><tr>${headers.map(h => `<th>${h}</th>`).join("")}</tr>`;
+    html += visibleRows.map(renderRowFn).join("");
+    html += `</table>`;
 
-  if (rows.length > TABLE_LIMIT) {
-    html += `
+    if (rows.length > TABLE_LIMIT) {
+      html += `
       <div style="margin-top:8px;text-align:center;">
         <button class="btn" style="background:#374151"
           onclick="toggleTable('${tableId}')">
-          ${
-            expanded
-              ? "See less"
-              : `See more (${rows.length - TABLE_LIMIT})`
-          }
+          ${expanded
+          ? "See less"
+          : `See more (${rows.length - TABLE_LIMIT})`
+        }
         </button>
       </div>`;
+    }
+    return html;
   }
-  return html;
-}
-function toggleTable(id) {
-  tableExpanded[id] = !tableExpanded[id];
-  if (id === "issued") renderIssuedTable();
-  if (id === "pending") renderPendingTable();
-}
-        // Render Issued Orders Table
-        function renderIssuedTable() {
-  const q = document.getElementById("issuedSearch").value.toLowerCase();
+  function toggleTable(id) {
+    tableExpanded[id] = !tableExpanded[id];
+    if (id === "issued") renderIssuedTable();
+    if (id === "pending") renderPendingTable();
+  }
+  // Render Issued Orders Table
+  function renderIssuedTable() {
+    const q = document.getElementById("issuedSearch").value.toLowerCase();
 
-  const filtered = issuedOrders.filter(o =>
-    o.order.toLowerCase().includes(q) &&
-    inDateRange(o.packTime)
-  );
+    const filtered = issuedOrders.filter(o =>
+      o.order.toLowerCase().includes(q) &&
+      inDateRange(o.packTime)
+    );
 
-  document.getElementById("issuedTable").innerHTML =
-    buildTable(
-      filtered,
-      [
-        "Order #",
-        "Received at Packing",
-        currentWarehouse === "packing" ? "Distributed" : "Preparation Time (min)"
-      ],
-      o => `
+    document.getElementById("issuedTable").innerHTML =
+      buildTable(
+        filtered,
+        [
+          "Order #",
+          "Received at Packing",
+          currentWarehouse === "packing" ? "Distributed" : "Preparation Time (min)"
+        ],
+        o => `
         <tr>
           <td>${o.order}</td>
           <td>${o.packTime ? o.packTime.toLocaleString() : "-"}</td>
           <td>${currentWarehouse === "packing" ? o.comment : o.prep}</td>
         </tr>
       `,
-      "issued"
+        "issued"
+      );
+  }
+
+  // Render Pending Orders Table
+  function renderPendingTable() {
+    const q = document.getElementById("pendingSearch").value.toLowerCase();
+
+    const filtered = pendingOrders.filter(o =>
+      (o.order.toLowerCase().includes(q) ||
+        o.comment.toLowerCase().includes(q)) &&
+      inDateRange(o.whTime)
     );
-}
 
-        // Render Pending Orders Table
-        function renderPendingTable() {
-  const q = document.getElementById("pendingSearch").value.toLowerCase();
-
-  const filtered = pendingOrders.filter(o =>
-    (o.order.toLowerCase().includes(q) ||
-     o.comment.toLowerCase().includes(q)) &&
-    inDateRange(o.whTime)
-  );
-
-  document.getElementById("pendingTable").innerHTML =
-    buildTable(
-      filtered,
-      ["Order #", "Received at WH", "Comment"],
-      o => `
+    document.getElementById("pendingTable").innerHTML =
+      buildTable(
+        filtered,
+        ["Order #", "Received at WH", "Comment"],
+        o => `
         <tr>
           <td>${o.order}</td>
           <td>${o.whTime ? o.whTime.toLocaleString() : "-"}</td>
           <td>${o.comment}</td>
         </tr>
       `,
-      "pending"
-    );
-}
+        "pending"
+      );
+  }
 
-        function renderPackingStation() {
-            const packingDiv = document.getElementById("packingOrders");
-            packingDiv.innerHTML = ""; // تنظيف المحتوى
+  function renderPackingStation() {
+    const packingDiv = document.getElementById("packingOrders");
+    packingDiv.innerHTML = ""; // تنظيف المحتوى
 
-            // Filter كل الـ packed orders عبر جميع المستودعات
-            const packedOrders = [];
-            allOrders.forEach(o => {
-                for (const whKey in o.warehouses) {
-                    const whData = o.warehouses[whKey];
-                    if (whData.packed) {
-                        // تحديد الـ distributed
-                        let distributed = whData.distributed ? whData.distributed : "Ready to distribute";
-                        packedOrders.push({
-                            order: o.order,
-                            packTime: whData.packTime,
-                            distributed
-                        });
-                    }
-                }
-            });
+    // Filter كل الـ packed orders عبر جميع المستودعات
+    const packedOrders = [];
+    allOrders.forEach(o => {
+      for (const whKey in o.warehouses) {
+        const whData = o.warehouses[whKey];
+        if (whData.packed) {
+          // تحديد الـ distributed
+          let distributed = whData.distributed ? whData.distributed : "Ready to distribute";
+          packedOrders.push({
+            order: o.order,
+            packTime: whData.packTime,
+            distributed
+          });
+        }
+      }
+    });
 
-            if (packedOrders.length === 0) {
-                packingDiv.innerHTML = "<p style='padding:8px;color:#aaa;'>No packed orders yet.</p>";
-                return;
-            }
+    if (packedOrders.length === 0) {
+      packingDiv.innerHTML = "<p style='padding:8px;color:#aaa;'>No packed orders yet.</p>";
+      return;
+    }
 
-            // بناء جدول
-            const table = document.createElement("table");
-            table.innerHTML = `
+    // بناء جدول
+    const table = document.createElement("table");
+    table.innerHTML = `
         <tr>
             <th>Order #</th>
             <th>Receiving Time</th>
@@ -1193,169 +1185,163 @@ function toggleTable(id) {
         </tr>
     `;
 
-            packedOrders.forEach(o => {
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
+    packedOrders.forEach(o => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
             <td>${o.order}</td>
             <td>${o.packTime ? o.packTime.toLocaleString() : "-"}</td>
             <td>${o.distributed}</td>
         `;
-                table.appendChild(tr);
-            });
+      table.appendChild(tr);
+    });
 
-            packingDiv.appendChild(table);
-        }
-
-
+    packingDiv.appendChild(table);
+  }
 
 
-        // Update KPI cards
-        function updateKPIs() {
 
-            let issuedFiltered = [];
-            let pendingFiltered = [];
 
-            // ================= PACKING STATION =================
-            if (currentWarehouse === "packing") {
+  // Update KPI cards
+  function updateKPIs() {
 
-                issuedFiltered = issuedOrders.filter(o =>
-                    inDateRange(o.packTime)
-                );
+    let issuedFiltered = [];
+    let pendingFiltered = [];
 
-                pendingFiltered = pendingOrders.filter(o =>
-                    inDateRange(o.whTime)
-                );
+    // ================= PACKING STATION =================
+    if (currentWarehouse === "packing") {
 
-                const total = issuedFiltered.length + pendingFiltered.length;
+      issuedFiltered = issuedOrders.filter(o =>
+        inDateRange(o.packTime)
+      );
 
-                document.getElementById("totalOrders").textContent = total;
-                document.getElementById("issuedOrders").textContent = issuedFiltered.length;
-                document.getElementById("pendingOrders").textContent = pendingFiltered.length;
-                document.getElementById("avgPrep").textContent = "0 min";
+      pendingFiltered = pendingOrders.filter(o =>
+        inDateRange(o.whTime)
+      );
 
-                return;
-            }
+      const total = issuedFiltered.length + pendingFiltered.length;
 
-            // ================= باقي المستودعات =================
-            issuedFiltered = issuedOrders.filter(o =>
-                inDateRange(o.packTime)
-            );
+      document.getElementById("totalOrders").textContent = total;
+      document.getElementById("issuedOrders").textContent = issuedFiltered.length;
+      document.getElementById("pendingOrders").textContent = pendingFiltered.length;
+      document.getElementById("avgPrep").textContent = "0 min";
 
-            pendingFiltered = pendingOrders.filter(o =>
-                inDateRange(o.whTime)
-            );
+      return;
+    }
 
-            const total = issuedFiltered.length + pendingFiltered.length;
-            const issued = issuedFiltered.length;
-            const pending = pendingFiltered.length;
+    // ================= باقي المستودعات =================
+    issuedFiltered = issuedOrders.filter(o =>
+      inDateRange(o.packTime)
+    );
 
-            const avgPrep = issued
-                ? Math.round(
-                    issuedFiltered.reduce((sum, o) => sum + (o.prep || 0), 0) / issued
-                )
-                : 0;
+    pendingFiltered = pendingOrders.filter(o =>
+      inDateRange(o.whTime)
+    );
 
-            document.getElementById("totalOrders").textContent = total;
-            document.getElementById("issuedOrders").textContent = issued;
-            document.getElementById("pendingOrders").textContent = pending;
-            document.getElementById("avgPrep").textContent = avgPrep + " min";
-        }
+    const total = issuedFiltered.length + pendingFiltered.length;
+    const issued = issuedFiltered.length;
+    const pending = pendingFiltered.length;
 
-        
-        // Apply manual date filter
-        function applyDateFilter() {
-            const from = document.getElementById("fromDate").value;
-            const to = document.getElementById("toDate").value;
+    const avgPrep = issued
+      ? Math.round(
+        issuedFiltered.reduce((sum, o) => sum + (o.prep || 0), 0) / issued
+      )
+      : 0;
 
-            dateFilter.from = from ? new Date(from + " 00:00:00") : null;
-            dateFilter.to = to ? new Date(to + " 23:59:59") : null;
+    document.getElementById("totalOrders").textContent = total;
+    document.getElementById("issuedOrders").textContent = issued;
+    document.getElementById("pendingOrders").textContent = pending;
+    document.getElementById("avgPrep").textContent = avgPrep + " min";
+  }
 
-            renderIssuedTable();
-            renderPendingTable();
-            updateKPIs();
-        }
 
-        // Quick buttons
-        function quickDate(type) {
-            const now = new Date();
-            let from = null, to = null;
+  // Apply manual date filter
+  function applyDateFilter() {
+    const from = document.getElementById("fromDate").value;
+    const to = document.getElementById("toDate").value;
 
-            if (type === "today") {
-                from = new Date(now.setHours(0, 0, 0, 0));
-                to = new Date();
-            }
-            if (type === "yesterday") {
-                from = new Date(now.setDate(now.getDate() - 1));
-                from.setHours(0, 0, 0, 0);
-                to = new Date(from);
-                to.setHours(23, 59, 59, 999);
-            }
-            if (type === "week") {
-                const day = now.getDay() || 7;
-                from = new Date(now.setDate(now.getDate() - day + 1));
-                from.setHours(0, 0, 0, 0);
-                to = new Date();
-            }
-            if (type === "month") {
-                from = new Date(now.getFullYear(), now.getMonth(), 1);
-                to = new Date();
-            }
-            if (type === "all") {
-                from = null;
-                to = null;
-            }
+    dateFilter.from = from ? new Date(from + " 00:00:00") : null;
+    dateFilter.to = to ? new Date(to + " 23:59:59") : null;
 
-            dateFilter.from = from;
-            dateFilter.to = to;
+    renderIssuedTable();
+    renderPendingTable();
+    updateKPIs();
+  }
 
-            document.getElementById("fromDate").value = from ? from.toISOString().slice(0, 10) : "";
-            document.getElementById("toDate").value = to ? to.toISOString().slice(0, 10) : "";
+  // Quick buttons
+  function quickDate(type) {
+    const now = new Date();
+    let from = null, to = null;
 
-            renderIssuedTable();
-            renderPendingTable();
-            updateKPIs();
-        }
+    if (type === "today") {
+      from = new Date(now.setHours(0, 0, 0, 0));
+      to = new Date();
+    }
+    if (type === "yesterday") {
+      from = new Date(now.setDate(now.getDate() - 1));
+      from.setHours(0, 0, 0, 0);
+      to = new Date(from);
+      to.setHours(23, 59, 59, 999);
+    }
+    if (type === "week") {
+      const day = now.getDay() || 7;
+      from = new Date(now.setDate(now.getDate() - day + 1));
+      from.setHours(0, 0, 0, 0);
+      to = new Date();
+    }
+    if (type === "month") {
+      from = new Date(now.getFullYear(), now.getMonth(), 1);
+      to = new Date();
+    }
+    if (type === "all") {
+      from = null;
+      to = null;
+    }
 
-        // Date match helper
-        function inDateRange(d) {
-  // لا يوجد فلتر → اعرض الكل
-  if (!dateFilter.from && !dateFilter.to) return true;
+    dateFilter.from = from;
+    dateFilter.to = to;
 
-  // لا يوجد تاريخ للطلب → لا تعرضه
+    document.getElementById("fromDate").value = from ? from.toISOString().slice(0, 10) : "";
+    document.getElementById("toDate").value = to ? to.toISOString().slice(0, 10) : "";
+
+    renderIssuedTable();
+    renderPendingTable();
+    updateKPIs();
+  }
+function inDateRange(d) {
   if (!d) return false;
 
-  const dateObj = (d instanceof Date) ? d : new Date(d);
-  if (isNaN(dateObj)) return false;
+  const time = d.getTime();
 
-  if (dateFilter.from && dateObj < dateFilter.from) return false;
-  if (dateFilter.to && dateObj > dateFilter.to) return false;
+  if (dateFilter.from && time < dateFilter.from.getTime()) return false;
+  if (dateFilter.to && time > dateFilter.to.getTime()) return false;
 
   return true;
 }
-        function renderPackedTable() {
-  const query = document.getElementById("packedSearch").value.toLowerCase();
-  const packed = [];
 
-  allOrders.forEach(o => {
-    const whs = o.warehouses;
-    const whNames = Object.keys(whs);
+  function renderPackedTable() {
+    const query = document.getElementById("packedSearch").value.toLowerCase();
+    const packed = [];
 
-    if (!whNames.length) return;
+    allOrders.forEach(o => {
+      const whs = o.warehouses;
+      const whNames = Object.keys(whs);
 
-    const packedCount = whNames.filter(wh => whs[wh].packed).length;
+      if (!whNames.length) return;
 
-    if (packedCount === whNames.length) {
-      if (o.order.toLowerCase().includes(query)) {
-        packed.push({
-          order: o.order,
-          time: Object.values(whs).find(w => w.packed)?.packTime
-        });
+      const packedCount = whNames.filter(wh => whs[wh].packed).length;
+
+      if (packedCount === whNames.length) {
+        if (o.order.toLowerCase().includes(query)) {
+          packed.push({
+            order: o.order,
+            time: Object.values(whs).find(w => w.packed)?.packTime
+          });
+        }
       }
-    }
-  });
+    });
 
-  document.getElementById("packedTable").innerHTML = packed.length
-    ? `<table>
+    document.getElementById("packedTable").innerHTML = packed.length
+      ? `<table>
          <tr><th>Order #</th><th>Packed Time</th></tr>
          ${packed.map(o => `
            <tr>
@@ -1363,32 +1349,36 @@ function toggleTable(id) {
              <td>${o.time ? o.time.toLocaleString() : "-"}</td>
            </tr>`).join("")}
        </table>`
-    : "<p style='color:#aaa'>No packed orders</p>";
-}
-function renderWaitingOtherTable() {
-  const query = document.getElementById("waitingSearch").value.toLowerCase();
-  const waitingOther = [];
+      : "<p style='color:#aaa'>No packed orders</p>";
+  }
 
-  allOrders.forEach(o => {
-    const whs = o.warehouses;
-    const whNames = Object.keys(whs);
 
-    if (whNames.length <= 1) return;
 
-    const packedCount = whNames.filter(wh => whs[wh].packed).length;
 
-    if (packedCount < whNames.length) {
-      if (o.order.toLowerCase().includes(query)) {
-        waitingOther.push({
-          order: o.order,
-          status: "Waiting other warehouse"
-        });
+  function renderWaitingOtherTable() {
+    const query = document.getElementById("waitingSearch").value.toLowerCase();
+    const waitingOther = [];
+
+    allOrders.forEach(o => {
+      const whs = o.warehouses;
+      const whNames = Object.keys(whs);
+
+      if (whNames.length <= 1) return;
+
+      const packedCount = whNames.filter(wh => whs[wh].packed).length;
+
+      if (packedCount < whNames.length) {
+        if (o.order.toLowerCase().includes(query)) {
+          waitingOther.push({
+            order: o.order,
+            status: "Waiting other warehouse"
+          });
+        }
       }
-    }
-  });
+    });
 
-  document.getElementById("waitingOtherTable").innerHTML = waitingOther.length
-    ? `<table>
+    document.getElementById("waitingOtherTable").innerHTML = waitingOther.length
+      ? `<table>
          <tr><th>Order #</th><th>Status</th></tr>
          ${waitingOther.map(o => `
            <tr>
@@ -1396,43 +1386,43 @@ function renderWaitingOtherTable() {
              <td>${o.status}</td>
            </tr>`).join("")}
        </table>`
-    : "<p style='color:#aaa'>No waiting orders from other warehouses</p>";
-}
-        function toggleQuickMenu() {
-            const m = document.getElementById("quickMenu");
-            m.style.display = m.style.display === "block" ? "none" : "block";
-        }
-function showLoading() {
-  document.getElementById("loadingBox").style.display = "flex";
-}
-
-function hideLoading() {
-  document.getElementById("loadingBox").style.display = "none";
-}
-
-
-async function refreshData() {
-  showLoading();
-
-  issuedOrders = [];
-  pendingOrders = [];
-
-  try {
-    await loadWarehouseData(); // مهم تكون async
-  } catch (e) {
-    console.error("Load error", e);
+      : "<p style='color:#aaa'>No waiting orders from other warehouses</p>";
+  }
+  function toggleQuickMenu() {
+    const m = document.getElementById("quickMenu");
+    m.style.display = m.style.display === "block" ? "none" : "block";
+  }
+  function showLoading() {
+    document.getElementById("loadingBox").style.display = "flex";
   }
 
-  renderIssuedTable();
-  renderPendingTable();
-  updateKPIs();
+  function hideLoading() {
+    document.getElementById("loadingBox").style.display = "none";
+  }
 
-  hideLoading();
-}
 
-setInterval(() => {
-  refreshData();
-}, 10 * 60 * 1000);
+  async function refreshData() {
+    showLoading();
+
+    issuedOrders = [];
+    pendingOrders = [];
+
+    try {
+      await loadWarehouseData(); // مهم تكون async
+    } catch (e) {
+      console.error("Load error", e);
+    }
+
+    renderIssuedTable();
+    renderPendingTable();
+    updateKPIs();
+
+    hideLoading();
+  }
+
+  setInterval(() => {
+    refreshData();
+  }, 10 * 60 * 1000);
 
   function updateFooterInfo() {
     const now = new Date();
@@ -1445,13 +1435,6 @@ setInterval(() => {
 
   updateFooterInfo();
 </script>
-    
-
-</html> 
 
 
-
-
-
-
-
+</html>
