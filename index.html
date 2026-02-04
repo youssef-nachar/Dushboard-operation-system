@@ -352,7 +352,47 @@
             color: #9ca3af;
             font-size: 14px;
         }
+.quick-menu {
+    position: relative;
+}
 
+.three-dots {
+    padding: 6px 10px;
+    font-size: 16px;
+    border-radius: 10px;
+    background: #020617;
+}
+
+.quick-dropdown {
+    position: absolute;
+    top: 38px;
+    right: 0;
+    min-width: 170px;
+    background: #020617;
+    border: 1px solid #1f2937;
+    border-radius: 14px;
+    box-shadow: 0 20px 40px rgba(0,0,0,.6);
+    z-index: 1000;
+    overflow: hidden;
+    animation: fadeIn 0.15s ease;
+}
+
+.quick-dropdown div {
+    padding: 10px 14px;
+    cursor: pointer;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 14px;
+}
+
+.quick-dropdown div:hover {
+    background: #111827;
+}
+
+.quick-dropdown i {
+    color: var(--accent);
+}
         /* SPINNER */
         .spinner {
             width: 64px;
@@ -525,6 +565,26 @@
 
                     <input type="date" id="dateTo" onchange="updateDashboard()">
                 </div>
+                <div class="quick-menu">
+    <button class="three-dots" onclick="toggleQuickMenu(event)">
+        <i class="fa-solid fa-ellipsis-vertical"></i>
+    </button>
+
+    <div id="quickDateMenu" class="quick-dropdown hidden">
+        <div onclick="setQuickDate('today')">
+            <i class="fa-regular fa-calendar-day"></i> Today
+        </div>
+        <div onclick="setQuickDate('yesterday')">
+            <i class="fa-regular fa-calendar-minus"></i> Yesterday
+        </div>
+        <div onclick="setQuickDate('week')">
+            <i class="fa-regular fa-calendar-week"></i> This Week
+        </div>
+        <div onclick="setQuickDate('month')">
+            <i class="fa-regular fa-calendar"></i> This Month
+        </div>
+    </div>
+</div>
             </header>
 
             <div class="kpis">
@@ -606,6 +666,28 @@
 </body>
 
 <script>
+
+// إغلاق الـ modal عند الضغط خارج البطاقة
+const orderDetails = document.getElementById("orderDetails");
+
+orderDetails.addEventListener("click", (e) => {
+    // إذا تم الضغط على الـ overlay وليس داخل البطاقة
+    if (e.target === orderDetails) {
+        orderDetails.classList.add("hidden");
+    }
+});
+
+
+let refreshTimer = null;
+let isRefreshing = false;
+let lastDataHash = "";
+let firstLoad = true;
+
+const REFRESH_INTERVAL = 60000; // 60 ثانية (professional)
+function hashData(data) {
+    return JSON.stringify(data).length + "_" + data.length;
+}
+
 const loginContainer = document.getElementById("loginContainer");
 const dashboard = document.getElementById("dashboard");
 window.addEventListener('DOMContentLoaded', () => {
@@ -614,28 +696,24 @@ window.addEventListener('DOMContentLoaded', () => {
     if (loggedIn === "true") {
         loginContainer.style.display = "none";
         dashboard.classList.remove("hidden");
-
-        initDate();        // فقط مرة واحدة
-        loadData();        // تحميل أول مرة
-        startAutoRefresh();
-    } else {
-        loginContainer.style.display = "flex";
-        dashboard.classList.add("hidden");
+        loadData();
+        startAutoRefresh(); // ✅
     }
 });
 
     const users = [{ username: "manager", password: "123456" }];
-    const sheetURL =  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?output=csv";
-      let allOrders = [];
-
-
-
+    const sheetURL =  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?output=csv";  let allOrders = [];
  // const sheetURL=""
 
 const distributionSheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTecpCEwZ10-Ncz2y0xSsAnNdLXcWDGt_GiAeJlbWYhgg9B8zlhvJ1DeDH8H0NDSg/pub?output=csv";
 let distributedOrders = new Set(); // قائمة الطلبات الموزعة
 
 let distributedOrdersMap = {}; 
+// الشكل النهائي:
+// {
+//   "#L3029": "10:00",
+//   "#M48717": "10:00"
+// }
 
 function loadDistributedOrders() {
     return fetch(distributionSheetURL)
@@ -679,29 +757,9 @@ function loadDistributedOrders() {
 }
 
 
-
-function getLastStatus(order) {
-
-    if (order.status === "distributed") {
-        return "Distributed";
-    }
-
-    if (
-        Array.isArray(order.warehouses) &&
-        order.warehouses.length > 0 &&
-        order.warehouses.every(w => w.packed === true)
-    ) {
-        return "In-Packing";
-    }
-
-    return "Pending";
-}
-
-
-
  let lastDisplayedOrders = [];
 
-function updateSearch() {
+    function updateSearch() {
     const query = document.getElementById("orderSearch").value.trim().toLowerCase();
     const resultsDiv = document.getElementById("searchResultsCard");
     const tableDiv = document.getElementById("searchResultsTable");
@@ -723,46 +781,37 @@ function updateSearch() {
     }
 
     tableDiv.innerHTML = `
-<table>
-  <tr>
-    <th>Order #</th>
-    <th>Warehouses</th>
-    <th>Last Status</th>
-    <th>Note</th>
-  </tr>
-
-  ${filtered.map(o => {
-
-    let status = "Pending";
-
-    if (o.status === "distributed") {
+    <table>
+        <tr>
+            <th>Order #</th>
+            <th>Warehouse</th>
+            <th>Status</th>
+            <th>Distributor</th>
+        </tr>
+    ${filtered.map(o =>
+        o.warehouses.map(w => {
+    let status;
+    if (w.distributed || o.status === "distributed") {
         status = "Distributed";
-    } else if (o.warehouses.every(w => w.packed)) {
+    } else if (w.packed) {
         status = "In-Packing";
+    } else {
+        status = "Pending";
     }
+    
 
-    const warehouses = o.warehouses
-        .map(w => w.base.toUpperCase())
-        .join(" , ");
-
-    return `
-      <tr>
-        <td>${o.orderNo}</td>
-        <td>${warehouses}</td>
-        <td style="font-weight:600;color:${
-            status === "Distributed" ? "#22c55e" :
-            status === "In-Packing" ? "#38bdf8" :
-            "#f59e0b"
-        }">
-          ${status}
-        </td>
-        <td>${o.comment || ""}</td>
-      </tr>
+            return `
+            <tr>
+                <td>${o.orderNo}</td>
+                <td>${w.base.toUpperCase()}</td>
+                <td style="font-weight:600">${status}</td>
+                <td>${o.distributor || ""}</td>
+            </tr>
+            `;
+        }).join("")
+    ).join("")}
+    </table>
     `;
-  }).join("")}
-
-</table>
-`;
 
     resultsDiv.style.display = "block";
 }
@@ -784,123 +833,195 @@ function updateSearch() {
 
     loginError.classList.add("hidden");
 
+    // تخزين حالة تسجيل الدخول
     localStorage.setItem("isLoggedIn", "true");
 
+    // إخفاء login وإظهار dashboard
     loginContainer.style.display = "none";
     dashboard.classList.remove("hidden");
 
-    loadData(true);
-    startAutoRefresh(); // ✅ هنا
+    loadData(); // تحميل البيانات
 };
+function toggleQuickMenu(e) {
+    e.stopPropagation();
+    document.getElementById("quickDateMenu").classList.toggle("hidden");
+}
+
+// إغلاق القائمة عند الضغط خارجها
+document.addEventListener("click", () => {
+    document.getElementById("quickDateMenu").classList.add("hidden");
+});
+
+function setQuickDate(type) {
+    const today = new Date();
+
+    const format = d => d.toISOString().slice(0, 10);
+
+    let from, to;
+
+    switch (type) {
+        case "today":
+            from = to = format(today);
+            break;
+
+        case "yesterday":
+            const y = new Date(today);
+            y.setDate(y.getDate() - 1);
+            from = to = format(y);
+            break;
+
+        case "week":
+            const startOfWeek = new Date(today);
+            startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday
+            from = format(startOfWeek);
+            to = format(today);
+            break;
+
+        case "month":
+            const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            from = format(startOfMonth);
+            to = format(today);
+            break;
+    }
+
+    dateFrom.value = from;
+    dateTo.value = to;
+
+    updateDashboard();
+}
+
+
+
+
     // FORMAT DATE
 function formatDateForInput(value) {
     if (!value) return null;
 
     let v = String(value).trim();
+
+    // إزالة الوقت إن وجد
+    // 27/01/2026 12:54:26  -->  27/01/2026
     v = v.split(" ")[0];
 
+    // YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
 
+    // DD/MM/YYYY  ✅ (الحالة الموجودة في الصورة)
     if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v)) {
         const [d, m, y] = v.split("/");
         return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
     }
 
+    // DD-MM-YYYY
     if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(v)) {
         const [d, m, y] = v.split("-");
         return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
     }
 
+    // YYYY/MM/DD
     if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(v)) {
         const [y, m, d] = v.split("/");
         return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
     }
 
+    // fallback
     const parsed = new Date(value);
     if (!isNaN(parsed)) return parsed.toISOString().slice(0, 10);
 
     return null;
 }
+async function loadData({ silent = false } = {}) {
+    if (isRefreshing) return; // ⛔ منع التداخل
+    isRefreshing = true;
 
+    if (!silent && firstLoad) {
+        loadingOverlay.classList.remove("hidden");
+    }
 
-let isLoading = false;  // 🔥 لمنع التداخل
+    try {
+        await loadDistributedOrders();
 
-async function loadData() {
-  if (isLoading) return; // 🚫 إذا التحميل شغال لا تعيد تشغيله
-  isLoading = true;
+        const response = await fetch(sheetURL, { cache: "no-store" });
+        const csv = await response.text();
 
-  showLoadingOverlay(true);
+        const parsed = Papa.parse(csv, { skipEmptyLines: true });
+        const rows = parsed.data;
+        if (!rows.length) return;
 
-  try {
-    await loadDistributedOrders();
+        const headers = rows.shift().map(h => h.toLowerCase().trim());
+        const col = {};
+        headers.forEach((h, i) => col[h] = i);
 
-    const res = await fetch(cacheBustedUrl(sheetURL));
-    const text = await res.text();
-    const parsed = Papa.parse(text, { skipEmptyLines: true });
-    const rows = parsed.data;
-    if (!rows.length) return;
+        const ORDER = col["shopify order#"];
+        const DATE  = col["order received in wh"];
+        const WH    = col["warehouse name"];
 
-    const headers = rows.shift().map(h => h.toLowerCase().trim());
-    const col = {};
-    headers.forEach((h, i) => col[h] = i);
+        const map = {};
 
-    const ORDER = col["shopify order#"];
-    const DATE  = col["order received in wh"];
-    const WH    = col["warehouse name"];
+        rows.forEach(r => {
+            const orderNo = r[ORDER];
+            const date = formatDateForInput(r[DATE]);
+            const whRaw = r[WH];
+            if (!orderNo || !date) return;
 
-    const map = {};
+            if (!map[orderNo]) {
+                map[orderNo] = { orderNo, date, wh: {} };
+            }
 
-    rows.forEach(r => {
-      const orderNo = r[ORDER];
-      const date = formatDateForInput(r[DATE]);
-      const whRaw = r[WH];
-      if (!orderNo || !date) return;
+            const w = normalizeWarehouse(whRaw);
+            if (!w.base) return;
 
-      if (!map[orderNo]) map[orderNo] = { orderNo, date, wh: {} };
+            if (!map[orderNo].wh[w.base]) {
+                map[orderNo].wh[w.base] = { base: w.base, packed: w.packed };
+            } else {
+                map[orderNo].wh[w.base].packed ||= w.packed;
+            }
+        });
 
-      const w = normalizeWarehouse(whRaw);
-      if (!w.base) return;
+        let newOrders = Object.values(map).map(o => {
+            const warehouses = Object.values(o.wh);
+            const packedCount = warehouses.filter(w => w.packed).length;
 
-      map[orderNo].wh[w.base] = { ...w };
-    });
+            let status = "pending";
+            if (packedCount === warehouses.length) status = "completed";
+            else if (packedCount > 0) status = "partial";
 
-    allOrders = Object.values(map).map(o => {
-      const warehouses = Object.values(o.wh);
-      const packedCount = warehouses.filter(w => w.packed).length;
+            return {
+                ...o,
+                warehouses,
+                warehouseCount: warehouses.length,
+                status
+            };
+        });
 
-      let status = "pending";
-      if (packedCount === warehouses.length) status = "completed";
-      else if (packedCount > 0) status = "partial";
+        // DISTRIBUTED override
+        newOrders.forEach(o => {
+            if (distributedOrdersMap[o.orderNo]) {
+                o.status = "distributed";
+                o.distributedTime = distributedOrdersMap[o.orderNo];
+                o.warehouses.forEach(w => w.distributed = true);
+            }
+        });
 
-      const newWarehouses = warehouses.map(w => ({ ...w }));
+        // 🔥 Detect real change
+        const newHash = hashData(newOrders);
+        if (newHash !== lastDataHash) {
+            allOrders = newOrders;
+            lastDataHash = newHash;
+            updateDashboard(); // فقط إذا تغيّر
+        }
 
-      return { ...o, warehouses: newWarehouses, warehouseCount: warehouses.length, status };
-    });
+        if (firstLoad) initDate();
+        firstLoad = false;
 
-    // تحديث حالة distributed
-    allOrders.forEach(o => {
-      const distDate = distributedOrdersMap[o.orderNo];
-      if (distDate) {
-        o.status = "distributed";
-        o.distributedTime = distDate;
-        o.warehouses = o.warehouses.map(w => ({ ...w, distributed: true }));
-      }
-    });
-
-    updateDashboard();
-    if (!userOpenedDetails) {
-  lastDisplayedOrders = [];  // تحديث الواجهة فقط بعد انتهاء التحميل
-} }
-    catch (err) {
-    console.error("❌ Load data error:", err);
-  } finally {
-    isLoading = false;
-    showLoadingOverlay(false);
-  }
+    } catch (err) {
+        console.error("❌ Load error:", err);
+    } finally {
+        isRefreshing = false;
+        loadingOverlay.classList.add("hidden");
+    }
 }
-
-   
-                // INIT DATE FILTER
+    // INIT DATE FILTER
 
 function initDate() {
     const today = new Date().toISOString().slice(0, 10);
@@ -929,22 +1050,18 @@ function applyFilters() {
 }
 
 
-//filteredOrders = Object.values(unique);
+filteredOrders = Object.values(unique);
     // UPDATE DASHBOARD KPIS
 function updateDashboard() {
-  const o = applyFilters();
+    const o = applyFilters();
 
-  total.textContent = o.length;
-
-  completed.textContent = o.filter(x => getOrderStatus(x) === "completed").length;
-  pending.textContent = o.filter(x => getOrderStatus(x) === "pending" || getOrderStatus(x) === "partial").length;
-  distributed.textContent = o.filter(x => getOrderStatus(x) === "distributed").length;
-
-  renderWarehouseBreakdown(o);
-  renderMultiWHOrders(o);
-  renderSingleWHOrders(o);
+    total.textContent = o.length + distributedOrders.size; // اجمالي الطلبات
+    completed.textContent = o.filter(x => x.status === "completed").length;
+    pending.textContent = o.filter(x => (x.status === "pending" || x.status === "partial")).length;
+    distributed.textContent = applyFilters().filter(o => o.status === "distributed").length;   renderWarehouseBreakdown(o);
+    renderMultiWHOrders(o);
+    renderSingleWHOrders(o);
 }
-
 
 function showDistributedOrders() {
     const from = dateFrom.value || null;
@@ -963,11 +1080,12 @@ function showDistributedOrders() {
     displayOrders(orders, "Distributed Orders");
 }
 
-function renderWarehouseBreakdown(orders) {
+  function renderWarehouseBreakdown(orders) {
   const warehouseMap = {};
   const grandTotal = { t: 0, c: 0, p: 0, d: 0 };
 
   orders.forEach(order => {
+    // الطلب يُحسب مرة واحدة
     grandTotal.t++;
 
     const isDistributed = order.status === "distributed";
@@ -982,12 +1100,13 @@ function renderWarehouseBreakdown(orders) {
       if (isDistributed) {
         warehouseMap[w.base].d++;
       } else if (w.packed) {
-        warehouseMap[w.base].c++;
+        warehouseMap[w.base].c++; // In-Packing
       } else {
-        warehouseMap[w.base].p++;
+        warehouseMap[w.base].p++; // Pending
       }
     });
 
+    // grand totals
     if (isDistributed) {
       grandTotal.d++;
     } else if (order.warehouses.every(w => w.packed)) {
@@ -1007,15 +1126,19 @@ function renderWarehouseBreakdown(orders) {
     <th>Delivered</th>
   </tr>
 
-  ${Object.entries(warehouseMap).map(([wh, v]) => `
-    <tr>
-      <td>${wh.toUpperCase()}</td>
-      <td><a href="#" onclick="showWarehouseOrders('${wh}','total')">${v.t}</a></td>
-      <td><a href="#" onclick="showWarehouseOrders('${wh}','completed')">${v.c}</a></td>
-      <td><a href="#" onclick="showWarehouseOrders('${wh}','pending')"> ${v.p} </a></td>
-      <td><a href="#" onclick="showWarehouseOrders('${wh}','distributed')">${v.d}</a></td>
-    </tr>
-  `).join("")}
+  ${Object.entries(warehouseMap).map(([wh, v]) => {
+  if (!wh || !v) return ""; // منع أي صف فارغ
+  const safeWh = wh.replace(/'/g, "\\'"); // escape single quotes
+  return `
+<tr>
+  <td>${wh.toUpperCase()}</td>
+  <td><a href="#" onclick="showWarehouseOrders('${safeWh}','total')">${v.t}</a></td>
+  <td><a href="#" onclick="showWarehouseOrders('${safeWh}','completed')">${v.c}</a></td>
+  <td><a href="#" onclick="showWarehouseOrders('${safeWh}','pending')">${v.p}</a></td>
+  <td><a href="#" onclick="showWarehouseOrders('${safeWh}','distributed')">${v.d}</a></td>
+</tr>
+`;
+}).join("")}
 
   <tr style="font-weight:bold;background:#020617;color:#22c55e">
     <td>TOTAL</td>
@@ -1030,9 +1153,9 @@ function renderWarehouseBreakdown(orders) {
 
 
     // MULTI-WAREHOUSE ORDERS
-function renderMultiWHOrders(orders) {
-    const m = orders.filter(x => x.warehouseCount > 1);
-    multiWHTable.innerHTML = `
+    function renderMultiWHOrders(orders) {
+        const m = orders.filter(x => x.warehouseCount > 1);
+        multiWHTable.innerHTML = `
 <table>
 <tr><th>Type</th><th>Orders</th></tr>
 <tr><td>Total</td><td><a href="#" onclick="showMultiWHOrders('total')">${m.length}</a></td></tr>
@@ -1040,13 +1163,12 @@ function renderMultiWHOrders(orders) {
 <tr><td>Pending / partial </td><td><a href="#" onclick="showMultiWHOrders('pending')">${m.filter(x => (x.status === "pending" || x.status === "partial") && !x.distributor).length}</a></td></tr>
 <tr><td>Distributed</td><td><a href="#" onclick="showMultiWHOrders('distributed')">${m.filter(x => x.status === "distributed").length}</a></td></tr>
 </table>`;
-}
-
+    }
 
     // SINGLE-WAREHOUSE ORDERS
-function renderSingleWHOrders(orders) {
-    const s = orders.filter(x => x.warehouseCount === 1);
-    singleWHTable.innerHTML = `
+    function renderSingleWHOrders(orders) {
+        const s = orders.filter(x => x.warehouseCount === 1);
+        singleWHTable.innerHTML = `
 <table>
 <tr><th>Type</th><th>Orders</th></tr>
 <tr><td>Total</td><td><a href="#" onclick="showSingleWHOrders('total')">${s.length}</a></td></tr>
@@ -1054,24 +1176,19 @@ function renderSingleWHOrders(orders) {
 <tr><td>Pending</td><td><a href="#" onclick="showSingleWHOrders('pending')">${s.filter(x => (x.status === "pending" || x.status === "partial") && !x.distributor).length}</a></td></tr>
 <tr><td>Distributed</td><td><a href="#" onclick="showSingleWHOrders('distributed')">${s.filter(x => x.status === "distributed").length}</a></td></tr>
 </table>`;
-}
-
-let userOpenedDetails = false;
+    }
 
     // SHOW ORDER DETAILS
-function showOrderDetails(type) {
-      userOpenedDetails = true;
-
-    let o = applyFilters();
-    if (type === "completed") o = o.filter(x => x.status === "completed");
-    if (type === "pending") o = o.filter(x => (x.status === "pending" || x.status === "partial") && !x.distributor);
-    if (type === "distributed") o = o.filter(x => x.status === "distributed");
-    displayOrders(o);
-}
-
+    function showOrderDetails(type) {
+        let o = applyFilters();
+        if (type === "completed") o = o.filter(x => x.status === "completed");
+        if (type === "pending") o = o.filter(x => (x.status === "pending" || x.status === "partial") && !x.distributor);
+        if (type === "distributed") o = o.filter(x => x.status === "distributed");
+        displayOrders(o);
+    }
 
     // SHOW WAREHOUSE ORDERS
-function showWarehouseOrders(warehouse, type) {
+   function showWarehouseOrders(warehouse, type) {
     let o = applyFilters();
 
     if (warehouse !== 'all') {
@@ -1083,7 +1200,7 @@ function showWarehouseOrders(warehouse, type) {
     if (type === "completed") o = o.filter(x => x.status === "completed");
     if (type === "pending") o = o.filter(x => (x.status === "pending" || x.status === "partial") && !x.distributor);
     if (type === "distributed") o = o.filter(x => x.status === "distributed");
-    if (type === "total") o = o;
+    if (type === "total") o = o; // all filtered orders
 
     displayOrders(o, warehouse === 'all' ? 'All Warehouses' : `Warehouse: ${warehouse}`);
 }
@@ -1106,12 +1223,10 @@ function showWarehouseOrders(warehouse, type) {
     }
 
   function displayOrders(orders, title = "Order Details") {
-      if (!userOpenedDetails) return; // 🚫 لا تفتحها مع auto refresh
+    const orderList = document.getElementById("orderList");
+    lastDisplayedOrders = orders; // مهم للتصدير
 
-  const orderList = document.getElementById("orderList");
-  lastDisplayedOrders = orders; // مهم للتصدير
-
-  let html = `
+    let html = `
     <table>
       <thead>
         <tr>
@@ -1121,58 +1236,77 @@ function showWarehouseOrders(warehouse, type) {
         </tr>
       </thead>
       <tbody>
-  `;
-
-  const seen = new Set();
-
-  orders.forEach(order => {
-    if (seen.has(order.orderNo)) return; // منع التكرار
-    seen.add(order.orderNo);
-
-    let statusText = "";
-
-if (order.status !== "distributed") {
-    const hasPending = order.warehouses.some(w => !w.packed);
-    statusText = hasPending ? "Pending" : "Completed";
-}
-    html += `
-      <tr>
-        <td>${order.orderNo}</td>
-        <td>
-          ${order.warehouses.map(w => `
-            <span style="
-              display:inline-block;
-              margin:2px;
-              padding:4px 8px;
-              border-radius:6px;
-              font-size:12px;
-              font-weight:600;
-              background:${w.packed ? '#22c55e' : '#7c2d12'};
-              color:${w.packed ? '#000' : '#f59e0b'};
-            ">
-              ${w.base.toUpperCase()}
-            </span>
-          `).join("")}
-        </td>
-        <td style="font-weight:600; color:#9ca3af">
-  ${statusText}
-</td>
-      </tr>
     `;
-  });
 
-  html += `
+    const seen = new Set();
+
+    orders.forEach(order => {
+        if (seen.has(order.orderNo)) return; // منع التكرار
+        seen.add(order.orderNo);
+
+        // تحديد حالة الطلب
+        let statusText = "";
+        if (order.status === "distributed") {
+            statusText = "Distributed";
+        } else {
+            const hasPending = order.warehouses.some(w => !w.packed);
+            statusText = hasPending ? "Pending" : "Completed";
+        }
+
+        html += `
+        <tr>
+          <td>${order.orderNo}</td>
+          <td>
+            ${order.warehouses.map(w => {
+                // تحديد لون الـ badge لكل warehouse
+                let color, text;
+
+if (order.status === "distributed") {
+    color = "#22c55e";
+    text = "Distributed";
+} else if (w.packed) {
+    color = "#22c55e";
+    text = "In-Packing";
+} else {
+    color = "#7c2d12";
+    text = "Pending";
+}
+
+                return `
+                <span style="
+                    display:inline-block;
+                    margin:2px;
+                    padding:4px 8px;
+                    border-radius:6px;
+                    font-size:12px;
+                    font-weight:600;
+                    background:${color};
+                    color:${(order.status === "distributed" || w.distributed) ? '#000' : 'black'};
+                ">
+                    ${w.base.toUpperCase()} 
+                </span>
+                `;
+            }).join("")}
+          </td>
+          <td style="font-weight:600; color:#9ca3af">
+            ${statusText}
+          </td>
+        </tr>
+        `;
+    });
+
+    html += `
       </tbody>
     </table>
-  `;
+    `;
 
-  orderList.innerHTML = `
-    <h3 style="color:var(--accent); margin-bottom:12px">${title}</h3>
-    ${html}
-  `;
+    orderList.innerHTML = `
+      <h3 style="color:var(--accent); margin-bottom:12px"></h3>
+      ${html}
+    `;
 
-  // إظهار نافذة التفاصيل
-  document.getElementById("orderDetails").classList.remove("hidden");
+    // إظهار نافذة التفاصيل
+    document.getElementById("orderDetails").classList.remove("hidden");
 }
     function toggleMenu(id) {
         const menu = document.getElementById(id);
@@ -1201,11 +1335,9 @@ if (order.status !== "distributed") {
     // });
 
     // CLOSE MODAL
-  function closeOrderDetails() {
-  userOpenedDetails = false;
-  orderDetails.classList.add("hidden");
-}
-// EXPORT TO EXCEL
+    function closeOrderDetails() { orderDetails.classList.add("hidden"); }
+
+    // EXPORT TO EXCEL
     function exportOrderDetailsToExcel() {
         if (!lastDisplayedOrders.length) {
             alert("No orders to export!");
@@ -1261,67 +1393,28 @@ function normalizeWarehouse(name) {
 }
     // SHOW WAREHOUSES PAGE
     function showWarehouses() { }
-
-    // SIGN OUT
-   function signOut() {
-    localStorage.removeItem("isLoggedIn");
-    stopAutoRefresh(); // ✅ إيقاف التحديث
-    dashboard.classList.add("hidden");
-    loginContainer.style.display = "flex";
-}
-
-let autoRefreshInterval = null;
-function getOrderStatus(order) {
-  if (order.status === "distributed") return "distributed";
-
-  const allPacked = order.warehouses.every(w => w.packed);
-  const anyPacked = order.warehouses.some(w => w.packed);
-
-  if (allPacked) return "completed";
-  if (anyPacked) return "partial";
-  return "pending";
-}
-
 function startAutoRefresh() {
-autoRefreshInterval = setInterval(() => {
-  if (!isLoading) {
-    userOpenedDetails = false;
-    closeOrderDetails();
-    loadData();
-  }
-}, 20000);
+    if (refreshTimer) return;
 
-   // 15 ثانية (وقت ممتاز بدون ضغط على الجوجل شيت)
+    refreshTimer = setInterval(() => {
+        loadData({ silent: true }); // بدون loading
+    }, REFRESH_INTERVAL);
 }
 
 function stopAutoRefresh() {
-  if (autoRefreshInterval) {
-    clearInterval(autoRefreshInterval);
-    autoRefreshInterval = null;
-  }
+    clearInterval(refreshTimer);
+    refreshTimer = null;
 }
-function cacheBustedUrl(url) {
-  return `${url}&_=${Date.now()}`;
+    // SIGN OUT
+    function signOut() {
+    stopAutoRefresh();
+    localStorage.removeItem("isLoggedIn");
+    dashboard.classList.add("hidden");
+    loginContainer.style.display = "flex";
 }
-function showLoadingOverlay(show) {
-  const overlay = document.getElementById("loadingOverlay");
-  if (!overlay) return;
-  overlay.classList.toggle(show, !show);
-}
-
 
 
 </script>
 </body>
 
-</html> 
-
-
-
-
-
-
-
-
-
-
+    </html>
