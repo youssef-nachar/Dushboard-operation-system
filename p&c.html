@@ -321,7 +321,43 @@
       background: rgba(0, 0, 0, 0.5);
       z-index: 999;
     }
+.toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #020617;
+    border: 1px solid #1f2937;
+    color: #e5e7eb;
+    padding: 14px 18px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    box-shadow: 0 20px 40px rgba(0,0,0,.6);
+    z-index: 9999;
+    animation: slideIn .25s ease;
+}
 
+.toast i {
+    color: #22c55e;
+    font-size: 16px;
+}
+
+.toast.hidden {
+    display: none;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
     /* Mobile Behavior */
     @media (max-width: 768px) {
 
@@ -464,9 +500,7 @@
 
       <h2 id="currentWarehouseName" style="margin-bottom: 20px; color: #22c55e;">
         P&C</h2>
-      <button class="btn" style="background:#2563eb; margin-top:10px;margin-right:10px" onclick="refreshData()">
-        🔄
-      </button>
+   
       <!-- KPIs -->
       <div class="kpis">
         <div class="kpi">
@@ -599,12 +633,80 @@
 
 
   </footer>
+<div id="toast" class="toast hidden">
+    <i class="fa-solid fa-bell"></i>
+    <span id="toastText">New orders received</span>
+</div>
 
+<audio id="pingSound" preload="auto">
+    <source src="https://assets.mixkit.co/sfx/preview/mixkit-bell-notification-933.mp3" type="audio/mpeg">
+</audio>
 
 </body>
 <script>
+let lastSnapshot = {
+  rows: 0,
+  lastOrder: ""
+};
 
+let isRefreshing = false;
 
+async function checkForNewData() {
+  if (isRefreshing) return;
+
+  const url = warehouseSheets[currentWarehouse];
+  if (!url) return;
+
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    const csv = await res.text();
+
+    let rows = 0;
+    let lastOrder = "";
+
+    Papa.parse(csv, {
+      header: true,
+      skipEmptyLines: true,
+      step: (row) => {
+        rows++;
+        const id = findOrderId(row.data);
+        if (id) lastOrder = normalizeOrderId(id);
+      },
+      complete: () => {
+        // 🔍 لا تغيير؟ اخرج بهدوء
+        if (
+  rows === lastSnapshot.rows &&
+  lastOrder === lastSnapshot.lastOrder
+) {
+  return;
+}
+
+// ✅ بيانات جديدة
+lastSnapshot.rows = rows;
+lastSnapshot.lastOrder = lastOrder;
+
+showToast("New orders received");
+smartRefresh();
+      }
+    });
+
+  } catch (e) {
+    console.error("Auto-check failed", e);
+  }
+}
+async function smartRefresh() {
+  isRefreshing = true;
+
+  try {
+    await loadPackingStation(() => {
+      loadWarehouseData(currentWarehouse);
+    });
+
+    updateFooterInfo(); // update last sync فقط هنا
+  } finally {
+    isRefreshing = false;
+  }
+}
 document.addEventListener("click", function (e) {
   const sidebar = document.querySelector(".sidebar");
   const btn = document.querySelector(".mobile-menu-btn");
@@ -684,12 +786,16 @@ function toggleSidebar() {
     const today = new Date().toISOString().slice(0, 10);
     document.getElementById("fromDate").value = today;
     document.getElementById("toDate").value = today;
-
+setTimeout(() => {
+  checkForNewData(); // snapshot initial
+}, 2000);
     // تفعيل فلتر التاريخ تلقائيًا
     dateFilter.from = new Date(today + " 00:00:00");
     dateFilter.to = new Date(today + " 23:59:59.999");
   });
-
+setInterval(() => {
+  checkForNewData();
+}, 60 * 1000); //   ()
 
   const pharma = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=875574333&single=true&output=csv";
 
@@ -1401,28 +1507,26 @@ function inDateRange(d) {
   }
 
 
-  async function refreshData() {
-    showLoading();
+  
+function showToast(message = "New orders received") {
+    const toast = document.getElementById("toast");
+    const text = document.getElementById("toastText");
+    const sound = document.getElementById("pingSound");
 
-    issuedOrders = [];
-    pendingOrders = [];
+    text.textContent = message;
+    toast.classList.remove("hidden");
 
-    try {
-      await loadWarehouseData(); // مهم تكون async
-    } catch (e) {
-      console.error("Load error", e);
+    // 🔔 تشغيل الصوت (محمي من الأخطاء)
+    if (sound) {
+        sound.currentTime = 0;
+        sound.play().catch(() => {});
     }
 
-    renderIssuedTable();
-    renderPendingTable();
-    updateKPIs();
-
-    hideLoading();
-  }
-
-  setInterval(() => {
-    refreshData();
-  }, 10 * 60 * 1000);
+    setTimeout(() => {
+        toast.classList.add("hidden");
+    }, 3500);
+}
+  
 
   function updateFooterInfo() {
     const now = new Date();
@@ -1438,6 +1542,5 @@ function inDateRange(d) {
 
 
 </html>
-
 
 
