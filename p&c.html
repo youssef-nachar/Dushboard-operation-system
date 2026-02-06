@@ -321,43 +321,7 @@
       background: rgba(0, 0, 0, 0.5);
       z-index: 999;
     }
-.toast {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    background: #020617;
-    border: 1px solid #1f2937;
-    color: #e5e7eb;
-    padding: 14px 18px;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 14px;
-    box-shadow: 0 20px 40px rgba(0,0,0,.6);
-    z-index: 9999;
-    animation: slideIn .25s ease;
-}
 
-.toast i {
-    color: #22c55e;
-    font-size: 16px;
-}
-
-.toast.hidden {
-    display: none;
-}
-
-@keyframes slideIn {
-    from {
-        transform: translateY(20px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
     /* Mobile Behavior */
     @media (max-width: 768px) {
 
@@ -427,7 +391,7 @@
     <!-- Sidebar -->
     <aside class="sidebar">
       <h2>MYholdal</h2>
-      <a href="index.html"> <button class="btn" onclick="goHome()">Dashboard</button></a>
+      <a href="holdal.html"> <button class="btn" onclick="goHome()">Dashboard</button></a>
       <div class="menu-item">
         <a href="#" onclick="toggleMenu('warehousesMenu')">
           <i class="fa-solid fa-boxes-stacked"></i> Warehouses
@@ -488,7 +452,7 @@
           </div>
           <!-- Packing Station -->
           <div class="submenu-item">
-                    <a href="packing_station.html" onclick="selectWarehouse('packing')">Packing Station</a>
+             <a href="packing_station.html" onclick="selectWarehouse('packing')">Packing Station</a>
           </div>
 
         </div>
@@ -500,7 +464,9 @@
 
       <h2 id="currentWarehouseName" style="margin-bottom: 20px; color: #22c55e;">
         P&C</h2>
-   
+      <button class="btn" style="background:#2563eb; margin-top:10px;margin-right:10px" onclick="refreshData()">
+        🔄
+      </button>
       <!-- KPIs -->
       <div class="kpis">
         <div class="kpi">
@@ -633,80 +599,12 @@
 
 
   </footer>
-<div id="toast" class="toast hidden">
-    <i class="fa-solid fa-bell"></i>
-    <span id="toastText">New orders received</span>
-</div>
 
-<audio id="pingSound" preload="auto">
-    <source src="https://assets.mixkit.co/sfx/preview/mixkit-bell-notification-933.mp3" type="audio/mpeg">
-</audio>
 
 </body>
 <script>
-let lastSnapshot = {
-  rows: 0,
-  lastOrder: ""
-};
 
-let isRefreshing = false;
 
-async function checkForNewData() {
-  if (isRefreshing) return;
-
-  const url = warehouseSheets[currentWarehouse];
-  if (!url) return;
-
-  try {
-    const res = await fetch(url, { cache: "no-store" });
-    const csv = await res.text();
-
-    let rows = 0;
-    let lastOrder = "";
-
-    Papa.parse(csv, {
-      header: true,
-      skipEmptyLines: true,
-      step: (row) => {
-        rows++;
-        const id = findOrderId(row.data);
-        if (id) lastOrder = normalizeOrderId(id);
-      },
-      complete: () => {
-        // 🔍 لا تغيير؟ اخرج بهدوء
-        if (
-  rows === lastSnapshot.rows &&
-  lastOrder === lastSnapshot.lastOrder
-) {
-  return;
-}
-
-// ✅ بيانات جديدة
-lastSnapshot.rows = rows;
-lastSnapshot.lastOrder = lastOrder;
-
-showToast("New orders received");
-smartRefresh();
-      }
-    });
-
-  } catch (e) {
-    console.error("Auto-check failed", e);
-  }
-}
-async function smartRefresh() {
-  isRefreshing = true;
-
-  try {
-    await loadPackingStation(() => {
-      loadWarehouseData(currentWarehouse);
-    });
-
-    updateFooterInfo(); // update last sync فقط هنا
-  } finally {
-    isRefreshing = false;
-  }
-}
 document.addEventListener("click", function (e) {
   const sidebar = document.querySelector(".sidebar");
   const btn = document.querySelector(".mobile-menu-btn");
@@ -786,16 +684,12 @@ function toggleSidebar() {
     const today = new Date().toISOString().slice(0, 10);
     document.getElementById("fromDate").value = today;
     document.getElementById("toDate").value = today;
-setTimeout(() => {
-  checkForNewData(); // snapshot initial
-}, 2000);
+
     // تفعيل فلتر التاريخ تلقائيًا
     dateFilter.from = new Date(today + " 00:00:00");
     dateFilter.to = new Date(today + " 23:59:59.999");
   });
-setInterval(() => {
-  checkForNewData();
-}, 60 * 1000); //   ()
+
 
   const pharma = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=875574333&single=true&output=csv";
 
@@ -805,92 +699,7 @@ setInterval(() => {
   const lux = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=884068351&single=true&output=csv";
   const packing_station = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=457547473&single=true&output=csv";
 
-// Cache لكل مستودع لتسريع التنقل
-const warehouseCache = {};
 
-async function loadWarehouseDataCached(warehouseKey, forceReload = false) {
-  // إذا موجودة في الـ cache ولم يطلب إعادة تحميل
-  if (warehouseCache[warehouseKey] && !forceReload) {
-    allOrders = warehouseCache[warehouseKey].allOrders;
-    packingData = warehouseCache[warehouseKey].packingData;
-    packingOrdersSet = warehouseCache[warehouseKey].packingOrdersSet;
-    packingMap = warehouseCache[warehouseKey].packingMap;
-
-    // اعرض البيانات مباشرة
-    selectWarehouseLogic(warehouseKey);
-    updateFooterInfo();
-    return;
-  }
-
-  // تحميل بيانات الـ packing أولاً
-  await new Promise(resolve => loadPackingStation(resolve));
-
-  // ثم تحميل بيانات المستودع
-  const url = warehouseSheets[warehouseKey];
-  if (!url) return;
-
-  try {
-    const res = await fetch(url, { cache: "no-store" });
-    const csv = await res.text();
-
-    const map = {};
-    Papa.parse(csv, {
-      header: true,
-      skipEmptyLines: true,
-      step: function (row) {
-        const data = row.data;
-        const id = findOrderId(data);
-        if (!id) return;
-
-        if (!map[id]) map[id] = { order: id, warehouses: {} };
-
-        const base = normalize(warehouseKey);
-        if (!map[id].warehouses[base]) {
-          map[id].warehouses[base] = {
-            packed: false,
-            comment: "",
-            whTime: null,
-            packTime: null,
-            distributedBy: ""
-          };
-        }
-
-        const w = map[id].warehouses[base];
-
-        if (data["Comment"]) w.comment = data["Comment"];
-
-        const whName = (data["Warehouse Name"] || "").toLowerCase();
-        if (whName.includes("pack")) w.packed = true;
-
-        const time = parseDate(data["Order Received in WH"]);
-        if (time) {
-          if (!w.whTime || time < w.whTime) w.whTime = time;
-        }
-
-        if (data["Distributed By"]) w.distributedBy = data["Distributed By"];
-      },
-      complete: () => {
-        allOrders = Object.values(map);
-
-        attachPackingTimes();
-
-        // حفظ في الـ cache
-        warehouseCache[warehouseKey] = {
-          allOrders: allOrders,
-          packingData: [...packingData],
-          packingOrdersSet: new Set(packingOrdersSet),
-          packingMap: new Map(packingMap)
-        };
-
-        // عرض البيانات
-        selectWarehouseLogic(warehouseKey);
-        updateFooterInfo();
-      }
-    });
-  } catch (e) {
-    console.error("Failed to load warehouse data", e);
-  }
-}
   let packingOrdersSet = new Set();
 
   function normalizeOrderId(val) {
@@ -915,27 +724,17 @@ async function loadWarehouseDataCached(warehouseKey, forceReload = false) {
 
     return key ? row[key] : null;
   }
+function findPackingTime(row) {
+  const key = Object.keys(row).find(k =>
+    k.toLowerCase().includes("pack")
+  );
 
-  // 🕒 إيجاد أي عمود وقت خاص بالـ Packing
-  function findPackingTime(row) {
-    const key = Object.keys(row).find(k => {
-      const n = k.toLowerCase();
-      return (
-        n.includes("pack") &&
-        (
-          n.includes("receiv") ||
-          n.includes("time") ||
-          n.includes("date") ||
-          n.includes("at")
-        )
-      );
-    });
+  if (!key) return null;
 
-    if (!key) return null;
+  const d = parseDate(row[key]);
+  return isNaN(d) ? null : d;
+}
 
-    const d = new Date(row[key]);
-    return isNaN(d) ? null : d;
-  }
   let packingData = [];
 
   let packingMap = new Map();
@@ -1128,7 +927,7 @@ function parseDate(val) {
 
     // 🔹 تحميل البيانات
     loadPackingStation(() => {
-      loadWarehouseDataCached(key);;
+      loadWarehouseData(key);
     });
   }
 
@@ -1216,35 +1015,28 @@ function parseDate(val) {
       const normalizedOrder = normalizeOrderId(o.order);
 
       if (packingOrdersSet.has(normalizedOrder)) {
+        const packRow = packingData.find(r => {
+          const id = r["Shopify Order#"] || r["#M Order"] || r["Order #"];
+          return normalizeOrderId(id) === normalizedOrder;
+        });
 
-  const packRow = packingMap.get(normalizedOrder);
-  let realPackTime = null;
+        const packKey = Object.keys(packRow).find(k =>
+          k.toLowerCase().includes("receiv") &&
+          k.toLowerCase().includes("pack")
+        );
 
-  if (packRow) {
-    const packKey = Object.keys(packRow).find(k =>
-      k.toLowerCase().includes("pack") &&
-      k.toLowerCase().includes("receiv")
-    );
+        const realPackTime = packKey ? parseDate(packRow[packKey]) : null;
 
-    if (packKey) {
-      realPackTime = parseDate(packRow[packKey]);
-    }
-  }
+        const prep = whTime && realPackTime ? Math.round((realPackTime - whTime) / 60000) : 0;
 
-  let prep = null;
-  if (whTime && realPackTime && realPackTime >= whTime) {
-    prep = Math.round((realPackTime - whTime) / 60000);
-  }
-
-  issuedOrders.push({
-    order: o.order,
-    whTime,
-    packTime: realPackTime,
-    prep,
-    comment: "Issued via Packing Station"
-  });
-      }
-      else if (whTime) {
+        issuedOrders.push({
+          order: o.order,
+          whTime,
+          packTime: realPackTime,
+          prep: prep,
+          comment: "Issued via Packing Station"
+        });
+      } else if (whTime) {
         pendingOrders.push({
           order: o.order,
           whTime,
@@ -1439,13 +1231,11 @@ function parseDate(val) {
     const issued = issuedFiltered.length;
     const pending = pendingFiltered.length;
 
-    const validPrep = issuedFiltered
-  .map(o => o.prep)
-  .filter(p => typeof p === "number" && p >= 0);
-
-const avgPrep = validPrep.length
-  ? Math.round(validPrep.reduce((a, b) => a + b, 0) / validPrep.length)
-  : 0;
+    const avgPrep = issued
+      ? Math.round(
+        issuedFiltered.reduce((sum, o) => sum + (o.prep || 0), 0) / issued
+      )
+      : 0;
 
     document.getElementById("totalOrders").textContent = total;
     document.getElementById("issuedOrders").textContent = issued;
@@ -1601,26 +1391,28 @@ function inDateRange(d) {
   }
 
 
-  
-function showToast(message = "New orders received") {
-    const toast = document.getElementById("toast");
-    const text = document.getElementById("toastText");
-    const sound = document.getElementById("pingSound");
+  async function refreshData() {
+    showLoading();
 
-    text.textContent = message;
-    toast.classList.remove("hidden");
+    issuedOrders = [];
+    pendingOrders = [];
 
-    // 🔔 تشغيل الصوت (محمي من الأخطاء)
-    if (sound) {
-        sound.currentTime = 0;
-        sound.play().catch(() => {});
+    try {
+      await loadWarehouseData(); // مهم تكون async
+    } catch (e) {
+      console.error("Load error", e);
     }
 
-    setTimeout(() => {
-        toast.classList.add("hidden");
-    }, 3500);
-}
-  
+    renderIssuedTable();
+    renderPendingTable();
+    updateKPIs();
+
+    hideLoading();
+  }
+
+  setInterval(() => {
+    refreshData();
+  }, 10 * 60 * 1000);
 
   function updateFooterInfo() {
     const now = new Date();
@@ -1636,5 +1428,3 @@ function showToast(message = "New orders received") {
 
 
 </html>
-
-
