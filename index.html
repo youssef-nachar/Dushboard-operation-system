@@ -322,15 +322,18 @@
         }
 
         /* LOADING OVERLAY */
-        .loading-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(2, 6, 23, 0.95);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
+  .loading-overlay {
+    position: fixed;
+    inset: 0;
+    backdrop-filter: blur(6px);      /* 👈 التغبيش */
+    -webkit-backdrop-filter: blur(6px);
+    background: rgba(0,0,0,0.05);    /* خفيف جدًا (اختياري) */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
 
         .loading-card {
             text-align: center;
@@ -449,6 +452,13 @@
         .menu-open>a .arrow {
             transform: rotate(180deg);
         }
+        /* BLUR EFFECT أثناء الـ refresh */
+.blur-loading {
+    filter: blur(6px);
+    pointer-events: none; /* منع أي تفاعل */
+    transition: filter 0.25s ease;
+}
+
     </style>
 
 </head>
@@ -746,6 +756,9 @@ let distributedOrdersMap = {};
 //   "#L3029": "10:00",
 //   "#M48717": "10:00"
 // }
+const LS_HASH  = "orders_hash";
+const LS_COUNT = "orders_count";
+const LS_TIME  = "orders_last_update";
 
 function loadDistributedOrders() {
     return fetch(distributionSheetURL)
@@ -963,6 +976,16 @@ function formatDateForInput(value) {
 
     return null;
 }
+const LS_ORDERS = "orders_list";
+
+function getStoredOrders() {
+    try {
+        return JSON.parse(localStorage.getItem(LS_ORDERS)) || [];
+    } catch {
+        return [];
+    }
+}
+
 async function loadData({ force = false, silent = false } = {}) {
     if (isLoading) return;
     isLoading = true;
@@ -972,8 +995,10 @@ async function loadData({ force = false, silent = false } = {}) {
     }
 
     try {
+        /* 1️⃣ تحميل Sheet التوزيع أولاً */
         await loadDistributedOrders();
 
+        /* 2️⃣ تحميل Sheet الأساسي */
         const res = await fetch(sheetURL, { cache: "no-store" });
         const csv = await res.text();
 
@@ -991,10 +1016,12 @@ async function loadData({ force = false, silent = false } = {}) {
 
         const map = {};
 
+        /* 3️⃣ بناء الطلبات من الصفوف */
         rows.forEach(r => {
             const orderNo = r[ORDER];
             const date = formatDateForInput(r[DATE]);
             const whRaw = r[WH];
+
             if (!orderNo || !date) return;
 
             if (!map[orderNo]) {
@@ -1005,12 +1032,16 @@ async function loadData({ force = false, silent = false } = {}) {
             if (!w.base) return;
 
             if (!map[orderNo].wh[w.base]) {
-                map[orderNo].wh[w.base] = { base: w.base, packed: w.packed };
+                map[orderNo].wh[w.base] = {
+                    base: w.base,
+                    packed: w.packed
+                };
             } else {
                 map[orderNo].wh[w.base].packed ||= w.packed;
             }
         });
 
+        /* 4️⃣ تحويلها لشكل Orders نهائي */
         let newOrders = Object.values(map).map(o => {
             const warehouses = Object.values(o.wh);
             const packedCount = warehouses.filter(w => w.packed).length;
@@ -1020,56 +1051,61 @@ async function loadData({ force = false, silent = false } = {}) {
             else if (packedCount > 0) status = "partial";
 
             return {
-                ...o,
+                orderNo: o.orderNo,
+                date: o.date,               // تاريخ ثابت
                 warehouses,
                 warehouseCount: warehouses.length,
-                status
+                status,
+                distributionDate: o.date   // سيتم override لو موزّع
             };
         });
 
-        // distributed override
+        /* 5️⃣ override الطلبات الموزعة (بـ تاريخ ثابت) */
         newOrders.forEach(o => {
-            if (distributedOrdersMap[o.orderNo]) {
+            const distDate = distributedOrdersMap[o.orderNo];
+            if (distDate) {
                 o.status = "distributed";
+                o.distributionDate = distDate;
                 o.warehouses.forEach(w => w.distributed = true);
             }
         });
 
-        const newHash = hashData(newOrders);
+        /* 6️⃣ إشعار الطلبات الجديدة (اختياري) */
+        const newOrderNos = [...new Set(newOrders.map(o => o.orderNo))].sort();
+        const oldOrderNos = getStoredOrders().sort();
 
-const oldCount = dataCache ? dataCache.length : 0;
-const newCount = newOrders.length;
+        const trulyNewOrders = newOrderNos.filter(
+            o => !oldOrderNos.includes(o)
+        );
 
-// ⛔ لا تحديث إذا لم تتغير الداتا
-if (!force && dataCache && newHash === lastDataHash) {
-    return;
-}
-
-// 🔔 Orders جديدة
-if (dataCache && newCount > oldCount) {
-    const diff = newCount - oldCount;
-    showToast(`🔔 ${diff} new order${diff > 1 ? "s" : ""} received`);
-}
-
-        // ✅ تحديث حقيقي فقط عند التغيير
-        dataCache = newOrders;
-        allOrders = newOrders;
-        lastDataHash = newHash;
-
-        updateDashboard();
-
-        if (!dateFrom.value && !dateTo.value) {
-            initDate();
+        if (!force && oldOrderNos.length && trulyNewOrders.length) {
+            showToast(
+                `🔔 ${trulyNewOrders.length} new order${trulyNewOrders.length > 1 ? "s" : ""} received`
+            );
         }
 
-    } catch (e) {
-        console.error("Load error:", e);
+        localStorage.setItem(LS_ORDERS, JSON.stringify(newOrderNos));
+
+        /* 7️⃣ تثبيت البيانات */
+        dataCache = newOrders;
+        allOrders = newOrders;
+
+        /* 8️⃣ تثبيت التاريخ مرة واحدة فقط */
+        if (firstLoad) {
+            initDate();
+            firstLoad = false;
+        } else {
+            updateDashboard();
+        }
+
+    } catch (err) {
+        console.error("Load error:", err);
     } finally {
         isLoading = false;
         loadingOverlay.classList.add("hidden");
+        dashboard.classList.remove("blur-loading");
     }
 }
-    // INIT DATE FILTER
 
 function initDate() {
     const today = new Date().toISOString().slice(0, 10);
@@ -1103,7 +1139,7 @@ function applyFilters() {
 function updateDashboard() {
     const o = applyFilters();
 
-    total.textContent = o.length + distributedOrders.size; // اجمالي الطلبات
+total.textContent = o.length;
     completed.textContent = o.filter(x => x.status === "completed").length;
     pending.textContent = o.filter(x => (x.status === "pending" || x.status === "partial")).length;
     distributed.textContent = applyFilters().filter(o => o.status === "distributed").length;   renderWarehouseBreakdown(o);
@@ -1441,15 +1477,24 @@ function normalizeWarehouse(name) {
 }
     // SHOW WAREHOUSES PAGE
     function showWarehouses() { }
-const CHECK_INTERVAL = 120000; // 20 ثانية
+
+
+
+
+const CHECK_INTERVAL = 20000; 
 
 function startSmartRefresh() {
     if (refreshTimer) return;
 
     refreshTimer = setInterval(() => {
-        loadData({ silent: true }); // ⬅️ لن يحدث update إلا إذا تغيّرت الداتا
+        loadData({ silent: true });
     }, CHECK_INTERVAL);
 }
+const lastUpdate = localStorage.getItem(LS_TIME);
+if (lastUpdate) {
+    console.log("Last update:", new Date(+lastUpdate).toLocaleTimeString());
+}
+
 
 //function stopAutoRefresh() {
    // clearInterval(refreshTimer);
@@ -1465,15 +1510,22 @@ function startSmartRefresh() {
     loginContainer.style.display = "flex";
 }
 // REFRESH PAGE ON ENTER
+// REFRESH PAGE ON ENTER + BLUR
 document.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
         const tag = document.activeElement.tagName.toLowerCase();
         if (tag === "input" || tag === "textarea") return;
 
         e.preventDefault();
+
+        // إضافة blur
+        dashboard.classList.add("blur-loading");
+        loadingOverlay.classList.remove("hidden");
+
         loadData({ force: true });
     }
 });
+
 function showToast(message) {
     const toast = document.getElementById("toast");
     const text = document.getElementById("toastText");
