@@ -662,7 +662,31 @@
             <p>Loading Dashboard...</p>
         </div>
     
+<div id="toast" style="
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #020617;
+    color: white;
+    padding: 14px 18px;
+    border-radius: 14px;
+    box-shadow: 0 20px 40px rgba(0,0,0,.6);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all .3s ease;
+    z-index: 99999;
+">
+    <i class="fa-solid fa-bell" style="color:#22c55e"></i>
+    <span id="toastText">New orders received</span>
+</div>
 
+<audio id="toastSound">
+    <source src="https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3" type="audio/mpeg">
+</audio>
 </body>
 
 <script>
@@ -680,12 +704,20 @@ orderDetails.addEventListener("click", (e) => {
 
 let refreshTimer = null;
 let isRefreshing = false;
-let lastDataHash = "";
+
 let firstLoad = true;
 
-const REFRESH_INTERVAL = 60000; // 60 ثانية (professional)
+//const REFRESH_INTERVAL = 60000; // 60 ثانية (professional)
+let dataCache = null;
+let lastDataHash = "";
+let isLoading = false;
+
 function hashData(data) {
-    return JSON.stringify(data).length + "_" + data.length;
+    return JSON.stringify(data.map(o => ({
+        orderNo: o.orderNo,
+        status: o.status,
+        wh: o.warehouses.map(w => w.base + w.packed + w.distributed)
+    })));
 }
 
 const loginContainer = document.getElementById("loginContainer");
@@ -697,7 +729,7 @@ window.addEventListener('DOMContentLoaded', () => {
         loginContainer.style.display = "none";
         dashboard.classList.remove("hidden");
         loadData();
-       // startAutoRefresh(); // ✅
+       startSmartRefresh()
     }
 });
 
@@ -840,7 +872,8 @@ function loadDistributedOrders() {
     loginContainer.style.display = "none";
     dashboard.classList.remove("hidden");
 
-    loadData(); // تحميل البيانات
+    loadData();
+     startSmartRefresh()
 };
 function toggleQuickMenu(e) {
     e.stopPropagation();
@@ -930,19 +963,19 @@ function formatDateForInput(value) {
 
     return null;
 }
-async function loadData({ silent = false } = {}) {
-    if (isRefreshing) return; // ⛔ منع التداخل
-    isRefreshing = true;
+async function loadData({ force = false, silent = false } = {}) {
+    if (isLoading) return;
+    isLoading = true;
 
-    if (!silent && firstLoad) {
+    if (!silent && !dataCache) {
         loadingOverlay.classList.remove("hidden");
     }
 
     try {
         await loadDistributedOrders();
 
-        const response = await fetch(sheetURL, { cache: "no-store" });
-        const csv = await response.text();
+        const res = await fetch(sheetURL, { cache: "no-store" });
+        const csv = await res.text();
 
         const parsed = Papa.parse(csv, { skipEmptyLines: true });
         const rows = parsed.data;
@@ -994,30 +1027,45 @@ async function loadData({ silent = false } = {}) {
             };
         });
 
-        // DISTRIBUTED override
+        // distributed override
         newOrders.forEach(o => {
             if (distributedOrdersMap[o.orderNo]) {
                 o.status = "distributed";
-                o.distributedTime = distributedOrdersMap[o.orderNo];
                 o.warehouses.forEach(w => w.distributed = true);
             }
         });
 
-        // 🔥 Detect real change
         const newHash = hashData(newOrders);
-        if (newHash !== lastDataHash) {
-            allOrders = newOrders;
-            lastDataHash = newHash;
-            updateDashboard(); // فقط إذا تغيّر
+
+const oldCount = dataCache ? dataCache.length : 0;
+const newCount = newOrders.length;
+
+// ⛔ لا تحديث إذا لم تتغير الداتا
+if (!force && dataCache && newHash === lastDataHash) {
+    return;
+}
+
+// 🔔 Orders جديدة
+if (dataCache && newCount > oldCount) {
+    const diff = newCount - oldCount;
+    showToast(`🔔 ${diff} new order${diff > 1 ? "s" : ""} received`);
+}
+
+        // ✅ تحديث حقيقي فقط عند التغيير
+        dataCache = newOrders;
+        allOrders = newOrders;
+        lastDataHash = newHash;
+
+        updateDashboard();
+
+        if (!dateFrom.value && !dateTo.value) {
+            initDate();
         }
 
-        if (firstLoad) initDate();
-        firstLoad = false;
-
-    } catch (err) {
-        console.error("❌ Load error:", err);
+    } catch (e) {
+        console.error("Load error:", e);
     } finally {
-        isRefreshing = false;
+        isLoading = false;
         loadingOverlay.classList.add("hidden");
     }
 }
@@ -1050,7 +1098,7 @@ function applyFilters() {
 }
 
 
-filteredOrders = Object.values(unique);
+//filteredOrders = Object.values(unique);
     // UPDATE DASHBOARD KPIS
 function updateDashboard() {
     const o = applyFilters();
@@ -1296,7 +1344,7 @@ if (order.status === "distributed") {
     });
 
     html += `
-      </tbody>
+      </tbodyi>
     </table>
     `;
 
@@ -1393,46 +1441,59 @@ function normalizeWarehouse(name) {
 }
     // SHOW WAREHOUSES PAGE
     function showWarehouses() { }
-function startAutoRefresh() {
+const CHECK_INTERVAL = 20000; // 20 ثانية
+
+function startSmartRefresh() {
     if (refreshTimer) return;
 
     refreshTimer = setInterval(() => {
-        loadData({ silent: true }); // بدون loading
-    }, REFRESH_INTERVAL);
+        loadData({ silent: true }); // ⬅️ لن يحدث update إلا إذا تغيّرت الداتا
+    }, CHECK_INTERVAL);
 }
 
-
-
-document.addEventListener("keydown", (e) => {
-    // نتأكد إنو Enter فقط
-    if (e.key === "Enter") {
-
-        // لو المستخدم يكتب في input أو textarea، ما نعمل refresh
-        const tag = document.activeElement.tagName.toLowerCase();
-        if (tag === "input" || tag === "textarea") return;
-
-        e.preventDefault();
-
-        // refresh كامل للصفحة
-        location.reload();
-    }
-});
-    
-function stopAutoRefresh() {
-    clearInterval(refreshTimer);
-    refreshTimer = null;
-}
+//function stopAutoRefresh() {
+   // clearInterval(refreshTimer);
+  //  refreshTimer = null;
+//}
     // SIGN OUT
     function signOut() {
-    stopAutoRefresh();
+    clearInterval(refreshTimer);
+    refreshTimer = null;
+
     localStorage.removeItem("isLoggedIn");
     dashboard.classList.add("hidden");
     loginContainer.style.display = "flex";
 }
+// REFRESH PAGE ON ENTER
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+        const tag = document.activeElement.tagName.toLowerCase();
+        if (tag === "input" || tag === "textarea") return;
 
+        e.preventDefault();
+        loadData({ force: true });
+    }
+});
+function showToast(message) {
+    const toast = document.getElementById("toast");
+    const text = document.getElementById("toastText");
+    const sound = document.getElementById("toastSound");
 
+    text.textContent = message;
+
+    toast.style.opacity = "1";
+    toast.style.transform = "translateY(0)";
+
+    // صوت (خفيف)
+    sound.currentTime = 0;
+    sound.play().catch(() => {});
+
+    setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateY(20px)";
+    }, 4000);
+}
 </script>
 </body>
 
     </html>
-
