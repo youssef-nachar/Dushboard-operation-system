@@ -385,6 +385,31 @@
     align-items: center;
     font-size: 14px;
 }
+.tracking-info {
+    margin-top: 12px;
+    padding: 14px;
+    background: #020617;
+    border: 1px solid #1f2937;
+    border-radius: 14px;
+    animation: fadeIn 0.3s ease;
+}
+
+.tracking-info h4 {
+    color: var(--accent);
+    margin-bottom: 6px;
+    font-size: 15px;
+}
+
+.tracking-info .meta {
+    display: flex;
+    gap: 16px;
+    font-size: 13px;
+    color: #9ca3af;
+}
+
+.tracking-info .meta i {
+    color: var(--accent);
+}
 
 .quick-dropdown div:hover {
     background: #111827;
@@ -786,7 +811,10 @@ const company = COMPANY_COL !== -1 ? r[COMPANY_COL]?.trim() : "";
                 const formattedDate = formatDateForInput(rawDate);
                 if (!formattedDate) return;
 
-                distributedOrdersMap[orderNo] = formattedDate, company;
+                distributedOrdersMap[orderNo] = {
+                  date: formattedDate,
+                 company: company
+};
             });
 
             console.log("✅ Distributed orders loaded:", distributedOrdersMap);
@@ -825,33 +853,51 @@ tableDiv.innerHTML = `
         <th>Order #</th>
         <th>Warehouse</th>
         <th>Status</th>
-        <th>Distributor</th>
     </tr>
-${filtered.map(o =>
-    o.warehouses.map(w => {
-        let status;
-        if (w.distributed || o.status === "distributed") {
-            status = "Distributed";
-        } else if (w.packed) {
-            status = "In-Packing";
-        } else {
-            status = "Pending";
-        }
+    ${filtered.map(o =>
+        o.warehouses.map(w => {
+            let status;
+            if (w.distributed || o.status === "distributed") {
+                status = "Distributed";
+            } else if (w.packed) {
+                status = "In-Packing";
+            } else {
+                status = "Pending";
+            }
 
-        // احصل على اسم الشركة من distributedOrdersMap إذا موجود
-        let distributorName = distributedOrdersMap[o.orderNo]?.company || "";
-        return `
-        <tr>
-            <td>${o.orderNo}</td>
-            <td>${w.base.toUpperCase()}</td>
-            <td style="font-weight:600">${status}</td>
-            <td>${distributorName}</td>
-        </tr>
-        `;
-    }).join("")
-).join("")}
+            return `
+            <tr>
+                <td>${o.orderNo}</td>
+                <td>${w.base.toUpperCase()}</td>
+                <td style="font-weight:600">${status}</td>
+            </tr>
+            `;
+        }).join("")
+    ).join("")}
 </table>
 `;
+
+/* ===== Distributor info card ===== */
+const dist = distributedOrdersMap[filtered[0].orderNo];
+
+if (dist) {
+    tableDiv.innerHTML += `
+    <div class="tracking-info">
+        <h4><i class="fa-solid fa-truck"></i> Distribution Details</h4>
+        <div class="meta">
+            <div>
+                <i class="fa-solid fa-building"></i>
+                ${dist.company || "Unknown Company"}
+            </div>
+            <div>
+                <i class="fa-regular fa-clock"></i>
+                ${dist.date}
+            </div>
+        </div>
+    </div>
+    `;
+}
+
 
 resultsDiv.style.display = "block";}
 
@@ -1095,7 +1141,7 @@ function applyFilters() {
     return allOrders.filter(o => {
         const dateToCheck =
             o.status === "distributed"
-                ? distributedOrdersMap[o.orderNo]
+                ? distributedOrdersMap[o.orderNo]?.date   // ✅ هنا التعديل
                 : o.date;
 
         if (!dateToCheck) return false;
@@ -1105,7 +1151,6 @@ function applyFilters() {
         return true;
     });
 }
-
 
 //filteredOrders = Object.values(unique);
     // UPDATE DASHBOARD KPIS
@@ -1193,7 +1238,7 @@ function showDistributedOrders() {
     <th>Total</th>
     <th>In-Packing</th>
     <th>Pending</th>
-    <th>Delivered</th>
+    <th>distributed</th>
   </tr>
 
   ${Object.entries(warehouseMap).map(([wh, v]) => {
@@ -1596,3 +1641,4 @@ function showToast(message) {
 </body>
 
     </html>
+
