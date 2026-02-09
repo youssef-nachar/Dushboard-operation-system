@@ -322,18 +322,15 @@
         }
 
         /* LOADING OVERLAY */
-  .loading-overlay {
-    position: fixed;
-    inset: 0;
-    backdrop-filter: blur(6px);      /* 👈 التغبيش */
-    -webkit-backdrop-filter: blur(6px);
-    background: rgba(0,0,0,0.05);    /* خفيف جدًا (اختياري) */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-}
-
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
 
         .loading-card {
             text-align: center;
@@ -452,13 +449,6 @@
         .menu-open>a .arrow {
             transform: rotate(180deg);
         }
-        /* BLUR EFFECT أثناء الـ refresh */
-.blur-loading {
-    filter: blur(6px);
-    pointer-events: none; /* منع أي تفاعل */
-    transition: filter 0.25s ease;
-}
-
     </style>
 
 </head>
@@ -502,8 +492,8 @@
             <a href="#">Dashboard</a>
             <div class="menu-item">
                 <a href="#" onclick="toggleMenu('warehousesMenu')">
-<a href="./p&c.html"><i class="fa-solid fa-boxes-stacked"></i> Warehouses</a>
-                    
+<a href="#" onclick="toggleMenu('warehousesMenu')">
+  <a href="./p&c.html"><i class="fa-solid fa-boxes-stacked"></i> Warehouses</a>                 
             
 
                 <div id="warehousesMenu" class="submenu">
@@ -655,7 +645,15 @@
     </div>
 </div>
     <div id="orderDetails" class="hidden">
+       
         <div class="card">
+             <div style="margin-bottom:10px; font-size:13px;">
+    <span style="color:#16a34a; font-weight:600">● In-Packing</span>
+    &nbsp;&nbsp;
+    <span style="color:#f59e0b; font-weight:600">● Partial / pending</span>
+    &nbsp;&nbsp;
+    <span style="color:#22c55e; font-weight:600">● Distributed</span>
+</div>
             <button onclick="closeOrderDetails()" style="float:right;background:#ef4444">Close</button>
             <button onclick="exportOrderDetailsToExcel()" style="float:right;margin-right:8px;background:#22c55e">Export
                 to Excel</button>
@@ -756,9 +754,6 @@ let distributedOrdersMap = {};
 //   "#L3029": "10:00",
 //   "#M48717": "10:00"
 // }
-const LS_HASH  = "orders_hash";
-const LS_COUNT = "orders_count";
-const LS_TIME  = "orders_last_update";
 
 function loadDistributedOrders() {
     return fetch(distributionSheetURL)
@@ -774,7 +769,7 @@ function loadDistributedOrders() {
 
             const ORDER_COL = headers.indexOf("request number");
             const DATE_COL  = headers.indexOf("request registration date time");
-
+           const COMPANY_COL = headers.findIndex(h => h.includes("company")); //
             if (ORDER_COL === -1 || DATE_COL === -1) {
                 console.error("❌ Distribution columns not found", headers);
                 return;
@@ -785,13 +780,13 @@ function loadDistributedOrders() {
             rows.forEach(r => {
                 const orderNo = r[ORDER_COL]?.trim();
                 const rawDate = r[DATE_COL];
-
+const company = COMPANY_COL !== -1 ? r[COMPANY_COL]?.trim() : "";
                 if (!orderNo || !rawDate) return;
 
                 const formattedDate = formatDateForInput(rawDate);
                 if (!formattedDate) return;
 
-                distributedOrdersMap[orderNo] = formattedDate;
+                distributedOrdersMap[orderNo] = formattedDate, company;
             });
 
             console.log("✅ Distributed orders loaded:", distributedOrdersMap);
@@ -824,42 +819,41 @@ function loadDistributedOrders() {
         resultsDiv.style.display = "block";
         return;
     }
+tableDiv.innerHTML = `
+<table>
+    <tr>
+        <th>Order #</th>
+        <th>Warehouse</th>
+        <th>Status</th>
+        <th>Distributor</th>
+    </tr>
+${filtered.map(o =>
+    o.warehouses.map(w => {
+        let status;
+        if (w.distributed || o.status === "distributed") {
+            status = "Distributed";
+        } else if (w.packed) {
+            status = "In-Packing";
+        } else {
+            status = "Pending";
+        }
 
-    tableDiv.innerHTML = `
-    <table>
+        // احصل على اسم الشركة من distributedOrdersMap إذا موجود
+        let distributorName = distributedOrdersMap[o.orderNo]?.company || "";
+        return `
         <tr>
-            <th>Order #</th>
-            <th>Warehouse</th>
-            <th>Status</th>
-            <th>Distributor</th>
+            <td>${o.orderNo}</td>
+            <td>${w.base.toUpperCase()}</td>
+            <td style="font-weight:600">${status}</td>
+            <td>${distributorName}</td>
         </tr>
-    ${filtered.map(o =>
-        o.warehouses.map(w => {
-    let status;
-    if (w.distributed || o.status === "distributed") {
-        status = "Distributed";
-    } else if (w.packed) {
-        status = "In-Packing";
-    } else {
-        status = "Pending";
-    }
-    
+        `;
+    }).join("")
+).join("")}
+</table>
+`;
 
-            return `
-            <tr>
-                <td>${o.orderNo}</td>
-                <td>${w.base.toUpperCase()}</td>
-                <td style="font-weight:600">${status}</td>
-                <td>${o.distributor || ""}</td>
-            </tr>
-            `;
-        }).join("")
-    ).join("")}
-    </table>
-    `;
-
-    resultsDiv.style.display = "block";
-}
+resultsDiv.style.display = "block";}
 
 
 
@@ -976,32 +970,17 @@ function formatDateForInput(value) {
 
     return null;
 }
-const LS_ORDERS = "orders_list";
-
-function getStoredOrders() {
-    try {
-        return JSON.parse(localStorage.getItem(LS_ORDERS)) || [];
-    } catch {
-        return [];
-    }
-}
-
 async function loadData({ force = false, silent = false } = {}) {
     if (isLoading) return;
     isLoading = true;
 
-    if (!silent && !dataCache) {
-        loadingOverlay.classList.remove("hidden");
-    }
+    if (!silent && !dataCache) loadingOverlay.classList.remove("hidden");
 
     try {
-        /* 1️⃣ تحميل Sheet التوزيع أولاً */
         await loadDistributedOrders();
 
-        /* 2️⃣ تحميل Sheet الأساسي */
         const res = await fetch(sheetURL, { cache: "no-store" });
         const csv = await res.text();
-
         const parsed = Papa.parse(csv, { skipEmptyLines: true });
         const rows = parsed.data;
         if (!rows.length) return;
@@ -1013,99 +992,93 @@ async function loadData({ force = false, silent = false } = {}) {
         const ORDER = col["shopify order#"];
         const DATE  = col["order received in wh"];
         const WH    = col["warehouse name"];
+        const PACKED = col["packed"] || null;
 
         const map = {};
 
-        /* 3️⃣ بناء الطلبات من الصفوف */
         rows.forEach(r => {
-            const orderNo = r[ORDER];
+            const orderNo = r[ORDER]?.trim().toUpperCase();
             const date = formatDateForInput(r[DATE]);
-            const whRaw = r[WH];
+            const whRaw = r[WH]?.trim();
+            const packedRaw = PACKED ? r[PACKED]?.trim() : null;
 
-            if (!orderNo || !date) return;
+            if (!orderNo || !date || !whRaw) return;
 
             if (!map[orderNo]) {
                 map[orderNo] = { orderNo, date, wh: {} };
             }
 
+            // normalize warehouse
             const w = normalizeWarehouse(whRaw);
             if (!w.base) return;
 
             if (!map[orderNo].wh[w.base]) {
-                map[orderNo].wh[w.base] = {
-                    base: w.base,
-                    packed: w.packed
-                };
-            } else {
-                map[orderNo].wh[w.base].packed ||= w.packed;
+                map[orderNo].wh[w.base] = { base: w.base, packed: false };
+            }
+
+            // ✅ معالجة جميع صيغ العمود Packed
+            const packedValues = ["TRUE", "True", "true", "1", "Yes", "yes", "X", "x"];
+            if (w.packed || (packedRaw && packedValues.includes(packedRaw))) {
+                map[orderNo].wh[w.base].packed = true;
             }
         });
 
-        /* 4️⃣ تحويلها لشكل Orders نهائي */
-        let newOrders = Object.values(map).map(o => {
-            const warehouses = Object.values(o.wh);
-            const packedCount = warehouses.filter(w => w.packed).length;
+        // بناء الطلبات النهائية مع تحديد الحالة بدقة
+        // بناء الطلبات النهائية مع تحديد الحالة بدقة
+let newOrders = Object.values(map).map(o => {
+    const warehouses = Object.values(o.wh);
+    const totalWH = warehouses.length;
+    const packedWH = warehouses.filter(w => w.packed).length;
 
-            let status = "pending";
-            if (packedCount === warehouses.length) status = "completed";
-            else if (packedCount > 0) status = "partial";
+    let status;
 
-            return {
-                orderNo: o.orderNo,
-                date: o.date,               // تاريخ ثابت
-                warehouses,
-                warehouseCount: warehouses.length,
-                status,
-                distributionDate: o.date   // سيتم override لو موزّع
-            };
-        });
+    if (distributedOrdersMap[o.orderNo]) {
+        status = "distributed";
+        warehouses.forEach(w => w.distributed = true);
+    } 
+    else if (totalWH === 1) {
+        // طلب من مستودع واحد
+        status = warehouses[0].packed ? "completed" : "pending";
+    } 
+    else {
+        // طلب من أكثر من مستودع
+        if (packedWH === 0) status = "pending";
+        else if (packedWH < totalWH) status = "partial";
+        else status = "completed";
+    }
 
-        /* 5️⃣ override الطلبات الموزعة (بـ تاريخ ثابت) */
-        newOrders.forEach(o => {
-            const distDate = distributedOrdersMap[o.orderNo];
-            if (distDate) {
-                o.status = "distributed";
-                o.distributionDate = distDate;
-                o.warehouses.forEach(w => w.distributed = true);
-            }
-        });
+    return {
+        ...o,
+        warehouses,
+        warehouseCount: totalWH,
+        status
+    };
+});
 
-        /* 6️⃣ إشعار الطلبات الجديدة (اختياري) */
-        const newOrderNos = [...new Set(newOrders.map(o => o.orderNo))].sort();
-        const oldOrderNos = getStoredOrders().sort();
+        const newHash = hashData(newOrders);
+        if (!force && dataCache && newHash === lastDataHash) return;
 
-        const trulyNewOrders = newOrderNos.filter(
-            o => !oldOrderNos.includes(o)
-        );
-
-        if (!force && oldOrderNos.length && trulyNewOrders.length) {
-            showToast(
-                `🔔 ${trulyNewOrders.length} new order${trulyNewOrders.length > 1 ? "s" : ""} received`
-            );
+        // إشعار بالطلبات الجديدة
+        if (dataCache && newOrders.length > dataCache.length) {
+            showToast(`🔔 ${newOrders.length - dataCache.length} new order${newOrders.length - dataCache.length > 1 ? "s" : ""} received`);
         }
 
-        localStorage.setItem(LS_ORDERS, JSON.stringify(newOrderNos));
-
-        /* 7️⃣ تثبيت البيانات */
         dataCache = newOrders;
         allOrders = newOrders;
+        lastDataHash = newHash;
 
-        /* 8️⃣ تثبيت التاريخ مرة واحدة فقط */
-        if (firstLoad) {
-            initDate();
-            firstLoad = false;
-        } else {
-            updateDashboard();
-        }
+        updateDashboard();
+        if (!dateFrom.value && !dateTo.value) initDate();
 
-    } catch (err) {
-        console.error("Load error:", err);
+    } catch (e) {
+        console.error("Load error:", e);
     } finally {
         isLoading = false;
         loadingOverlay.classList.add("hidden");
-        dashboard.classList.remove("blur-loading");
     }
 }
+
+    // INIT DATE FILTER
 
 function initDate() {
     const today = new Date().toISOString().slice(0, 10);
@@ -1137,14 +1110,27 @@ function applyFilters() {
 //filteredOrders = Object.values(unique);
     // UPDATE DASHBOARD KPIS
 function updateDashboard() {
-    const o = applyFilters();
+    const orders = applyFilters();
 
-total.textContent = o.length;
-    completed.textContent = o.filter(x => x.status === "completed").length;
-    pending.textContent = o.filter(x => (x.status === "pending" || x.status === "partial")).length;
-    distributed.textContent = applyFilters().filter(o => o.status === "distributed").length;   renderWarehouseBreakdown(o);
-    renderMultiWHOrders(o);
-    renderSingleWHOrders(o);
+    total.textContent = orders.length;
+
+    const distributedOrders = orders.filter(o => o.status === "distributed");
+    const completedOrders = orders.filter(o => o.status === "completed");
+
+    // Pending يجب استبعاد أي طلب موجود في In-Packing أو Distributed
+    const pendingOrders = orders.filter(o => 
+        o.status === "pending" || o.status === "partial"
+    ).filter(o => 
+        !completedOrders.includes(o) && !distributedOrders.includes(o)
+    );
+
+    distributed.textContent = distributedOrders.length;
+    completed.textContent = completedOrders.length;
+    pending.textContent = pendingOrders.length;
+
+    renderWarehouseBreakdown(orders);
+    renderMultiWHOrders(orders);
+    renderSingleWHOrders(orders);
 }
 
 function showDistributedOrders() {
@@ -1181,23 +1167,23 @@ function showDistributedOrders() {
 
       warehouseMap[w.base].t++;
 
-      if (isDistributed) {
-        warehouseMap[w.base].d++;
-      } else if (w.packed) {
-        warehouseMap[w.base].c++; // In-Packing
-      } else {
-        warehouseMap[w.base].p++; // Pending
-      }
+    if (isDistributed) {
+    warehouseMap[w.base].d++;
+} else if (order.status === "completed") {
+    warehouseMap[w.base].c++; // In-Packing
+} else {
+    warehouseMap[w.base].p++; // Pending + Partial
+}
     });
 
     // grand totals
     if (isDistributed) {
-      grandTotal.d++;
-    } else if (order.warehouses.every(w => w.packed)) {
-      grandTotal.c++;
-    } else {
-      grandTotal.p++;
-    }
+    grandTotal.d++;
+} else if (order.status === "completed") {
+    grandTotal.c++;
+} else {
+    grandTotal.p++;
+}
   });
 
   warehouseBreakdownTable.innerHTML = `
@@ -1238,38 +1224,71 @@ function showDistributedOrders() {
 
     // MULTI-WAREHOUSE ORDERS
     function renderMultiWHOrders(orders) {
-        const m = orders.filter(x => x.warehouseCount > 1);
-        multiWHTable.innerHTML = `
+    const m = orders.filter(x => x.warehouseCount > 1);
+    const completedOrders = m.filter(x => x.status === "completed");
+    const distributedOrders = m.filter(x => x.status === "distributed");
+    const pendingOrders = m.filter(x => x.status === "pending" || x.status === "partial")
+                           .filter(o => !completedOrders.includes(o) && !distributedOrders.includes(o));
+
+    multiWHTable.innerHTML = `
 <table>
 <tr><th>Type</th><th>Orders</th></tr>
 <tr><td>Total</td><td><a href="#" onclick="showMultiWHOrders('total')">${m.length}</a></td></tr>
-<tr><td>In-Packing</td><td><a href="#" onclick="showMultiWHOrders('completed')">${m.filter(x => x.status === "completed").length}</a></td></tr>
-<tr><td>Pending / partial </td><td><a href="#" onclick="showMultiWHOrders('pending')">${m.filter(x => (x.status === "pending" || x.status === "partial") && !x.distributor).length}</a></td></tr>
-<tr><td>Distributed</td><td><a href="#" onclick="showMultiWHOrders('distributed')">${m.filter(x => x.status === "distributed").length}</a></td></tr>
+<tr><td>In-Packing</td><td><a href="#" onclick="showMultiWHOrders('completed')">${completedOrders.length}</a></td></tr>
+<tr><td>Pending</td>
+<td>
+<a href="#" onclick="showMultiWHOrders('pending')">
+${pendingOrders.length}</a>
+</td></tr>
+<tr><td>Distributed</td><td><a href="#" onclick="showMultiWHOrders('distributed')">${distributedOrders.length}</a></td></tr>
 </table>`;
-    }
+}
 
     // SINGLE-WAREHOUSE ORDERS
     function renderSingleWHOrders(orders) {
-        const s = orders.filter(x => x.warehouseCount === 1);
-        singleWHTable.innerHTML = `
+    const s = orders.filter(x => x.warehouseCount === 1);
+    const completedOrders = s.filter(x => x.status === "completed");
+    const distributedOrders = s.filter(x => x.status === "distributed");
+    const pendingOrders = s.filter(x => x.status === "pending")
+                           .filter(o => !completedOrders.includes(o) && !distributedOrders.includes(o));
+
+    singleWHTable.innerHTML = `
 <table>
 <tr><th>Type</th><th>Orders</th></tr>
 <tr><td>Total</td><td><a href="#" onclick="showSingleWHOrders('total')">${s.length}</a></td></tr>
-<tr><td>In-Packing</td><td><a href="#" onclick="showSingleWHOrders('completed')">${s.filter(x => x.status === "completed").length}</a></td></tr>
-<tr><td>Pending</td><td><a href="#" onclick="showSingleWHOrders('pending')">${s.filter(x => (x.status === "pending" || x.status === "partial") && !x.distributor).length}</a></td></tr>
-<tr><td>Distributed</td><td><a href="#" onclick="showSingleWHOrders('distributed')">${s.filter(x => x.status === "distributed").length}</a></td></tr>
+<tr><td>In-Packing</td><td><a href="#" onclick="showSingleWHOrders('completed')">${completedOrders.length}</a></td></tr>
+<tr>
+  <td>Pending</td>
+  <td>
+    <a href="#" onclick="showSingleWHOrders('pending')">
+      ${pendingOrders.length}
+    </a>
+  </td>
+</tr>
+<tr><td>Distributed</td><td><a href="#" onclick="showSingleWHOrders('distributed')">${distributedOrders.length}</a></td></tr>
 </table>`;
-    }
+}
 
     // SHOW ORDER DETAILS
     function showOrderDetails(type) {
-        let o = applyFilters();
-        if (type === "completed") o = o.filter(x => x.status === "completed");
-        if (type === "pending") o = o.filter(x => (x.status === "pending" || x.status === "partial") && !x.distributor);
-        if (type === "distributed") o = o.filter(x => x.status === "distributed");
-        displayOrders(o);
+    let o = applyFilters();
+
+    if (type === "completed") {
+        o = o.filter(x => x.status === "completed");
     }
+
+    if (type === "pending") {
+        o = o.filter(x =>
+            x.status === "pending" || x.status === "partial"
+        );
+    }
+
+    if (type === "distributed") {
+        o = o.filter(x => x.status === "distributed");
+    }
+
+    displayOrders(o);
+}
 
     // SHOW WAREHOUSE ORDERS
    function showWarehouseOrders(warehouse, type) {
@@ -1282,8 +1301,8 @@ function showDistributedOrders() {
     }
 
     if (type === "completed") o = o.filter(x => x.status === "completed");
-    if (type === "pending") o = o.filter(x => (x.status === "pending" || x.status === "partial") && !x.distributor);
-    if (type === "distributed") o = o.filter(x => x.status === "distributed");
+   if (type === "pending")   o = o.filter(x => x.status === "pending" || x.status === "partial");   
+ if (type === "distributed") o = o.filter(x => x.status === "distributed");
     if (type === "total") o = o; // all filtered orders
 
     displayOrders(o, warehouse === 'all' ? 'All Warehouses' : `Warehouse: ${warehouse}`);
@@ -1293,15 +1312,18 @@ function showDistributedOrders() {
     function showMultiWHOrders(type) {
         let o = applyFilters().filter(x => x.warehouseCount > 1);
         if (type === "completed") o = o.filter(x => x.status === "completed");
-        if (type === "pending") o = o.filter(x => (x.status === "pending" || x.status === "partial") && !x.distributor);
-        if (type === "distributed") o = o.filter(x => x.status === "distributed");
+        if (type === "pending") {
+        o = o.filter(x =>
+            x.status === "pending" || x.status === "partial"
+        );
+    }    if (type === "distributed") o = o.filter(x => x.status === "distributed");
         displayOrders(o, "Multi-Warehouse Orders");
     }
 
     function showSingleWHOrders(type) {
         let o = applyFilters().filter(x => x.warehouseCount === 1);
         if (type === "completed") o = o.filter(x => x.status === "completed");
-        if (type === "pending") o = o.filter(x => (x.status === "pending" || x.status === "partial") && !x.distributor);
+        if (type === "pending") o = o.filter(x => x.status === "pending");
         if (type === "distributed") o = o.filter(x => x.status === "distributed");
         displayOrders(o, "Single-Warehouse Orders");
     }
@@ -1325,17 +1347,22 @@ function showDistributedOrders() {
     const seen = new Set();
 
     orders.forEach(order => {
-        if (seen.has(order.orderNo)) return; // منع التكرار
-        seen.add(order.orderNo);
+        const key = order.orderNo.toUpperCase();
+if (seen.has(key)) return;
+seen.add(key);
 
         // تحديد حالة الطلب
         let statusText = "";
-        if (order.status === "distributed") {
-            statusText = "Distributed";
-        } else {
-            const hasPending = order.warehouses.some(w => !w.packed);
-            statusText = hasPending ? "Pending" : "Completed";
-        }
+
+if (order.status === "distributed") {
+    statusText = "Distributed";
+} else if (order.status === "completed") {
+    statusText = "In-Packing";
+} else if (order.status === "partial") {
+    statusText = "Partial";
+} else {
+    statusText = "Pending";
+}
 
         html += `
         <tr>
@@ -1380,7 +1407,7 @@ if (order.status === "distributed") {
     });
 
     html += `
-      </tbodyi>
+      </tbody>
     </table>
     `;
 
@@ -1406,17 +1433,7 @@ if (order.status === "distributed") {
     const toggleToDateBtn = document.getElementById("toggleToDate");
     const dateToInput = document.getElementById("dateTo");
 
-    // toggleToDateBtn.addEventListener("click", () => {
-    //     if (dateToInput.style.display === "none") {
-    //         dateToInput.style.display = "inline-block";
-    //         toggleToDateBtn.textContent = "− Range"; // تغيير الزر
-    //     } else {
-    //         dateToInput.style.display = "none";
-    //         toggleToDateBtn.textContent = "+ Range";
-    //         dateToInput.value = ""; // مسح القيمة عند الإخفاء
-    //         updateDashboard(); // إعادة حساب الفلترة
-    //     }
-    // });
+    // 
 
     // CLOSE MODAL
     function closeOrderDetails() { orderDetails.classList.add("hidden"); }
@@ -1470,31 +1487,68 @@ function normalizeWarehouse(name) {
     if (!name) return { base: "", packed: false };
 
     const raw = name.toLowerCase();
-    const isPacked = raw.includes('---pack');
-    const base = raw.replace(/---pack/gi, "").replace(/\bwh\b/gi, "").replace(/\s+/g, " ").trim();
 
-    return { base, packed: isPacked };
+    const packed = /pack/.test(raw);
+
+    const base = raw
+        .replace(/pack/gi, "")
+        .replace(/wh/gi, "")
+        .replace(/[-_]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    return { base, packed };
 }
     // SHOW WAREHOUSES PAGE
     function showWarehouses() { }
-
-
-
-
-const CHECK_INTERVAL = 120000; 
+let currentInterval = 30000; // يبدأ 30 ثانية
+const MIN_INTERVAL = 15000;  // أقل حد
+const MAX_INTERVAL = 120000; // أعلى حد
+let lastRefreshHash = "";
 
 function startSmartRefresh() {
     if (refreshTimer) return;
 
-    refreshTimer = setInterval(() => {
-        loadData({ silent: true });
-    }, CHECK_INTERVAL);
-}
-const lastUpdate = localStorage.getItem(LS_TIME);
-if (lastUpdate) {
-    console.log("Last update:", new Date(+lastUpdate).toLocaleTimeString());
+    refreshTimer = setTimeout(async function tick() {
+
+        // لا تحديث إذا الصفحة غير نشطة
+        if (document.hidden || isLoading) {
+            scheduleNext();
+            return;
+        }
+
+        await loadData({ silent: true });
+
+        // لو تغيّرت الداتا → سرّع
+        if (lastDataHash !== lastRefreshHash) {
+            lastRefreshHash = lastDataHash;
+            currentInterval = Math.max(MIN_INTERVAL, currentInterval * 0.7);
+        }
+        // لو ما تغيّرت → بطّئ
+        else {
+            currentInterval = Math.min(MAX_INTERVAL, currentInterval * 1.2);
+        }
+
+        scheduleNext();
+    }, currentInterval);
 }
 
+function scheduleNext() {
+    refreshTimer = setTimeout(startSmartRefresh, currentInterval);
+}
+
+function stopSmartRefresh() {
+    clearTimeout(refreshTimer);
+    refreshTimer = null;
+}
+
+document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+        stopSmartRefresh();
+    } else {
+        startSmartRefresh();
+    }
+});
 
 //function stopAutoRefresh() {
    // clearInterval(refreshTimer);
@@ -1510,22 +1564,15 @@ if (lastUpdate) {
     loginContainer.style.display = "flex";
 }
 // REFRESH PAGE ON ENTER
-// REFRESH PAGE ON ENTER + BLUR
 document.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
         const tag = document.activeElement.tagName.toLowerCase();
         if (tag === "input" || tag === "textarea") return;
 
         e.preventDefault();
-
-        // إضافة blur
-        dashboard.classList.add("blur-loading");
-        loadingOverlay.classList.remove("hidden");
-
         loadData({ force: true });
     }
 });
-
 function showToast(message) {
     const toast = document.getElementById("toast");
     const text = document.getElementById("toastText");
@@ -1549,5 +1596,3 @@ function showToast(message) {
 </body>
 
     </html>
-
-
