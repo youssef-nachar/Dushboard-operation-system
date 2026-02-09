@@ -32,7 +32,10 @@
       background: var(--bg);
       color: var(--text);
     }
-
+.refresh-blur {
+  filter: blur(2px);
+  transition: filter 0.25s ease;
+}
     /* ===== Layout ===== */
     .app {
       display: grid;
@@ -885,22 +888,7 @@ function apply() {
   render(classify(filteredRows, summaryMap, filteredDistribution, f, t));
 }
 
-  document.getElementById('btnRefresh').onclick = async () => {
-    // يمكن تعطيل الزر أثناء التحميل لتفادي الضغط المتكرر
-    const btn = document.getElementById('btnRefresh');
-    btn.disabled = true;
-    btn.textContent = 'Refreshing...';
-
-    try {
-      await init();  // إعادة تحميل البيانات وتحديث الواجهة
-    } catch (e) {
-      console.error('Error refreshing data:', e);
-      alert('Failed to refresh data.');
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Refresh Data';
-    }
-  };
+  
 
 
 
@@ -1028,8 +1016,87 @@ document.getElementById('exportWaiting').onclick = () => {
   }
 
   console.table(distributionRows);
-  init();
+  init().then(() => {
+  startAutoRefresh();
+});
 
+
+let AUTO_REFRESH_INTERVAL = 30000; // 30 ثانية
+let autoRefreshTimer = null;
+let isRefreshing = false;
+
+async function refreshOrdersOnly() {
+  if (isRefreshing) return;
+  isRefreshing = true;
+
+  try {
+    allRows = await fetchCSV();
+    distributionRows = await fetchDistribution();
+
+    // ⬅️ لو بدك دقة أعلى (اختياري)
+    // const summaryRows = await fetchSummary();
+    // summaryMap = analyzeOrders(summaryRows);
+
+    apply(); // بدون لمس التاريخ
+  } catch (e) {
+    console.error("Orders refresh failed:", e);
+  } finally {
+    isRefreshing = false;
+  }
+}
+
+/* ===============================
+   🚀 SMART AUTO REFRESH ENGINE
+=============================== */
+document.getElementById('btnRefresh').onclick = async () => {
+  const btn = document.getElementById('btnRefresh');
+  if (isRefreshing) return;
+
+  btn.disabled = true;
+  btn.textContent = 'Refreshing...';
+
+  try {
+    await refreshOrdersOnly();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Refresh Data';
+  }
+};
+
+
+
+function startAutoRefresh() {
+  stopAutoRefresh();
+  autoRefreshTimer = setInterval(refreshOrdersOnly, AUTO_REFRESH_INTERVAL);
+}
+
+function stopAutoRefresh() {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+}
+document.addEventListener("keydown", async (e) => {
+  if (e.key !== "Enter") return;
+
+  // لا نعمل refresh إذا المستخدم يكتب داخل input / textarea
+  const tag = document.activeElement?.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA") return;
+
+  if (isRefreshing) return;
+
+  const dashboard = document.getElementById("dashboard") || document.body;
+
+  dashboard.classList.add("refresh-blur");
+
+  try {
+    await refreshOrdersOnly(); // refresh الطلبات فقط
+  } finally {
+    setTimeout(() => {
+      dashboard.classList.remove("refresh-blur");
+    }, 200); // blur خفيف وسريع
+  }
+});
 </script>
 
-            </html>
+      </html>
