@@ -320,7 +320,33 @@
                 transform: translateY(0);
             }
         }
+.tooltip-wrapper {
+    position: relative;
+    display: inline-block;
+}
 
+.tooltip-box {
+    position: absolute;
+    bottom: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #020617;
+    color: white;
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    white-space: nowrap;
+    box-shadow: 0 10px 25px rgba(0,0,0,.6);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+    z-index: 9999;
+}
+
+.tooltip-wrapper:hover .tooltip-box {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-4px);
+}
         /* LOADING OVERLAY */
         .loading-overlay {
             position: fixed;
@@ -384,31 +410,6 @@
     gap: 10px;
     align-items: center;
     font-size: 14px;
-}
-.tracking-info {
-    margin-top: 12px;
-    padding: 14px;
-    background: #020617;
-    border: 1px solid #1f2937;
-    border-radius: 14px;
-    animation: fadeIn 0.3s ease;
-}
-
-.tracking-info h4 {
-    color: var(--accent);
-    margin-bottom: 6px;
-    font-size: 15px;
-}
-
-.tracking-info .meta {
-    display: flex;
-    gap: 16px;
-    font-size: 13px;
-    color: #9ca3af;
-}
-
-.tracking-info .meta i {
-    color: var(--accent);
 }
 
 .quick-dropdown div:hover {
@@ -589,6 +590,7 @@
                     <button type="button" id="toggleToDate" style="padding:4px 8px; font-size:12px;"> to</button>
 
                     <input type="date" id="dateTo" onchange="updateDashboard()">
+                    
                 </div>
                 <div class="quick-menu">
     <button class="three-dots" onclick="toggleQuickMenu(event)">
@@ -609,6 +611,23 @@
             <i class="fa-regular fa-calendar"></i> This Month
         </div>
     </div>
+</div>
+                <div id="liveStatus" style="
+    padding:6px 10px;
+    border-radius:10px;
+    background:#020617;
+    font-size:12px;
+    display:flex;
+    gap:6px;
+    align-items:center;
+">
+    <span id="liveDot" style="
+        width:8px;
+        height:8px;
+        border-radius:50%;
+        background:#22c55e;
+    "></span>
+    <span id="liveText">LIVE</span>
 </div>
             </header>
 
@@ -746,11 +765,19 @@ let lastDataHash = "";
 let isLoading = false;
 
 function hashData(data) {
-    return JSON.stringify(data.map(o => ({
-        orderNo: o.orderNo,
-        status: o.status,
-        wh: o.warehouses.map(w => w.base + w.packed + w.distributed)
-    })));
+    return JSON.stringify(
+        data
+            .slice()
+            .sort((a, b) => a.orderNo.localeCompare(b.orderNo))
+            .map(o => ({
+                orderNo: o.orderNo,
+                status: o.status,
+                wh: o.warehouses
+                    .slice()
+                    .sort((a, b) => a.base.localeCompare(b.base))
+                    .map(w => w.base + w.packed + w.distributed)
+            }))
+    );
 }
 
 const loginContainer = document.getElementById("loginContainer");
@@ -762,14 +789,15 @@ window.addEventListener('DOMContentLoaded', () => {
         loginContainer.style.display = "none";
         dashboard.classList.remove("hidden");
         loadData();
-       startSmartRefresh()
+       startLiveDashboard()
     }
 });
 
     const users = [{ username: "manager", password: "123456" }];
-    const sheetURL =  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?output=csv";  let allOrders = [];
- // const sheetURL=""
+    const sheetURL =  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?output=csv"; 
 
+// const sheetURL="https://docs.google.com/spreadsheets/d/1swpSpmMPAG_P_MrgPFSqeCTaO8Ftdza3qNbME5rfmYY/export?format=csv"
+let allOrders = [];
 const distributionSheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTecpCEwZ10-Ncz2y0xSsAnNdLXcWDGt_GiAeJlbWYhgg9B8zlhvJ1DeDH8H0NDSg/pub?output=csv";
 let distributedOrders = new Set(); // قائمة الطلبات الموزعة
 
@@ -812,8 +840,8 @@ const company = COMPANY_COL !== -1 ? r[COMPANY_COL]?.trim() : "";
                 if (!formattedDate) return;
 
                 distributedOrdersMap[orderNo] = {
-                  date: formattedDate,
-                 company: company
+    date: formattedDate,
+    company: company || "LMD"
 };
             });
 
@@ -847,60 +875,166 @@ const company = COMPANY_COL !== -1 ? r[COMPANY_COL]?.trim() : "";
         resultsDiv.style.display = "block";
         return;
     }
-tableDiv.innerHTML = `
-<table>
-    <tr>
-        <th>Order #</th>
-        <th>Warehouse</th>
-        <th>Status</th>
-    </tr>
-    ${filtered.map(o =>
-        o.warehouses.map(w => {
-            let status;
-            if (w.distributed || o.status === "distributed") {
-                status = "Distributed";
-            } else if (w.packed) {
-                status = "In-Packing";
-            } else {
-                status = "Pending";
+
+    tableDiv.innerHTML = `
+    <table>
+        <tr>
+            <th>Order #</th>
+            <th>Warehouses</th>
+            <th>Status</th>
+        </tr>
+        ${filtered.map(order => {
+
+            /* ---------------- STATUS ---------------- */
+
+            let statusText = "";
+
+            if (order.status === "distributed") {
+                statusText = `<span style="color:#22c55e;font-weight:600;">Distributed</span>`;
+            }
+            else if (order.status === "completed") {
+                statusText = `<span style="color:#22c55e;font-weight:600;">In-Packing</span>`;
+            }
+            else if (order.status === "partial") {
+                statusText = `<span style="color:#f59e0b;font-weight:600;">Partial</span>`;
+            }
+            else {
+                statusText = `<span style="color:#f59e0b;font-weight:600;">Pending</span>`;
             }
 
-            return `
-            <tr>
-                <td>${o.orderNo}</td>
-                <td>${w.base.toUpperCase()}</td>
-                <td style="font-weight:600">${status}</td>
-            </tr>
+            /* ---------------- WAREHOUSES ---------------- */
+
+            const warehousesHTML = `
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    ${order.warehouses.map(w => {
+
+                        let color;
+                        let tooltipText;
+
+                        if (order.status === "distributed") {
+                            color = "#22c55e";
+                            tooltipText = `
+                                Distributed at:
+                                ${distributedOrdersMap[order.orderNo]?.date || "-"}
+                            `;
+                        }
+                        else if (w.packed) {
+                            color = "#fde68a";
+                            tooltipText = `
+                                Received at Packing:
+                                ${w.packingTime || w.receivedTime || "-"}
+                            `;
+                        }
+                        else {
+                            color = "#93c5fd";
+                            tooltipText = `
+                                Received in Warehouse:
+                                ${w.receivedTime || "-"}
+                            `;
+                        }
+
+                        return `
+                        <div style="position:relative;display:inline-block;">
+                            <span style="
+                                display:inline-block;
+                                padding:5px 10px;
+                                border-radius:8px;
+                                font-size:12px;
+                                font-weight:600;
+                                background:${color};
+                                color:black;
+                                cursor:pointer;
+                            ">
+                                ${w.base.toUpperCase()}
+                            </span>
+
+                            <div style="
+                                position:absolute;
+                                bottom:130%;
+                                left:50%;
+                                transform:translateX(-50%);
+                                background:#0f172a;
+                                color:white;
+                                padding:8px 10px;
+                                border-radius:8px;
+                                font-size:12px;
+                                white-space:nowrap;
+                                opacity:0;
+                                pointer-events:none;
+                                transition:.2s ease;
+                                box-shadow:0 8px 25px rgba(0,0,0,.4);
+                                z-index:9999;
+                            " class="wh-tooltip">
+                                ${tooltipText}
+                            </div>
+                        </div>
+                        `;
+                    }).join("")}
+                </div>
             `;
-        }).join("")
-    ).join("")}
-</table>
-`;
 
-/* ===== Distributor info card ===== */
-const dist = distributedOrdersMap[filtered[0].orderNo];
+            /* ---------------- DISTRIBUTED BOX ---------------- */
 
-if (dist) {
-    tableDiv.innerHTML += `
-    <div class="tracking-info">
-        <h4><i class="fa-solid fa-truck"></i> Distribution Details</h4>
-        <div class="meta">
-            <div>
-                <i class="fa-solid fa-building"></i>
-                ${dist.company || "Unknown Company"}
-            </div>
-            <div>
-                <i class="fa-regular fa-clock"></i>
-                ${dist.date}
-            </div>
-        </div>
-    </div>
+            const distributedBox =
+                order.status === "distributed" && distributedOrdersMap[order.orderNo]
+                ? `
+                <div style="
+                    margin-top:8px;
+                    padding:8px 10px;
+                    border-radius:10px;
+                    background:#022c22;
+                    border:1px solid #065f46;
+                    font-size:12px;
+                    display:inline-block;
+                ">
+                    <div style="color:#22c55e;font-weight:600;">
+                        <i class="fa-solid fa-truck"></i>
+                        Distributed by ${distributedOrdersMap[order.orderNo].company}
+                    </div>
+                    <div style="opacity:.7;margin-top:2px;">
+                        ${distributedOrdersMap[order.orderNo].date}
+                    </div>
+                </div>
+                `
+                : "";
+
+            /* ---------------- ROW ---------------- */
+
+            return `
+                <tr>
+                    <td>
+                        <div style="font-weight:600;">
+                            ${order.orderNo}
+                        </div>
+                        ${distributedBox}
+                    </td>
+
+                    <td>${warehousesHTML}</td>
+
+                    <td>${statusText}</td>
+                </tr>
+            `;
+        }).join("")}
+    </table>
     `;
+
+    /* -------- Tooltip Hover Fix -------- */
+
+    setTimeout(() => {
+        document.querySelectorAll("td div > span").forEach(badge => {
+            badge.addEventListener("mouseenter", function () {
+                const tooltip = this.parentElement.querySelector(".wh-tooltip");
+                if (tooltip) tooltip.style.opacity = "1";
+            });
+            badge.addEventListener("mouseleave", function () {
+                const tooltip = this.parentElement.querySelector(".wh-tooltip");
+                if (tooltip) tooltip.style.opacity = "0";
+            });
+        });
+    }, 0);
+
+    resultsDiv.style.display = "block";
 }
-
-
-resultsDiv.style.display = "block";}
-
 
 
     // LOGIN
@@ -926,7 +1060,7 @@ resultsDiv.style.display = "block";}
     dashboard.classList.remove("hidden");
 
     loadData();
-     startSmartRefresh()
+     startLiveDashboard()
 };
 function toggleQuickMenu(e) {
     e.stopPropagation();
@@ -1059,8 +1193,13 @@ async function loadData({ force = false, silent = false } = {}) {
             if (!w.base) return;
 
             if (!map[orderNo].wh[w.base]) {
-                map[orderNo].wh[w.base] = { base: w.base, packed: false };
-            }
+    map[orderNo].wh[w.base] = {
+        base: w.base,
+        packed: false,
+        receivedTime: r[DATE] || "",  // ⬅️ حفظ الوقت الخام
+        packingTime: packedRaw && packedRaw !== "" ? r[DATE] : null
+    };
+}
 
             // ✅ معالجة جميع صيغ العمود Packed
             const packedValues = ["TRUE", "True", "true", "1", "Yes", "yes", "X", "x"];
@@ -1102,12 +1241,22 @@ let newOrders = Object.values(map).map(o => {
 });
 
         const newHash = hashData(newOrders);
-        if (!force && dataCache && newHash === lastDataHash) return;
 
+// ❌ إذا لا يوجد تغيير — لا تفعل أي شيء
+if (!force && dataCache && newHash === lastDataHash) {
+    return; // يحافظ على الأرقام كما هي
+}
         // إشعار بالطلبات الجديدة
-        if (dataCache && newOrders.length > dataCache.length) {
-            showToast(`🔔 ${newOrders.length - dataCache.length} new order${newOrders.length - dataCache.length > 1 ? "s" : ""} received`);
-        }
+        let newOnly = [];
+
+if (dataCache && Array.isArray(dataCache)) {
+    const oldSet = new Set(dataCache.map(o => o.orderNo));
+    newOnly = newOrders.filter(o => !oldSet.has(o.orderNo));
+}
+
+if (dataCache && newOnly.length) {
+    showToast(`🔔 ${newOnly.length} new order(s) received`);
+}
 
         dataCache = newOrders;
         allOrders = newOrders;
@@ -1127,9 +1276,15 @@ let newOrders = Object.values(map).map(o => {
     // INIT DATE FILTER
 
 function initDate() {
+    // تاريخ البداية ثابت
+    const startDate = "2026-02-01";
+
+    // تاريخ اليوم تلقائي
     const today = new Date().toISOString().slice(0, 10);
-    dateFrom.value = today;
+
+    dateFrom.value = startDate;
     dateTo.value = today;
+
     updateDashboard();
 }
 
@@ -1139,9 +1294,10 @@ function applyFilters() {
     const to   = dateTo.value || null;
 
     return allOrders.filter(o => {
+
         const dateToCheck =
             o.status === "distributed"
-                ? distributedOrdersMap[o.orderNo]?.date   // ✅ هنا التعديل
+                ? distributedOrdersMap[o.orderNo]?.date
                 : o.date;
 
         if (!dateToCheck) return false;
@@ -1151,6 +1307,7 @@ function applyFilters() {
         return true;
     });
 }
+
 
 //filteredOrders = Object.values(unique);
     // UPDATE DASHBOARD KPIS
@@ -1238,7 +1395,7 @@ function showDistributedOrders() {
     <th>Total</th>
     <th>In-Packing</th>
     <th>Pending</th>
-    <th>distributed</th>
+    <th>Delivered</th>
   </tr>
 
   ${Object.entries(warehouseMap).map(([wh, v]) => {
@@ -1374,6 +1531,11 @@ ${pendingOrders.length}</a>
     }
 
   function displayOrders(orders, title = "Order Details") {
+      orders.sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        return dateB - dateA; // الأحدث أولاً
+    });
     const orderList = document.getElementById("orderList");
     lastDisplayedOrders = orders; // مهم للتصدير
 
@@ -1428,20 +1590,38 @@ if (order.status === "distributed") {
     text = "Pending";
 }
 
-                return `
-                <span style="
-                    display:inline-block;
-                    margin:2px;
-                    padding:4px 8px;
-                    border-radius:6px;
-                    font-size:12px;
-                    font-weight:600;
-                    background:${color};
-                    color:${(order.status === "distributed" || w.distributed) ? '#000' : 'black'};
-                ">
-                    ${w.base.toUpperCase()} 
-                </span>
-                `;
+                let tooltipText = "";
+
+if (order.status === "distributed") {
+    tooltipText = `Distributed at: ${distributedOrdersMap[order.orderNo]?.date || "-"}`;
+}
+else if (w.packed) {
+    tooltipText = `Received at Packing Station: ${w.receivedTime || "-"}`;
+}
+else {
+    tooltipText = `Received in Warehouse: ${w.receivedTime || "-"}`;
+}
+
+return `
+<div class="tooltip-wrapper">
+    <span style="
+        display:inline-block;
+        margin:2px;
+        padding:4px 8px;
+        border-radius:6px;
+        font-size:12px;
+        font-weight:600;
+        background:${color};
+        color:black;
+        cursor:pointer;
+    ">
+        ${w.base.toUpperCase()}
+    </span>
+    <div class="tooltip-box">
+        ${tooltipText}
+    </div>
+</div>
+`;
             }).join("")}
           </td>
           <td style="font-weight:600; color:#9ca3af">
@@ -1547,53 +1727,67 @@ function normalizeWarehouse(name) {
     // SHOW WAREHOUSES PAGE
     function showWarehouses() { }
 let currentInterval = 30000; // يبدأ 30 ثانية
-const MIN_INTERVAL = 15000;  // أقل حد
-const MAX_INTERVAL = 120000; // أعلى حد
-let lastRefreshHash = "";
+// ==============================
+// 🔥 ENTERPRISE LIVE ENGINE
+// ==============================
 
-function startSmartRefresh() {
-    if (refreshTimer) return;
+const FAST_INTERVAL = 2000;   // نشط
+const SLOW_INTERVAL = 10000;  // خمول
 
-    refreshTimer = setTimeout(async function tick() {
+let liveTimer = null;
+let idleTimer = null;
+let isIdle = false;
 
-        // لا تحديث إذا الصفحة غير نشطة
-        if (document.hidden || isLoading) {
-            scheduleNext();
-            return;
+function startLiveDashboard() {
+    stopLiveDashboard();
+
+    runLiveCycle(FAST_INTERVAL);
+
+    // كشف الخمول
+    resetIdleTimer();
+    ["mousemove", "keydown", "click", "touchstart"].forEach(evt =>
+        document.addEventListener(evt, resetIdleTimer)
+    );
+
+    // عند الرجوع للتاب
+    document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) {
+            loadData({ force: true, silent: true });
         }
-
-        await loadData({ silent: true });
-
-        // لو تغيّرت الداتا → سرّع
-        if (lastDataHash !== lastRefreshHash) {
-            lastRefreshHash = lastDataHash;
-            currentInterval = Math.max(MIN_INTERVAL, currentInterval * 0.7);
-        }
-        // لو ما تغيّرت → بطّئ
-        else {
-            currentInterval = Math.min(MAX_INTERVAL, currentInterval * 1.2);
-        }
-
-        scheduleNext();
-    }, currentInterval);
+    });
 }
 
-function scheduleNext() {
-    refreshTimer = setTimeout(startSmartRefresh, currentInterval);
+function stopLiveDashboard() {
+    if (liveTimer) clearInterval(liveTimer);
+    if (idleTimer) clearTimeout(idleTimer);
 }
 
-function stopSmartRefresh() {
-    clearTimeout(refreshTimer);
-    refreshTimer = null;
+function runLiveCycle(interval) {
+    if (liveTimer) clearInterval(liveTimer);
+
+    liveTimer = setInterval(async () => {
+        if (isLoading) return;
+
+        try {
+            await loadData({ silent: true });
+
+        } catch (e) {
+            console.error("Live error:", e);
+        }
+    }, interval);
 }
 
-document.addEventListener("visibilitychange", () => {
-    if (document.hidden) {
-        stopSmartRefresh();
-    } else {
-        startSmartRefresh();
-    }
-});
+function resetIdleTimer() {
+    isIdle = false;
+    runLiveCycle(FAST_INTERVAL);
+
+    if (idleTimer) clearTimeout(idleTimer);
+
+    idleTimer = setTimeout(() => {
+        isIdle = true;
+        runLiveCycle(SLOW_INTERVAL);
+    }, 60000); // بعد دقيقة خمول
+}
 
 //function stopAutoRefresh() {
    // clearInterval(refreshTimer);
@@ -1607,6 +1801,7 @@ document.addEventListener("visibilitychange", () => {
     localStorage.removeItem("isLoggedIn");
     dashboard.classList.add("hidden");
     loginContainer.style.display = "flex";
+        startLiveDashboard()
 }
 // REFRESH PAGE ON ENTER
 document.addEventListener("keydown", (e) => {
@@ -1620,15 +1815,13 @@ document.addEventListener("keydown", (e) => {
 });
 function showToast(message) {
     const toast = document.getElementById("toast");
-    const text = document.getElementById("toastText");
     const sound = document.getElementById("toastSound");
 
-    text.textContent = message;
+    document.getElementById("toastText").textContent = message;
 
     toast.style.opacity = "1";
     toast.style.transform = "translateY(0)";
 
-    // صوت (خفيف)
     sound.currentTime = 0;
     sound.play().catch(() => {});
 
@@ -1640,5 +1833,4 @@ function showToast(message) {
 </script>
 </body>
 
-    </html>
-
+</html>
