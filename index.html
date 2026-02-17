@@ -590,9 +590,7 @@
                     <button type="button" id="toggleToDate" style="padding:4px 8px; font-size:12px;"> to</button>
 
                     <input type="date" id="dateTo" onchange="updateDashboard()">
-                    
-                </div>
-                <div class="quick-menu">
+                     <div class="quick-menu">
     <button class="three-dots" onclick="toggleQuickMenu(event)">
         <i class="fa-solid fa-ellipsis-vertical"></i>
     </button>
@@ -610,8 +608,20 @@
         <div onclick="setQuickDate('month')">
             <i class="fa-regular fa-calendar"></i> This Month
         </div>
+        <button id="resetFiltersBtn"
+        onclick="resetFilters()"
+        style="
+            padding:6px 10px;
+            border-radius:10px;
+            background:#7f1d1d;
+            font-size:12px;
+        ">
+    Reset
+</button>
     </div>
 </div>
+                </div>
+               
                 <div id="liveStatus" style="
     padding:6px 10px;
     border-radius:10px;
@@ -852,7 +862,31 @@ const company = COMPANY_COL !== -1 ? r[COMPANY_COL]?.trim() : "";
         );
 }
 
+function resetFilters() {
 
+    // 🔹 إلغاء Today Mode
+    todayOnlyMode = false;
+
+    const todayBtn = document.getElementById("todayToggleBtn");
+    if (todayBtn) {
+        todayBtn.style.background = "#020617";
+        todayBtn.style.color = "white";
+        todayBtn.textContent = "Today Only";
+    }
+
+    // 🔹 إعادة التاريخ للقيمة الافتراضية
+    const defaultStart = "2026-02-01";  // 01-Feb-2026
+    const today = new Date().toISOString().slice(0, 10);
+
+    dateFrom.value = defaultStart;
+    dateTo.value   = today;
+
+    // 🔹 إعادة ترتيب الطلبات
+    orderSortMode = "newest";
+
+    // 🔹 تحديث الداشبورد
+    updateDashboard();
+}
  let lastDisplayedOrders = [];
 
     function updateSearch() {
@@ -1308,13 +1342,18 @@ function applyFilters() {
     });
 }
 
-
+let lastKPI = {
+    total: 0,
+    completed: 0,
+    pending: 0,
+    distributed: 0
+};
 //filteredOrders = Object.values(unique);
     // UPDATE DASHBOARD KPIS
 function updateDashboard() {
     const orders = applyFilters();
 
-    total.textContent = orders.length;
+   // total.textContent = orders.length;
 
     const distributedOrders = orders.filter(o => o.status === "distributed");
     const completedOrders = orders.filter(o => o.status === "completed");
@@ -1326,15 +1365,33 @@ function updateDashboard() {
         !completedOrders.includes(o) && !distributedOrders.includes(o)
     );
 
-    distributed.textContent = distributedOrders.length;
-    completed.textContent = completedOrders.length;
-    pending.textContent = pendingOrders.length;
-
+    updateKPINumber("total", orders.length);
+updateKPINumber("distributed", distributedOrders.length);
+updateKPINumber("completed", completedOrders.length);
+updateKPINumber("pending", pendingOrders.length);
+    
     renderWarehouseBreakdown(orders);
     renderMultiWHOrders(orders);
     renderSingleWHOrders(orders);
 }
+function updateKPINumber(id, newValue) {
+    const element = document.getElementById(id);
+    const currentValue = lastKPI[id];
 
+    // إذا نفس الرقم → لا تفعل شيء
+    if (newValue === currentValue) return;
+
+    // إذا زاد → حدّث
+    if (newValue > currentValue) {
+        lastKPI[id] = newValue;
+        element.textContent = newValue;
+        return;
+    }
+
+    // إذا نقص (مثلاً تغيير فلتر)
+    lastKPI[id] = newValue;
+    element.textContent = newValue;
+}
 function showDistributedOrders() {
     const from = dateFrom.value || null;
     const to   = dateTo.value || null;
@@ -1833,4 +1890,4 @@ function showToast(message) {
 </script>
 </body>
 
-</html>
+    </html>
