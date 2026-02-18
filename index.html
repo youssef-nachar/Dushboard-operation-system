@@ -804,10 +804,9 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
     const users = [{ username: "manager", password: "123456" }];
-  //  const sheetURL = "https://docs.google.com/spreadsheets/d/13hVfVW6TchB_ZLV6Uuh06sOvBffMw_rwG4aF3FGJSV0/export?format=csv&gid=1480729463&t=" + Date.now();
-    
-    
-     const sheetURL="https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?output=csv"
+    const sheetURL =  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?output=csv"; 
+
+// const sheetURL="https://docs.google.com/spreadsheets/d/1swpSpmMPAG_P_MrgPFSqeCTaO8Ftdza3qNbME5rfmYY/export?format=csv"
 let allOrders = [];
 const distributionSheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTecpCEwZ10-Ncz2y0xSsAnNdLXcWDGt_GiAeJlbWYhgg9B8zlhvJ1DeDH8H0NDSg/pub?output=csv";
 let distributedOrders = new Set(); // قائمة الطلبات الموزعة
@@ -1194,7 +1193,9 @@ async function loadData({ force = false, silent = false } = {}) {
     try {
         await loadDistributedOrders();
 
-        const res = await fetch(sheetURL, { cache: "no-store" });
+        const res = await fetch(sheetURL + "&t=" + Date.now(), {
+    cache: "no-store"
+});
         const csv = await res.text();
         const parsed = Papa.parse(csv, { skipEmptyLines: true });
         const rows = parsed.data;
@@ -1274,7 +1275,14 @@ let newOrders = Object.values(map).map(o => {
         status
     };
 });
-
+        if (dataCache && newOrders.length < dataCache.length) {
+    console.warn("Old version detected — skipped");
+    return;
+}
+if (!newOrders.length) {
+    console.warn("Invalid refresh skipped");
+    return;
+}
         const newHash = hashData(newOrders);
 
 // ❌ إذا لا يوجد تغيير — لا تفعل أي شيء
@@ -1789,8 +1797,8 @@ let currentInterval = 30000; // يبدأ 30 ثانية
 // 🔥 ENTERPRISE LIVE ENGINE
 // ==============================
 
-const FAST_INTERVAL = 10000;   // نشط
-const SLOW_INTERVAL = 20000;  // خمول
+const FAST_INTERVAL = 2000;   // نشط
+const SLOW_INTERVAL = 10000;  // خمول
 
 let liveTimer = null;
 let idleTimer = null;
@@ -1891,10 +1899,4 @@ function showToast(message) {
 </script>
 </body>
 
-    </html>
-
-
-
-
-
-
+                            </html>
