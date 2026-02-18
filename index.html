@@ -514,12 +514,12 @@
 
     <div id="dashboard" class="hidden app">
         <aside class="sidebar">
-            <h2><i class="fa-solid fa-warehouse"></i>Operation dashboard system</h2>
+            <h2>Operation dashboard system</h2>
             <a href="#">Dashboard</a>
             <div class="menu-item">
                 <a href="#" onclick="toggleMenu('warehousesMenu')">
-<a href="#" onclick="toggleMenu('warehousesMenu')">
-  <a href="./p&c.html"><i class="fa-solid fa-boxes-stacked"></i> Warehouses</a>                 
+                <a href="#" onclick="toggleMenu('warehousesMenu')">
+                <a href="./p&c.html"><i class="fa-solid fa-boxes-stacked"></i> Warehouses</a>                 
             
 
                 <div id="warehousesMenu" class="submenu">
@@ -812,11 +812,6 @@ const distributionSheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT
 let distributedOrders = new Set(); // قائمة الطلبات الموزعة
 
 let distributedOrdersMap = {}; 
-// الشكل النهائي:
-// {
-//   "#L3029": "10:00",
-//   "#M48717": "10:00"
-// }
 
 function loadDistributedOrders() {
     return fetch(distributionSheetURL)
@@ -843,15 +838,15 @@ function loadDistributedOrders() {
             rows.forEach(r => {
                 const orderNo = r[ORDER_COL]?.trim();
                 const rawDate = r[DATE_COL];
-const company = COMPANY_COL !== -1 ? r[COMPANY_COL]?.trim() : "";
+                const company = COMPANY_COL !== -1 ? r[COMPANY_COL]?.trim() : "";
                 if (!orderNo || !rawDate) return;
 
                 const formattedDate = formatDateForInput(rawDate);
                 if (!formattedDate) return;
 
                 distributedOrdersMap[orderNo] = {
-    date: formattedDate,
-    company: company || "LMD"
+                date: formattedDate,
+                company: company || "LMD"
 };
             });
 
@@ -874,17 +869,15 @@ function resetFilters() {
         todayBtn.textContent = "Today Only";
     }
 
-    // 🔹 إعادة التاريخ للقيمة الافتراضية
+    // 🔹 
     const defaultStart = "2026-02-01";  // 01-Feb-2026
     const today = new Date().toISOString().slice(0, 10);
 
     dateFrom.value = defaultStart;
     dateTo.value   = today;
 
-    // 🔹 إعادة ترتيب الطلبات
     orderSortMode = "newest";
 
-    // 🔹 تحديث الداشبورد
     updateDashboard();
 }
  let lastDisplayedOrders = [];
@@ -939,7 +932,7 @@ function resetFilters() {
             /* ---------------- WAREHOUSES ---------------- */
 
             const warehousesHTML = `
-                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <div style="display:flex;gap:6px;flex-wrap:wrap;text-align:center">
                     ${order.warehouses.map(w => {
 
                         let color;
@@ -1900,4 +1893,5 @@ function showToast(message) {
 </body>
 
                             </html>
+
 
