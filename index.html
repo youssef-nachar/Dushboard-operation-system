@@ -924,16 +924,16 @@ function resetFilters() {
             let statusText = "";
 
             if (order.status === "distributed") {
-                statusText = `<span style="color:#22c55e;font-weight:600;">Distributed</span>`;
+                statusText = `<span style="color:green;font-weight:600;">Distributed</span>`;
             }
             else if (order.status === "completed") {
-                statusText = `<span style="color:#22c55e;font-weight:600;">In-Packing</span>`;
+                statusText = `<span style="color:green;font-weight:600;">In-Packing</span>`;
             }
             else if (order.status === "partial") {
                 statusText = `<span style="color:#f59e0b;font-weight:600;">Partial</span>`;
             }
             else {
-                statusText = `<span style="color:#f59e0b;font-weight:600;">Pending</span>`;
+                statusText = `<span style="color:red;font-weight:600;">Pending</span>`;
             }
 
             /* ---------------- WAREHOUSES ---------------- */
@@ -1900,3 +1900,4 @@ function showToast(message) {
 </body>
 
                             </html>
+
