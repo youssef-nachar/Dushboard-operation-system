@@ -932,7 +932,7 @@ function resetFilters() {
             /* ---------------- WAREHOUSES ---------------- */
 
             const warehousesHTML = `
-                <div style="display:flex;gap:6px;flex-wrap:wrap;text-align:center">
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
                     ${order.warehouses.map(w => {
 
                         let color;
@@ -961,14 +961,14 @@ function resetFilters() {
                         }
 
                         return `
-                        <div style="position:relative;display:inline-block;">
+                        <div style="position:relative;display:inline-block;text-align:center">
                             <span style="
                                 display:inline-block;
                                 padding:5px 10px;
                                 border-radius:8px;
                                 font-size:12px;
                                 font-weight:600;
-                                background:${color};
+                                background:red;
                                 color:black;
                                 cursor:pointer;
                             ">
@@ -1893,5 +1893,6 @@ function showToast(message) {
 </body>
 
                             </html>
+
 
 
