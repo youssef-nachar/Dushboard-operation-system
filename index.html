@@ -91,7 +91,12 @@
         font-weight: 700;  
         margin-top: 6px  
     }  
-
+.sub-number {
+    font-size: 13px;
+    margin-top: 4px;
+    opacity: .7;
+    font-weight: 500;
+}
     .success {  
         color: var(--accent)  
     }  
@@ -270,14 +275,38 @@
         border: 1px solid #1f2937;  
         color: white;  
         font-size: 14px;  
-    }  
+    } 
+    .tooltip {
+    position:fixed;
+    background:#111827;
+    color:white;
+    padding:6px 10px;
+    border-radius:6px;
+    font-size:12px;
+    pointer-events:none;
+    z-index:9999;
+}
+.hidden {
+    display:none;
+}
 
     .input-group input:focus {  
         outline: none;  
         border-color: var(--accent);  
         box-shadow: 0 0 0 2px #22c55e33;  
     }  
-
+.toggle-btn {
+    padding:6px 12px;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+    background:#1f2937;
+    color:white;
+    font-size:13px;
+}
+.toggle-btn:hover {
+    opacity:.8;
+}
     /* BUTTON */  
     .login-btn {  
         width: 100%;  
@@ -476,6 +505,8 @@ animation: spin 1s linear infinite;
 </style>
 
 </head>  <body>  
+    <div id="tooltip" class="tooltip hidden"></div>
+    
 <div id="loginSection">  
   <!-- كل كود الـ login هنا -->  <div id="loginContainer" class="login-wrapper">  
     <form id="loginForm" class="login-card">  
@@ -635,14 +666,21 @@ background:#22c55e;
                 <div>Total Orders</div>  
                 <div id="total" class="value">0</div>  
             </div>  
-            <div class="kpi" onclick="showOrderDetails('completed')">  
-                <div>In-Packing</div>  
-                <div id="completed" class="value success">0</div>  
-            </div>  
-            <div class="kpi" onclick="showOrderDetails('pending')">  
-                <div>Pending</div>  
-                <div id="pending" class="value warning">0</div>  
-            </div>  
+           <div class="kpi" onclick="showOrderDetails('completed')">
+    <div>In-Packing</div>
+    <div id="completed" class="value success">
+        <div class="main-number">0</div>
+        <div class="sub-number"></div>
+    </div>
+</div>
+
+<div class="kpi" onclick="showOrderDetails('pending')">
+    <div>Pending</div>
+    <div id="pending" class="value warning">
+        <div class="main-number">0</div>
+        <div class="sub-number"></div>
+    </div>
+</div>
             <div class="kpi" onclick="showOrderDetails('distributed')">  
                 <div>Distributed</div>  
                 <div id="distributed" class="value success">0</div>  
@@ -749,7 +787,7 @@ orderDetails.addEventListener("click", (e) => {
   
 let refreshTimer = null;  
 let isRefreshing = false;  
-  
+  let showOnlyBacklog = false;
 let firstLoad = true;  
   
 //const REFRESH_INTERVAL = 60000; // 60 ثانية (professional)  
@@ -788,8 +826,8 @@ window.addEventListener('DOMContentLoaded', () => {
   
     const users = [{ username: "manager", password: "123456" }];  
     const sheetURL =  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?output=csv";   
-//const sheetURL = "https://docs.google.com/spreadsheets/d/13hVfVW6TchB_ZLV6Uuh06sOvBffMw_rwG4aF3FGJSV0/export?format=csv&gid=1480729463";
-
+  
+// const sheetURL="https://docs.google.com/spreadsheets/d/1swpSpmMPAG_P_MrgPFSqeCTaO8Ftdza3qNbME5rfmYY/export?format=csv"  
 let allOrders = [];  
 const distributionSheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTecpCEwZ10-Ncz2y0xSsAnNdLXcWDGt_GiAeJlbWYhgg9B8zlhvJ1DeDH8H0NDSg/pub?output=csv";  
 let distributedOrders = new Set(); // قائمة الطلبات الموزعة  
@@ -922,33 +960,22 @@ function resetFilters() {
             /* ---------------- WAREHOUSES ---------------- */  
   
             const warehousesHTML = `  
-                <div style="display:flex;gap:6px;flex-wrap:wrap;">  
+                <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center">  
                     ${order.warehouses.map(w => {  
   
-                        let color;  
-                        let tooltipText;  
-  
-                        if (order.status === "distributed") {  
-                            color = "#22c55e";  
-                            tooltipText = `  
-                                Distributed at:  
-                                ${distributedOrdersMap[order.orderNo]?.date || "-"}  
-                            `;  
-                        }  
-                        else if (w.packed) {  
-                            color = "#fde68a";  
-                            tooltipText = `  
-                                Received at Packing:  
-                                ${w.packingTime || w.receivedTime || "-"}  
-                            `;  
-                        }  
-                        else {  
-                            color = "#93c5fd";  
-                            tooltipText = `  
-                                Received in Warehouse:  
-                                ${w.receivedTime || "-"}  
-                            `;  
-                        }  
+                      const color = getWarehouseBadgeColor(order, w);
+
+let tooltipText = "";
+
+if (order.status === "distributed") {
+    tooltipText = `Distributed at: ${distributedOrdersMap[order.orderNo]?.date || "-"}`;
+}
+else if (w.packed) {
+    tooltipText = `Received at Packing: ${w.packingTime || w.receivedTime || "-"}`;
+}
+else {
+    tooltipText = `Received in Warehouse: ${w.receivedTime || "-"}`;
+}
   
                         return `  
                         <div style="position:relative;display:inline-block;">  
@@ -1079,6 +1106,31 @@ function resetFilters() {
     loadData();  
      startLiveDashboard()  
 };  
+
+function getWarehouseBadgeColor(order, warehouse) {
+
+    // Distributed
+    if (order.status === "distributed") {
+        return "#22c55e"; // green
+    }
+
+    // Multi warehouse partial
+    if (order.status === "partial") {
+        if (warehouse.packed) {
+            return "#22c55e"; // yellow (packed)
+        } else {
+            return "#f59e0b"; // orange (pending part)
+        }
+    }
+
+    // Completed (In-Packing)
+    if (order.status === "completed") {
+        return "#16a34a"; // dark green
+    }
+
+    // Pending
+    return "#7c2d12"; // dark red
+}
 function toggleQuickMenu(e) {  
     e.stopPropagation();  
     document.getElementById("quickDateMenu").classList.toggle("hidden");  
@@ -1167,6 +1219,7 @@ function formatDateForInput(value) {
   
     return null;  
 }  
+let highestOrderCountSeen = 0;
 async function loadData({ force = false, silent = false } = {}) {  
     if (isLoading) return;  
     isLoading = true;  
@@ -1176,19 +1229,9 @@ async function loadData({ force = false, silent = false } = {}) {
     try {  
         await loadDistributedOrders();  
   
-    //    const res = await fetch(sheetURL + "&t=" + Date.now(), {  
-    //cache: "no-store"  
-//}); 
-
-        const url = sheetURL + (sheetURL.includes("?") ? "&" : "?") + "t=" + Date.now();
-
-const res = await fetch(url, {
-    cache: "no-store",
-    headers: {
-        "Cache-Control": "no-cache"
-    }
-});
-
+        const res = await fetch(sheetURL + "&t=" + Date.now(), {  
+    cache: "no-store"  
+});  
         const csv = await res.text();  
         const parsed = Papa.parse(csv, { skipEmptyLines: true });  
         const rows = parsed.data;  
@@ -1268,16 +1311,28 @@ let newOrders = Object.values(map).map(o => {
         status  
     };  
 });  
+        if (newOrders.length < highestOrderCountSeen) {
+    console.warn("⚠️ Sheet returned older snapshot — blocked");
+    return;
+}
+
+highestOrderCountSeen = newOrders.length;
       //  if (dataCache && newOrders.length < dataCache.length) {  
  //   console.warn("Old version detected — skipped");  
  //   return;  
 //}  
-if (!newOrders.length) {  
-    console.warn("Invalid refresh skipped");  
-    return;  
-}  
-        const newHash = hashData(newOrders);  
-  
+// ❌ إذا رجعت نسخة أقل من الحالية — تجاهلها
+if (dataCache && newOrders.length < dataCache.length) {
+    console.warn("⚠️ Older version detected — skipped");
+    return;
+}
+
+// ❌ إذا الهَاش أقدم أو نفسه — تجاهل
+const newHash = hashData(newOrders);
+
+if (!force && dataCache && newHash === lastDataHash) {
+    return; // لا يوجد تغيير
+}
 // ❌ إذا لا يوجد تغيير — لا تفعل أي شيء  
 if (!force && dataCache && newHash === lastDataHash) {  
     return; // يحافظ على الأرقام كما هي  
@@ -1311,18 +1366,14 @@ if (dataCache && newOnly.length) {
   
     // INIT DATE FILTER  
   
-function initDate() {  
-    // تاريخ البداية ثابت  
-    const startDate = "2026-02-01";  
-  
-    // تاريخ اليوم تلقائي  
-    const today = new Date().toISOString().slice(0, 10);  
-  
-    dateFrom.value = startDate;  
-    dateTo.value = today;  
-  
-    updateDashboard();  
-}  
+function initDate() {
+    const today = new Date().toISOString().slice(0, 10);
+
+    dateFrom.value = today;
+    dateTo.value   = today;
+
+    updateDashboard();
+}
   
   
 function applyFilters() {  
@@ -1351,49 +1402,87 @@ let lastKPI = {
     distributed: 0  
 };  
 //filteredOrders = Object.values(unique);  
-    // UPDATE DASHBOARD KPIS  
-function updateDashboard() {  
-    const orders = applyFilters();  
-  
-   // total.textContent = orders.length;  
-  
-    const distributedOrders = orders.filter(o => o.status === "distributed");  
-    const completedOrders = orders.filter(o => o.status === "completed");  
-  
-    // Pending يجب استبعاد أي طلب موجود في In-Packing أو Distributed  
-    const pendingOrders = orders.filter(o =>   
-        o.status === "pending" || o.status === "partial"  
-    ).filter(o =>   
-        !completedOrders.includes(o) && !distributedOrders.includes(o)  
-    );  
-  
-    updateKPINumber("total", orders.length);  
-updateKPINumber("distributed", distributedOrders.length);  
-updateKPINumber("completed", completedOrders.length);  
-updateKPINumber("pending", pendingOrders.length);  
-      
-    renderWarehouseBreakdown(orders);  
-    renderMultiWHOrders(orders);  
-    renderSingleWHOrders(orders);  
-}  
+function updateDashboard() {
+
+    const todayOrders = applyFilters();
+    const ACCUMULATE_FROM = "2026-02-02";
+
+    const accumulatedOrders = allOrders.filter(o => {
+        const dateToCheck =
+            o.status === "distributed"
+                ? distributedOrdersMap[o.orderNo]?.date
+                : o.date;
+
+        if (!dateToCheck) return false;
+        return dateToCheck >= ACCUMULATE_FROM;
+    });
+
+    // ================= TODAY =================
+
+    const distributedToday = todayOrders.filter(o => o.status === "distributed");
+    const completedToday   = todayOrders.filter(o => o.status === "completed");
+    const pendingToday     = todayOrders.filter(o =>
+        o.status === "pending" || o.status === "partial"
+    );
+
+    // ================= BACKLOG =================
+
+    const completedBacklog = accumulatedOrders.filter(o =>
+        o.status === "completed"
+    );
+
+    const pendingBacklog = accumulatedOrders.filter(o =>
+        o.status === "pending" || o.status === "partial"
+    );
+
+    // ================= DISPLAY =================
+
+    updateKPINumber("total", todayOrders.length);
+    updateKPINumber("distributed", distributedToday.length);
+
+    updateKPIWithBacklog("completed", completedToday.length, completedBacklog.length);
+    updateKPIWithBacklog("pending", pendingToday.length, pendingBacklog.length);
+
+    renderWarehouseBreakdown(todayOrders);
+    renderMultiWHOrders(todayOrders);
+    renderSingleWHOrders(todayOrders);
+}
+function updateKPIWithBacklog(id, todayValue, backlogValue) {
+
+    const container = document.getElementById(id);
+    const main = container.querySelector(".main-number");
+    const sub  = container.querySelector(".sub-number");
+
+    main.textContent = todayValue;
+
+    if (backlogValue > todayValue) {
+        const backlogOnly = backlogValue - todayValue;
+        sub.textContent = `(+${backlogOnly} backlog)`;
+    } else {
+        sub.textContent = "";
+    }
+}
+
 function updateKPINumber(id, newValue) {  
+     if (lastKPI[id] === newValue) return;
+
+    lastKPI[id] = newValue;
+    document.getElementById(id).textContent = newValue;
     const element = document.getElementById(id);  
     const currentValue = lastKPI[id];  
-  
-    // إذا نفس الرقم → لا تفعل شيء  
-    if (newValue === currentValue) return;  
-  
-    // إذا زاد → حدّث  
-    if (newValue > currentValue) {  
-        lastKPI[id] = newValue;  
-        element.textContent = newValue;  
-        return;  
-    }  
-  
-    // إذا نقص (مثلاً تغيير فلتر)  
-    lastKPI[id] = newValue;  
-    element.textContent = newValue;  
-}  
+
+    // إذا زاد → فقط أضف الفرق
+    if (newValue > currentValue) {
+        const diff = newValue - currentValue;
+        lastKPI[id] += diff;
+        element.textContent = lastKPI[id];
+        return;
+    }
+
+    // إذا نقص (تغيير فلتر مثلاً) → حدّث مباشرة
+    
+    element.textContent = newValue;
+}
 function showDistributedOrders() {  
     const from = dateFrom.value || null;  
     const to   = dateTo.value || null;  
@@ -1531,26 +1620,192 @@ ${pendingOrders.length}</a>
 }  
   
     // SHOW ORDER DETAILS  
-    function showOrderDetails(type) {  
-    let o = applyFilters();  
-  
-    if (type === "completed") {  
-        o = o.filter(x => x.status === "completed");  
-    }  
-  
-    if (type === "pending") {  
-        o = o.filter(x =>  
-            x.status === "pending" || x.status === "partial"  
-        );  
-    }  
-  
-    if (type === "distributed") {  
-        o = o.filter(x => x.status === "distributed");  
-    }  
-  
-    displayOrders(o);  
-}  
-  
+    function showOrderDetails(type) {
+
+    const ACCUMULATE_FROM = "2026-02-02";
+
+    const todayOrders = applyFilters();
+
+    // ================= TODAY FILTER =================
+
+    let todayFiltered = todayOrders;
+
+    if (type === "completed") {
+        todayFiltered = todayOrders.filter(o => o.status === "completed");
+    }
+
+    if (type === "pending") {
+        todayFiltered = todayOrders.filter(o =>
+            o.status === "pending" || o.status === "partial"
+        );
+    }
+
+    if (type === "distributed") {
+        todayFiltered = todayOrders.filter(o => o.status === "distributed");
+    }
+
+    if (type === "total") {
+        todayFiltered = todayOrders;
+    }
+
+    // ================= BACKLOG =================
+
+    let backlogOrders = [];
+
+    if (type === "completed" || type === "pending") {
+
+        backlogOrders = allOrders.filter(o => {
+
+            const dateToCheck =
+                o.status === "distributed"
+                    ? distributedOrdersMap[o.orderNo]?.date
+                    : o.date;
+
+            if (!dateToCheck) return false;
+
+            if (dateToCheck < ACCUMULATE_FROM) return false;
+
+            // استبعاد طلبات اليوم
+            if (todayFiltered.includes(o)) return false;
+
+            if (type === "completed") {
+                return o.status === "completed";
+            }
+
+            if (type === "pending") {
+                return o.status === "pending" || o.status === "partial";
+            }
+
+            return false;
+        });
+    }
+
+    lastTodayOrders = todayFiltered;
+lastBacklogOrders = backlogOrders;
+lastType = type;
+
+displayOrdersWithBacklog(todayFiltered, backlogOrders, type);
+}
+let lastTodayOrders = [];
+let lastBacklogOrders = [];
+let lastType = null;
+
+
+function displayOrdersWithBacklog(todayOrders, backlogOrders, type) {
+
+    const orderList = document.getElementById("orderList");
+
+    function buildTable(orders) {
+
+    if (!orders.length) {
+        return `<p style="color:#9ca3af">No orders found.</p>`;
+    }
+
+    return `
+        <table>
+            <tr>
+                <th>Order #</th>
+                <th>Warehouses</th>
+                <th>Status</th>
+            </tr>
+            ${orders.map(order => {
+
+                let statusText =
+                    order.status === "distributed" ? "Distributed" :
+                    order.status === "completed" ? "In-Packing" :
+                    order.status === "partial" ? "Partial" :
+                    "Pending";
+
+                return `
+                <tr>
+                    <td>${order.orderNo}</td>
+                    <td>
+                        ${order.warehouses.map(w => {
+
+    const badgeColor = getWarehouseBadgeColor(order, w);
+
+    let tooltipText = "";
+
+    if (order.status === "distributed") {
+        tooltipText = `Distributed at: ${distributedOrdersMap[order.orderNo]?.date || "-"}`;
+    }
+    else if (w.packed) {
+        tooltipText = `Received at Packing Station: ${w.receivedTime || "-"}`;
+    }
+    else {
+        tooltipText = `Received in Warehouse: ${w.receivedTime || "-"}`;
+    }
+
+    return `
+        <div class="tooltip-wrapper">
+            <span style="
+                display:inline-block;
+                margin:2px;
+                padding:4px 8px;
+                border-radius:6px;
+                font-size:12px;
+                font-weight:600;
+                background:${badgeColor};
+                color:black;
+                cursor:pointer;
+            ">
+                ${w.base.toUpperCase()}
+            </span>
+            <div class="tooltip-box">
+                ${tooltipText}
+            </div>
+        </div>
+    `;
+}).join("")}
+                    </td>
+                    <td>${statusText}</td>
+                </tr>
+                `;
+            }).join("")}
+        </table>
+    `;
+}
+
+let html = `
+    <div style="display:flex;gap:10px;margin-bottom:15px">
+        <button onclick="toggleBacklogView(false)" class="toggle-btn">
+            All
+        </button>
+        <button onclick="toggleBacklogView(true)" class="toggle-btn">
+            Show Only Backlog
+        </button>
+    </div>
+`;
+
+if (!showOnlyBacklog) {
+    html += `
+        <h3 style="color:#22c55e;margin-bottom:10px">
+            Today Orders (${todayOrders.length})
+        </h3>
+        ${buildTable(todayOrders)}
+    `;
+}
+
+if (backlogOrders.length) {
+    html += `
+        <h3 style="color:#f59e0b;margin:30px 0 10px 0">
+            Backlog Orders (${backlogOrders.length})
+        </h3>
+        ${buildTable(backlogOrders)}
+    `;
+}
+
+    orderList.innerHTML = html;
+
+    document.getElementById("orderDetails").classList.remove("hidden");
+}
+  function toggleBacklogView(value) {
+    showOnlyBacklog = value;
+    updateLastOrderDetailsView();
+}
+function updateLastOrderDetailsView() {
+    displayOrdersWithBacklog(lastTodayOrders, lastBacklogOrders, lastType);
+}
     // SHOW WAREHOUSE ORDERS  
    function showWarehouseOrders(warehouse, type) {  
     let o = applyFilters();  
@@ -1889,7 +2144,44 @@ function showToast(message) {
         toast.style.transform = "translateY(20px)";  
     }, 4000);  
 }  
-</script>  </body>  </html>
+document.addEventListener("mouseover", function(e) {
 
+    const row = e.target.closest(".order-row");
+    if (!row) return;
 
+    const tooltip = document.getElementById("tooltip");
 
+    const status = row.dataset.status;
+    const receivedWH = row.dataset.wh;
+    const receivedPack = row.dataset.pack;
+
+    let text = "";
+
+    if (status === "pending" || status === "partial") {
+        text = "Received at WH: " + receivedWH;
+    }
+
+    if (status === "completed") {
+        text = "Received at Packing Station: " + receivedPack;
+    }
+
+    if (!text) return;
+
+    tooltip.textContent = text;
+    tooltip.classList.remove("hidden");
+});
+
+document.addEventListener("mousemove", function(e) {
+    const tooltip = document.getElementById("tooltip");
+    tooltip.style.top = (e.pageY + 15) + "px";
+    tooltip.style.left = (e.pageX + 15) + "px";
+});
+
+document.addEventListener("mouseout", function(e) {
+    if (e.target.closest(".order-row")) {
+        document.getElementById("tooltip").classList.add("hidden");
+    }
+});
+</script> 
+</body>  
+</html>
