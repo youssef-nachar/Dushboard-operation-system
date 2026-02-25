@@ -60,7 +60,7 @@
     .sidebar a:hover {  
         background: #111827  
     }  
-
+    
     .main {  
         padding: 20px  
     }  
@@ -1571,7 +1571,7 @@ function showDistributedOrders() {
 `;  
 }  
   
-  
+
     // MULTI-WAREHOUSE ORDERS  
     function renderMultiWHOrders(orders) {  
     const m = orders.filter(x => x.warehouseCount > 1);  
@@ -1585,7 +1585,7 @@ function showDistributedOrders() {
 <tr><th>Type</th><th>Orders</th></tr>  
 <tr><td>Total</td><td><a href="#" onclick="showMultiWHOrders('total')">${m.length}</a></td></tr>  
 <tr><td>In-Packing</td><td><a href="#" onclick="showMultiWHOrders('completed')">${completedOrders.length}</a></td></tr>  
-<tr><td>Pending</td>  
+<tr><td>Pending / partial</td>  
 <td>  
 <a href="#" onclick="showMultiWHOrders('pending')">  
 ${pendingOrders.length}</a>  
@@ -1700,7 +1700,21 @@ function displayOrdersWithBacklog(todayOrders, backlogOrders, type) {
     if (!orders.length) {
         return `<p style="color:#9ca3af">No orders found.</p>`;
     }
+orders.sort((a, b) => {
 
+    const dateA =
+        a.status === "distributed"
+            ? distributedOrdersMap[a.orderNo]?.date
+            : a.date;
+
+    const dateB =
+        b.status === "distributed"
+            ? distributedOrdersMap[b.orderNo]?.date
+            : b.date;
+
+    return new Date(dateB) - new Date(dateA); // ⬅️ من الأقدم للأحدث
+
+});
     return `
         <table>
             <tr>
@@ -1845,11 +1859,27 @@ function updateLastOrderDetailsView() {
     }  
   
   function displayOrders(orders, title = "Order Details") {  
-      orders.sort((a, b) => {  
-        const dateA = new Date(a.date);  
-        const dateB = new Date(b.date);  
-        return dateB - dateA; // الأحدث أولاً  
-    });  
+      orders.sort((a, b) => {
+
+    function getFullDate(order) {
+
+        // لو الطلب Distributed
+        if (order.status === "distributed") {
+            return new Date(distributedOrdersMap[order.orderNo]?.date);
+        }
+
+        // أخذ أول وقت استلام من أول warehouse
+        const firstWH = order.warehouses[0];
+
+        if (firstWH?.receivedTime) {
+            return new Date(firstWH.receivedTime);
+        }
+
+        return new Date(order.date); // fallback
+    }
+
+    return getFullDate(b) - getFullDate(a); // ⬅️ الأحدث أولاً حسب الوقت
+});
     const orderList = document.getElementById("orderList");  
     lastDisplayedOrders = orders; // مهم للتصدير  
   
@@ -1978,50 +2008,96 @@ return `
     function closeOrderDetails() { orderDetails.classList.add("hidden"); }  
   
     // EXPORT TO EXCEL  
-    function exportOrderDetailsToExcel() {  
-        if (!lastDisplayedOrders.length) {  
-            alert("No orders to export!");  
-            return;  
-        }  
-  
-        const headers = ["Order", "Status", "Warehouses", "Distributor"];  
-  
-        const rows = lastDisplayedOrders.map(o => {  
-            const whs = o.warehouses.map(w => {  
-                let status = w.packed ? "In-Packing" : "Pending";  
-                if (w.distributed) status = "Distributed";  
-                return `${w.base}`;  
-            }).join(" | ");  
-  
-            return [  
-                o.orderNo,  
-                o.status,  
-                whs,  
-                o.distributor || ""  
-            ];  
-        });  
-  
-        // CSV with proper escaping  
-        const csv = [  
-            headers.join(","),  
-            ...rows.map(r =>  
-                r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")  
-            )  
-        ].join("\r\n");  
-  
-        // Use Blob (Excel-safe)  
-        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });  
-        const url = URL.createObjectURL(blob);  
-  
-        const link = document.createElement("a");  
-        link.href = url;  
-        link.download = "order_details.csv";  
-        document.body.appendChild(link);  
-        link.click();  
-  
-        document.body.removeChild(link);  
-        URL.revokeObjectURL(url);  
-    }  
+    function exportOrderDetailsToExcel() {
+
+    let exportOrders = [];
+    let fileType = "filtered";
+
+    // ===============================
+    // تحديد مصدر البيانات
+    // ===============================
+
+    if (lastType !== null) {
+
+        if (showOnlyBacklog) {
+            exportOrders = lastBacklogOrders;
+            fileType = "backlog";
+        } 
+        else if (lastBacklogOrders.length > 0) {
+            exportOrders = [
+                ...lastTodayOrders,
+                ...lastBacklogOrders
+            ];
+            fileType = "all";
+        } 
+        else {
+            exportOrders = lastTodayOrders;
+            fileType = "today";
+        }
+
+    } else {
+        exportOrders = lastDisplayedOrders;
+        fileType = "filtered";
+    }
+
+    if (!exportOrders || !exportOrders.length) {
+        alert("No orders to export!");
+        return;
+    }
+
+    // إزالة التكرار
+    const uniqueMap = {};
+    exportOrders.forEach(o => {
+        uniqueMap[o.orderNo] = o;
+    });
+
+    const unique = Object.values(uniqueMap);
+
+    const headers = ["Order #", "Status", "Warehouses", "Date"];
+
+    const rows = unique.map(o => {
+
+        const whs = o.warehouses
+            .map(w => w.base.toUpperCase())
+            .join(" | ");
+
+        return [
+            o.orderNo,
+            o.status,
+            whs,
+            o.date
+        ];
+    });
+
+    const csvContent =
+        "\uFEFF" +
+        [
+            headers.join(","),
+            ...rows.map(r =>
+                r.map(v =>
+                    `"${String(v).replace(/"/g, '""')}"`
+                ).join(",")
+            )
+        ].join("\r\n");
+
+    const blob = new Blob([csvContent], {
+        type: "text/csv;charset=utf-8;"
+    });
+
+    const url = URL.createObjectURL(blob);
+
+    const today = new Date().toISOString().slice(0,10);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `orders_${fileType}_${today}.csv`;
+
+    document.body.appendChild(link);
+    link.click();
+
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
 function normalizeWarehouse(name) {  
     if (!name) return { base: "", packed: false };  
   
