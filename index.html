@@ -2191,7 +2191,7 @@ function resetIdleTimer() {
     localStorage.removeItem("isLoggedIn");  
     dashboard.classList.add("hidden");  
     loginContainer.style.display = "flex";  
-        startLiveDashboard()  
+        stopLiveDashboard()  
 }  
 // REFRESH PAGE ON ENTER  
 document.addEventListener("keydown", (e) => {  
@@ -2261,4 +2261,5 @@ document.addEventListener("mouseout", function(e) {
 </script> 
 </body>  
 </html>
+
 
