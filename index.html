@@ -1264,23 +1264,15 @@ async function loadData({ force = false, silent = false } = {}) {
             const w = normalizeWarehouse(whRaw);  
             if (!w.base) return;  
   
-if (!map[orderNo].wh[w.base]) {
-    map[orderNo].wh[w.base] = {
-        base: w.base,
-        packed: false,
-        receivedTime: null,
-        packingTime: null
-    };
-}
-
-if (w.isPack) {
-    // هذا صف ---Pack → هو تاريخ الباكينج
-    map[orderNo].wh[w.base].packed = true;
-    map[orderNo].wh[w.base].packingTime = r[DATE] || null;
-} else {
-    // هذا صف الاستلام العادي
-    map[orderNo].wh[w.base].receivedTime = r[DATE] || null;
-}
+            if (!map[orderNo].wh[w.base]) {  
+    map[orderNo].wh[w.base] = {  
+        base: w.base,  
+        packed: false,  
+        receivedTime: r[DATE] || "",  // ⬅️ حفظ الوقت الخام  
+        packingTime: packedRaw && packedRaw !== "" ? r[DATE] : null  
+    };  
+}  
+  
             // ✅ معالجة جميع صيغ العمود Packed  
             const packedValues = ["TRUE", "True", "true", "1", "Yes", "yes", "X", "x"];  
             if (w.packed || (packedRaw && packedValues.includes(packedRaw))) {  
@@ -1383,30 +1375,18 @@ function initDate() {
     updateDashboard();
 }
   
-  function getPackingDate(order) {
-
-    for (let w of order.warehouses) {
-        if (w.packingTime) {
-            return formatDateForInput(w.packingTime);
-        }
-    }
-
-    return order.date; // fallback لو لم يوجد ---Pack
-}
+  
 function applyFilters() {  
     const from = dateFrom.value || null;  
     const to   = dateTo.value || null;  
   
     return allOrders.filter(o => {  
   
-const dateToCheck =
-    o.status === "distributed"
-        ? distributedOrdersMap[o.orderNo]?.date
-        : o.status === "completed"
-            ? getPackingDate(o)
-            : o.date;
-
-
+        const dateToCheck =  
+            o.status === "distributed"  
+                ? distributedOrdersMap[o.orderNo]?.date  
+                : o.date;  
+  
         if (!dateToCheck) return false;  
         if (from && dateToCheck < from) return false;  
         if (to && dateToCheck > to) return false;  
@@ -1422,32 +1402,16 @@ let lastKPI = {
     distributed: 0  
 };  
 //filteredOrders = Object.values(unique);  
-
-function getEffectiveOrderDate(order) {
-
-    // لو Distributed → تاريخ التوزيع
-    if (order.status === "distributed") {
-        return distributedOrdersMap[order.orderNo]?.date || null;
-    }
-
-    // لو Completed (In-Packing) → تاريخ أول Packing
-    if (order.status === "completed") {
-        const firstPackedWH = order.warehouses.find(w => w.packed && w.packingTime);
-        if (firstPackedWH) {
-            return formatDateForInput(firstPackedWH.packingTime);
-        }
-    }
-
-    // غير ذلك → تاريخ الاستلام في المستودع
-    return order.date;
-}
 function updateDashboard() {
 
     const todayOrders = applyFilters();
     const ACCUMULATE_FROM = "2026-02-02";
 
     const accumulatedOrders = allOrders.filter(o => {
-const dateToCheck = getEffectiveOrderDate(o);
+        const dateToCheck =
+            o.status === "distributed"
+                ? distributedOrdersMap[o.orderNo]?.date
+                : o.date;
 
         if (!dateToCheck) return false;
         return dateToCheck >= ACCUMULATE_FROM;
@@ -1690,26 +1654,30 @@ ${pendingOrders.length}</a>
 
     if (type === "completed" || type === "pending") {
 
-backlogOrders = allOrders.filter(o => {
+        backlogOrders = allOrders.filter(o => {
 
-    const dateToCheck = getEffectiveOrderDate(o);
-    if (!dateToCheck) return false;
+            const dateToCheck =
+                o.status === "distributed"
+                    ? distributedOrdersMap[o.orderNo]?.date
+                    : o.date;
 
-    if (dateToCheck < ACCUMULATE_FROM) return false;
+            if (!dateToCheck) return false;
 
-    // استبعاد طلبات اليوم
-    if (todayFiltered.includes(o)) return false;
+            if (dateToCheck < ACCUMULATE_FROM) return false;
 
-    if (type === "completed") {
-        return o.status === "completed";
-    }
+            // استبعاد طلبات اليوم
+            if (todayFiltered.includes(o)) return false;
 
-    if (type === "pending") {
-        return o.status === "pending" || o.status === "partial";
-    }
+            if (type === "completed") {
+                return o.status === "completed";
+            }
 
-    return false;
-});
+            if (type === "pending") {
+                return o.status === "pending" || o.status === "partial";
+            }
+
+            return false;
+        });
     }
 
     lastTodayOrders = todayFiltered;
@@ -1733,9 +1701,19 @@ function displayOrdersWithBacklog(todayOrders, backlogOrders, type) {
         return `<p style="color:#9ca3af">No orders found.</p>`;
     }
 orders.sort((a, b) => {
-    const dateA = getEffectiveOrderDate(a);
-    const dateB = getEffectiveOrderDate(b);
-    return new Date(dateB) - new Date(dateA);
+
+    const dateA =
+        a.status === "distributed"
+            ? distributedOrdersMap[a.orderNo]?.date
+            : a.date;
+
+    const dateB =
+        b.status === "distributed"
+            ? distributedOrdersMap[b.orderNo]?.date
+            : b.date;
+
+    return new Date(dateB) - new Date(dateA); // ⬅️ من الأقدم للأحدث
+
 });
     return `
         <table>
@@ -2138,13 +2116,13 @@ function normalizeWarehouse(name) {
 }  
     // SHOW WAREHOUSES PAGE  
     function showWarehouses() { }  
-let currentInterval = 30000; // يبدأ 30 ثانية  
+let currentInterval = 3000; // يبدأ 30 ثانية  
 // ==============================  
 // 🔥 ENTERPRISE LIVE ENGINE  
 // ==============================  
   
-const FAST_INTERVAL = 20000;   // نشط  
-const SLOW_INTERVAL = 30000;  // خمول  
+const FAST_INTERVAL = 2000;   // نشط  
+const SLOW_INTERVAL = 3000;  // خمول  
   
 let liveTimer = null;  
 let idleTimer = null;  
@@ -2259,16 +2237,10 @@ document.addEventListener("mouseover", function(e) {
         text = "Received at WH: " + receivedWH;
     }
 
-if (status === "completed") {
-
-    const packingDate = getPackingDate(order);
-
-    if (packingDate === today) {
-        todayCount++;
-    } else if (packingDate < today) {
-        backlogCount++;
+    if (status === "completed") {
+        text = "Received at Packing Station: " + receivedPack;
     }
-}
+
     if (!text) return;
 
     tooltip.textContent = text;
