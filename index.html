@@ -838,51 +838,133 @@ let distributedOrdersMap = {};
 //   "#L3029": "10:00",  
 //   "#M48717": "10:00"  
 // }  
+  let lastDistributionHash = "";
+let distributionCache = {};
+    function hashDistribution(dataMap) {
+    return JSON.stringify(
+        Object.keys(dataMap)
+            .sort()
+            .map(key => ({
+                orderNo: key,
+                date: dataMap[key].date,
+                company: dataMap[key].company
+            }))
+    );
+}
+// function loadDistributedOrders() {  
+//     return fetch(distributionSheetURL)  
+//         .then(r => r.text())  
+//         .then(csv => {  
+//             const parsed = Papa.parse(csv, { skipEmptyLines: true });  
+//             const rows = parsed.data;  
+//             if (!rows.length) return;  
   
-function loadDistributedOrders() {  
-    return fetch(distributionSheetURL)  
-        .then(r => r.text())  
-        .then(csv => {  
-            const parsed = Papa.parse(csv, { skipEmptyLines: true });  
-            const rows = parsed.data;  
-            if (!rows.length) return;  
+//             const headers = rows  
+//                 .shift()  
+//                 .map(h => h.toString().trim().toLowerCase());  
   
-            const headers = rows  
-                .shift()  
-                .map(h => h.toString().trim().toLowerCase());  
+//             const ORDER_COL = headers.indexOf("request number");  
+//             const DATE_COL  = headers.indexOf("request registration date time");  
+//            const COMPANY_COL = headers.findIndex(h => h.includes("company")); //  
+//             if (ORDER_COL === -1 || DATE_COL === -1) {  
+//                 console.error("❌ Distribution columns not found", headers);  
+//                 return;  
+//             }  
   
-            const ORDER_COL = headers.indexOf("request number");  
-            const DATE_COL  = headers.indexOf("request registration date time");  
-           const COMPANY_COL = headers.findIndex(h => h.includes("company")); //  
-            if (ORDER_COL === -1 || DATE_COL === -1) {  
-                console.error("❌ Distribution columns not found", headers);  
-                return;  
-            }  
+//             distributedOrdersMap = {}; // reset  
   
-            distributedOrdersMap = {}; // reset  
+//             rows.forEach(r => {  
+//                 const orderNo = r[ORDER_COL]?.trim();  
+//                 const rawDate = r[DATE_COL];  
+// const company = COMPANY_COL !== -1 ? r[COMPANY_COL]?.trim() : "";  
+//                 if (!orderNo || !rawDate) return;  
   
-            rows.forEach(r => {  
-                const orderNo = r[ORDER_COL]?.trim();  
-                const rawDate = r[DATE_COL];  
-const company = COMPANY_COL !== -1 ? r[COMPANY_COL]?.trim() : "";  
-                if (!orderNo || !rawDate) return;  
+//                 const formattedDate = formatDateForInput(rawDate);  
+//                 if (!formattedDate) return;  
   
-                const formattedDate = formatDateForInput(rawDate);  
-                if (!formattedDate) return;  
+//                 distributedOrdersMap[orderNo] = {  
+//     date: formattedDate,  
+//     company: company || "LMD"  
+// };  
+//             });  
   
-                distributedOrdersMap[orderNo] = {  
-    date: formattedDate,  
-    company: company || "LMD"  
-};  
-            });  
-  
-            console.log("✅ Distributed orders loaded:", distributedOrdersMap);  
-        })  
-        .catch(err =>  
-            console.error("Error loading distribution sheet:", err)  
-        );  
-}  
-  
+//             console.log("✅ Distributed orders loaded:", distributedOrdersMap);  
+//         })  
+//         .catch(err =>  
+//             console.error("Error loading distribution sheet:", err)  
+//         );  
+// }  
+  function loadDistributedOrders() {
+
+    return fetch(distributionSheetURL + "&t=" + Date.now(), {
+        cache: "no-store"
+    })
+    .then(r => r.text())
+    .then(csv => {
+
+        const parsed = Papa.parse(csv, { skipEmptyLines: true });
+        const rows = parsed.data;
+        if (!rows.length) return;
+
+        const headers = rows
+            .shift()
+            .map(h => h.toString().trim().toLowerCase());
+
+        const ORDER_COL = headers.indexOf("request number");
+        const DATE_COL  = headers.indexOf("request registration date time");
+        const COMPANY_COL = headers.findIndex(h => h.includes("company"));
+
+        if (ORDER_COL === -1 || DATE_COL === -1) {
+            console.warn("❌ Distribution columns not found");
+            return;
+        }
+
+        let newMap = {};
+
+        rows.forEach(r => {
+
+            const orderNo = r[ORDER_COL]?.trim().toUpperCase();
+            const rawDate = r[DATE_COL];
+            const company = COMPANY_COL !== -1 ? r[COMPANY_COL]?.trim() : "";
+
+            if (!orderNo || !rawDate) return;
+
+            const formattedDate = formatDateForInput(rawDate);
+            if (!formattedDate) return;
+
+            newMap[orderNo] = {
+                date: formattedDate,
+                company: company || "LMD"
+            };
+        });
+
+        const newHash = hashDistribution(newMap);
+
+        // 🔥 BLOCK إذا رجعت نسخة قديمة
+        if (lastDistributionHash && newHash === lastDistributionHash) {
+            return; // لا يوجد تغيير
+        }
+
+        // 🔥 لو النسخة أقدم (عدد أقل) تجاهلها
+        if (
+            Object.keys(newMap).length <
+            Object.keys(distributionCache).length
+        ) {
+            console.warn("⚠️ Older distribution snapshot blocked");
+            return;
+        }
+
+        // ✅ اعتماد النسخة الجديدة
+        distributionCache = newMap;
+        distributedOrdersMap = newMap;
+        lastDistributionHash = newHash;
+
+        console.log("✅ Distribution updated safely");
+    })
+    .catch(err => {
+        console.error("Distribution load error:", err);
+    });
+}
 function resetFilters() {  
   
     // 🔹 إلغاء Today Mode  
@@ -2261,5 +2343,6 @@ document.addEventListener("mouseout", function(e) {
 </script> 
 </body>  
 </html>
+
 
 
