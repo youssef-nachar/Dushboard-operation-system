@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>  <html lang="en">  <head>  
     <meta charset="UTF-8">  
     <title>Warehouse Dashboard</title>  
@@ -684,7 +683,11 @@ background:#22c55e;
             <div class="kpi" onclick="showOrderDetails('distributed')">  
                 <div>Distributed</div>  
                 <div id="distributed" class="value success">0</div>  
-            </div>  
+            </div> 
+            <div class="kpi" onclick="showOrderDetails('canceled')">
+    <div>Canceled Before Delivery</div>
+    <div id="canceled" class="value" style="color:#f76666">0</div>
+</div>
         </div>  
 
         <div class="warehouse-container">  
@@ -833,11 +836,45 @@ const distributionSheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT
 let distributedOrders = new Set(); // قائمة الطلبات الموزعة  
   
 let distributedOrdersMap = {};   
-// الشكل النهائي:  
-// {  
-//   "#L3029": "10:00",  
-//   "#M48717": "10:00"  
-// }  
+
+
+const canceledSheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTecpCEwZ10-Ncz2y0xSsAnNdLXcWDGt_GiAeJlbWYhgg9B8zlhvJ1DeDH8H0NDSg/pub?gid=508410365&single=true&output=csv";
+let canceledOrdersSet = new Set();
+
+async function loadCanceledOrders() {
+
+    const res = await fetch(canceledSheetURL + "&t=" + Date.now(), {
+        cache: "no-store"
+    });
+
+    const csv = await res.text();
+    const parsed = Papa.parse(csv, { skipEmptyLines: true });
+    const rows = parsed.data;
+
+    if (!rows.length) return;
+
+    const headers = rows.shift().map(h => h.toLowerCase().trim());
+
+    const ORDER_COL = headers.indexOf("order #"); // 🔥 lowercase
+
+    if (ORDER_COL === -1) {
+        console.warn("Canceled column not found", headers);
+        return;
+    }
+
+    let newSet = new Set();
+
+    rows.forEach(r => {
+        const orderNo = r[ORDER_COL]?.trim().toUpperCase();
+        if (orderNo) newSet.add(orderNo);
+    });
+
+    canceledOrdersSet = newSet;
+
+    console.log("Canceled Orders Loaded:", canceledOrdersSet.size);
+}
+
+
   let lastDistributionHash = "";
 let distributionCache = {};
     function hashDistribution(dataMap) {
@@ -1029,6 +1066,9 @@ function resetFilters() {
             if (order.status === "distributed") {  
                 statusText = `<span style="color:#22c55e;font-weight:600;">Distributed</span>`;  
             }  
+               else if (order.status === "canceled") {  
+                statusText = `<span style="color:#f59e0b;font-weight:600;">canceled</span>`;  
+            } 
             else if (order.status === "completed") {  
                 statusText = `<span style="color:#22c55e;font-weight:600;">In-Packing</span>`;  
             }  
@@ -1191,27 +1231,23 @@ else {
 
 function getWarehouseBadgeColor(order, warehouse) {
 
-    // Distributed
+    if (order.status === "canceled") {
+        return "#ef4444"; // red
+    }
+
     if (order.status === "distributed") {
-        return "#22c55e"; // green
+        return "#22c55e";
     }
 
-    // Multi warehouse partial
     if (order.status === "partial") {
-        if (warehouse.packed) {
-            return "#22c55e"; // yellow (packed)
-        } else {
-            return "#f59e0b"; // orange (pending part)
-        }
+        return warehouse.packed ? "#22c55e" : "#f59e0b";
     }
 
-    // Completed (In-Packing)
     if (order.status === "completed") {
-        return "#16a34a"; // dark green
+        return "#16a34a";
     }
 
-    // Pending
-    return "#7c2d12"; // dark red
+    return "#7c2d12";
 }
 function toggleQuickMenu(e) {  
     e.stopPropagation();  
@@ -1309,8 +1345,9 @@ async function loadData({ force = false, silent = false } = {}) {
   
     if (!silent && !dataCache) loadingOverlay.classList.remove("hidden");  
   
-    try {  
-        await loadDistributedOrders();  
+  try {  
+    await loadDistributedOrders();  
+    await loadCanceledOrders();   // 🔥 هذا السطر كان ناقص 
   
         const res = await fetch(sheetURL + "&t=" + Date.now(), {  
     cache: "no-store"  
@@ -1370,34 +1407,38 @@ if (w.packed || (packedRaw && packedValues.includes(packedRaw))) {
         // بناء الطلبات النهائية مع تحديد الحالة بدقة  
         // بناء الطلبات النهائية مع تحديد الحالة بدقة  
 let newOrders = Object.values(map).map(o => {  
+
     const warehouses = Object.values(o.wh);  
     const totalWH = warehouses.length;  
     const packedWH = warehouses.filter(w => w.packed).length;  
-  
+
     let status;  
-  
-    if (distributedOrdersMap[o.orderNo]) {  
+
+    // 🔴 CANCELED FIRST (أولوية قصوى)
+    if (canceledOrdersSet.has(o.orderNo)) {
+        status = "canceled";
+    }
+    else if (distributedOrdersMap[o.orderNo]) {  
         status = "distributed";  
         warehouses.forEach(w => w.distributed = true);  
     }   
     else if (totalWH === 1) {  
-        // طلب من مستودع واحد  
         status = warehouses[0].packed ? "completed" : "pending";  
     }   
     else {  
-        // طلب من أكثر من مستودع  
         if (packedWH === 0) status = "pending";  
         else if (packedWH < totalWH) status = "partial";  
         else status = "completed";  
     }  
-  
+
     return {  
         ...o,  
         warehouses,  
         warehouseCount: totalWH,  
         status  
     };  
-});  
+
+});
         // 🔥 احسب أحدث تاريخ فعلي في البيانات
 const newestDateInSnapshot = newOrders
     .map(o => getEffectiveDate(o))
@@ -1525,18 +1566,28 @@ function updateDashboard() {
 
     const accumulatedOrders = allOrders.filter(o => {
         const dateToCheck = getEffectiveDate(o);
-
         if (!dateToCheck) return false;
         return dateToCheck >= ACCUMULATE_FROM;
     });
 
     // ================= TODAY =================
+const CANCELED_START_DATE = "2026-02-02";
 
+const canceledToday = allOrders.filter(o => {
+
+    if (o.status !== "canceled") return false;
+
+    const dateToCheck = getEffectiveDate(o);
+    if (!dateToCheck) return false;
+
+    return dateToCheck >= CANCELED_START_DATE;
+});
     const distributedToday = todayOrders.filter(o => o.status === "distributed");
     const completedToday   = todayOrders.filter(o => o.status === "completed");
-    const pendingToday     = todayOrders.filter(o =>
-        o.status === "pending" || o.status === "partial"
-    );
+ const pendingToday = todayOrders.filter(o =>
+    (o.status === "pending" || o.status === "partial")
+    && o.status !== "canceled"
+);
 
     // ================= BACKLOG =================
 
@@ -1552,6 +1603,7 @@ function updateDashboard() {
 
     updateKPINumber("total", todayOrders.length);
     updateKPINumber("distributed", distributedToday.length);
+    updateKPINumber("canceled", canceledToday.length);
 
     updateKPIWithBacklog("completed", completedToday.length, completedBacklog.length);
     updateKPIWithBacklog("pending", pendingToday.length, pendingBacklog.length);
@@ -1733,25 +1785,37 @@ ${pendingOrders.length}</a>
 }  
   
     // SHOW ORDER DETAILS  
-    function showOrderDetails(type) {
+function showOrderDetails(type) {
 
     const ACCUMULATE_FROM = "2026-02-02";
-
     const todayOrders = applyFilters();
-
-    // ================= TODAY FILTER =================
 
     let todayFiltered = todayOrders;
 
+if (type === "canceled") {
+
+    const CANCELED_START_DATE = "2026-02-02";
+
+    todayFiltered = allOrders.filter(o => {
+
+        if (o.status !== "canceled") return false;
+
+        const dateToCheck = getEffectiveDate(o);
+        if (!dateToCheck) return false;
+
+        return dateToCheck >= CANCELED_START_DATE;
+    });
+}
     if (type === "completed") {
         todayFiltered = todayOrders.filter(o => o.status === "completed");
     }
 
-    if (type === "pending") {
-        todayFiltered = todayOrders.filter(o =>
-            o.status === "pending" || o.status === "partial"
-        );
-    }
+if (type === "pending") {
+    todayFiltered = todayOrders.filter(o =>
+        (o.status === "pending" || o.status === "partial")
+        && o.status !== "canceled"
+    );
+}
 
     if (type === "distributed") {
         todayFiltered = todayOrders.filter(o => o.status === "distributed");
@@ -1760,8 +1824,6 @@ ${pendingOrders.length}</a>
     if (type === "total") {
         todayFiltered = todayOrders;
     }
-
-    // ================= BACKLOG =================
 
     let backlogOrders = [];
 
@@ -1772,30 +1834,25 @@ ${pendingOrders.length}</a>
             const dateToCheck = getEffectiveDate(o);
 
             if (!dateToCheck) return false;
-
             if (dateToCheck < ACCUMULATE_FROM) return false;
-
-            // استبعاد طلبات اليوم
             if (todayFiltered.includes(o)) return false;
 
-            if (type === "completed") {
-                return o.status === "completed";
-            }
-
-            if (type === "pending") {
-                return o.status === "pending" || o.status === "partial";
-            }
+            if (type === "completed") return o.status === "completed";
+            if (type === "pending") return o.status === "pending" || o.status === "partial";
 
             return false;
         });
     }
 
     lastTodayOrders = todayFiltered;
-lastBacklogOrders = backlogOrders;
-lastType = type;
+    lastBacklogOrders = backlogOrders;
+    lastType = type;
 
-displayOrdersWithBacklog(todayFiltered, backlogOrders, type);
+    displayOrdersWithBacklog(todayFiltered, backlogOrders, type);
 }
+
+
+
 let lastTodayOrders = [];
 let lastBacklogOrders = [];
 let lastType = null;
@@ -1834,11 +1891,12 @@ orders.sort((a, b) => {
             </tr>
             ${orders.map(order => {
 
-                let statusText =
-                    order.status === "distributed" ? "Distributed" :
-                    order.status === "completed" ? "In-Packing" :
-                    order.status === "partial" ? "Partial" :
-                    "Pending";
+           let statusText =
+    order.status === "canceled" ? "Canceled" :
+    order.status === "distributed" ? "Distributed" :
+    order.status === "completed" ? "In-Packing" :
+    order.status === "partial" ? "Partial" :
+    "Pending";
 
                 return `
                 <tr>
@@ -1915,12 +1973,47 @@ if (!showOnlyBacklog) {
 }
 
 if (backlogOrders.length) {
+
+    // 🔥 تجميع الطلبات حسب التاريخ الفعلي
+    const grouped = {};
+
+    backlogOrders.forEach(order => {
+
+        const dateKey = getEffectiveDate(order) || "No Date";
+
+        if (!grouped[dateKey]) {
+            grouped[dateKey] = [];
+        }
+
+        grouped[dateKey].push(order);
+    });
+
+    // ترتيب التواريخ من الأحدث للأقدم
+    const sortedDates = Object.keys(grouped)
+        .sort((a, b) => new Date(b) - new Date(a));
+
     html += `
         <h3 style="color:#f59e0b;margin:30px 0 10px 0">
             Backlog Orders (${backlogOrders.length})
         </h3>
-        ${buildTable(backlogOrders)}
     `;
+
+    sortedDates.forEach(date => {
+
+        html += `
+            <h4 style="
+                margin:20px 0 8px 0;
+                color:#eab308;
+                font-weight:600;
+                border-bottom:1px solid #1f2937;
+                padding-bottom:4px;
+            ">
+                📅 ${date}
+            </h4>
+        `;
+
+        html += buildTable(grouped[date]);
+    });
 }
 
     orderList.innerHTML = html;
@@ -2019,16 +2112,21 @@ seen.add(key);
         // تحديد حالة الطلب  
         let statusText = "";  
   
-if (order.status === "distributed") {  
+if (order.status === "canceled") {
+    statusText = "Canceled";
+}
+else if (order.status === "distributed") {  
     statusText = "Distributed";  
-} else if (order.status === "completed") {  
+}
+else if (order.status === "completed") {  
     statusText = "In-Packing";  
-} else if (order.status === "partial") {  
+}
+else if (order.status === "partial") {  
     statusText = "Partial";  
-} else {  
+}
+else {  
     statusText = "Pending";  
-}  
-  
+}
         html += `  
         <tr>  
           <td>${order.orderNo}</td>  
@@ -2375,7 +2473,3 @@ document.addEventListener("mouseout", function(e) {
 </script> 
 </body>  
 </html>
-
-
-
-
