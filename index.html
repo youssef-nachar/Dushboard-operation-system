@@ -501,6 +501,7 @@ animation: spin 1s linear infinite;
     .menu-open>a .arrow {  
         transform: rotate(180deg);  
     }  
+    
 </style>
 
 </head>  <body>  
@@ -537,7 +538,9 @@ animation: spin 1s linear infinite;
 </div>  <div id="dashboard" class="hidden app">  
     <aside class="sidebar">  
         <h2><i class="fa-solid fa-warehouse"></i>Operation dashboard system</h2>  
-        <a href="#">Dashboard</a>  
+        <a href="#" onclick="showDashboardHome()">
+    <i class="fa-solid fa-chart-line"></i> Dashboard
+</a>
         <div class="menu-item">  
             <a href="#" onclick="toggleMenu('warehousesMenu')">
 
@@ -597,6 +600,8 @@ animation: spin 1s linear infinite;
             </div>  
         </div>  
         <a href="#" onclick="signOut()" style="color:#ef4444">Logout</a>  
+              <a href="#" onclick="showNewOrderTab()">
+    <i class="fa-solid fa-plus"></i> New Orders</a>
     </aside>  
 
     <main class="main">  
@@ -610,6 +615,7 @@ animation: spin 1s linear infinite;
                 <button type="button" id="toggleToDate" style="padding:4px 8px; font-size:12px;"> to</button>  
 
                 <input type="date" id="dateTo" onchange="updateDashboard()">  
+              
                  <div class="quick-menu">  
 <button class="three-dots" onclick="toggleQuickMenu(event)">  
     <i class="fa-solid fa-ellipsis-vertical"></i>  
@@ -639,6 +645,7 @@ animation: spin 1s linear infinite;
 Reset
 
 </button>  
+  
     </div>  
 </div>  
                 </div>  <div id="liveStatus" style="  
@@ -660,7 +667,49 @@ background:#22c55e;
 <span id="liveText">LIVE</span>
 
 </div>  
-            </header>  <div class="kpis">  
+            </header>
+      <div id="newOrderTab" class="card hidden" style="margin-top:30px">
+
+    <h3 style="
+        color:var(--accent);
+        margin-bottom:20px;
+        display:flex;
+        align-items:center;
+        gap:10px;
+        font-size:20px;
+    ">
+        <i class="fa-solid fa-circle-plus"></i>
+        Add New Order
+    </h3>
+
+    <div class="new-order-grid">
+
+        <div class="input-group">
+            <i class="fa-solid fa-hashtag"></i>
+            <input type="text" id="newOrderNumber" placeholder="Order Number">
+        </div>
+
+        <div class="input-group">
+            <i class="fa-solid fa-warehouse"></i>
+            <input type="text" id="newWarehouseName" placeholder="Warehouse Name">
+        </div>
+
+        <div class="input-group">
+            <i class="fa-solid fa-calendar"></i>
+            <input type="date" id="newOrderDate">
+        </div>
+
+        <button onclick="saveNewOrder()" class="save-order-btn">
+            <i class="fa-solid fa-floppy-disk"></i>
+            Save Order
+        </button>
+
+    </div>
+
+    <div id="newOrderPreview" class="hidden"></div>
+
+</div>
+        <div class="kpis">  
             <div class="kpi" onclick="showOrderDetails('total')">  
                 <div>Total Orders</div>  
                 <div id="total" class="value">0</div>  
@@ -719,6 +768,7 @@ background:#22c55e;
                 <div id="searchResultsCard" style="display:none">  
                     <div id="searchResultsTable"></div>  
                 </div>  
+
             </div>  
 
         </div>  
@@ -772,10 +822,21 @@ background:#22c55e;
 ">  
     <i class="fa-solid fa-bell" style="color:#22c55e"></i>  
     <span id="toastText">New orders received</span>  
-</div>  <audio id="toastSound">  
+</div> 
+  
+   <audio id="toastSound">  
     <source src="https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3" type="audio/mpeg">  
 </audio>  
-</body>  <script>  
+  <!-- NEW ORDER TAB -->
+
+</div>
+</body> 
+
+
+
+
+
+ <script>  
   
 // إغلاق الـ modal عند الضغط خارج البطاقة  
 const orderDetails = document.getElementById("orderDetails");  
@@ -823,12 +884,17 @@ window.addEventListener('DOMContentLoaded', () => {
         loginContainer.style.display = "none";  
         dashboard.classList.remove("hidden");  
         loadData();  
+      loadSecureOrders();
        startLiveDashboard()  
     }  
 });  
   
-    const users = [{ username: "manager", password: "123456" }];  
-    const sheetURL =  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?output=csv";   
+    const users = [
+    { username: "manager", password: "123456", warehouse: "P&C" },
+    { username: "pharmaUser", password: "123456", warehouse: "Pharma" },
+    { username: "retailUser", password: "123456", warehouse: "Retail" }
+];
+const sheetURL =  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?output=csv";   
   
 // const sheetURL="https://docs.google.com/spreadsheets/d/1swpSpmMPAG_P_MrgPFSqeCTaO8Ftdza3qNbME5rfmYY/export?format=csv"  
 let allOrders = [];  
@@ -1206,28 +1272,29 @@ else {
     // LOGIN  
     loginForm.onsubmit = e => {  
     e.preventDefault();  
-  
+
     const u = users.find(  
         x => x.username === username.value && x.password === password.value  
     );  
-  
+
     if (!u) {  
         loginError.classList.remove("hidden");  
         return;  
     }  
-  
+
     loginError.classList.add("hidden");  
-  
-    // تخزين حالة تسجيل الدخول  
+
     localStorage.setItem("isLoggedIn", "true");  
-  
-    // إخفاء login وإظهار dashboard  
+
+    // ✅ تخزين المستودع
+    localStorage.setItem("currentWarehouse", u.warehouse);
+
     loginContainer.style.display = "none";  
     dashboard.classList.remove("hidden");  
-  
+
     loadData();  
-     startLiveDashboard()  
-};  
+    startLiveDashboard();  
+};
 
 function getWarehouseBadgeColor(order, warehouse) {
 
@@ -2401,6 +2468,10 @@ function resetIdleTimer() {
     refreshTimer = null;  
   
     localStorage.removeItem("isLoggedIn");  
+        
+    localStorage.removeItem("currentWarehouse");
+
+    location.reload();
     dashboard.classList.add("hidden");  
     loginContainer.style.display = "flex";  
         stopLiveDashboard()  
@@ -2470,6 +2541,214 @@ document.addEventListener("mouseout", function(e) {
         document.getElementById("tooltip").classList.add("hidden");
     }
 });
+
+
+// =============================
+// SHOW TAB
+// =============================
+function showNewOrderTab() {
+
+    document.querySelectorAll(".main > div").forEach(div => {
+        if (div.id !== "newOrderTab") div.classList.add("hidden");
+    });
+
+    document.getElementById("newOrderTab").classList.remove("hidden");
+    const warehouseInput = document.getElementById("newWarehouseName");
+    const userWarehouse = localStorage.getItem("currentWarehouse");
+
+    if (userWarehouse) {
+        warehouseInput.value = userWarehouse;
+        warehouseInput.readOnly = true; // يمنع التعديل
+    }
+    setTodayForNewOrder()
+}
+function setTodayForNewOrder() {
+    const today = new Date().toISOString().slice(0, 10);
+    document.getElementById("newOrderDate").value = today;
+}
+// =============================
+// SIMPLE ENCRYPTION
+// =============================
+function simpleEncrypt(text) {
+    return btoa(text); // Base64 encode
+}
+
+function simpleDecrypt(text) {
+    return atob(text);
+}
+
+// =============================
+// SAVE NEW ORDER
+// =============================
+function saveNewOrder() {
+
+    const orderNo = document.getElementById("newOrderNumber").value.trim();
+    const warehouse = document.getElementById("newWarehouseName").value.trim();
+    const date = document.getElementById("newOrderDate").value;
+
+    if (!orderNo || !warehouse || !date) {
+        showToast("⚠️ Please fill all fields");
+        return;
+    }
+
+    const newOrder = {
+        orderNo: orderNo.toUpperCase(),
+        date: date,
+        warehouses: [{
+            base: warehouse,
+            packed: false,
+            receivedTime: date
+        }],
+        warehouseCount: 1,
+        status: "pending"
+    };
+
+    allOrders.push(newOrder);
+
+    updateDashboard();
+
+    showToast(`✅ Order ${orderNo} added successfully`);
+
+    showOrderPreview(newOrder);
+
+    clearNewOrderForm();
+}
+const newOrderInput = document.getElementById("newOrderNumber");
+
+newOrderInput.addEventListener("input", function () {
+
+    const value = this.value.trim();
+
+    // يتحقق من الصيغة: #m + 5 أرقام
+    const pattern = /^#m\d{5}$/i;
+
+    if (pattern.test(value)) {
+
+        // منع التكرار إذا نفس الرقم
+        if (this.dataset.saved === value) return;
+
+        this.dataset.saved = value;
+
+        // تنفيذ الحفظ تلقائياً
+        saveNewOrder();
+
+        // تفريغ الحقل بعد الحفظ
+        this.value = "";
+
+    }
+});
+function showOrderPreview(order) {
+
+    const preview = document.getElementById("newOrderPreview");
+
+    preview.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+                <div style="font-size:16px;font-weight:600">
+                    ${order.orderNo}
+                </div>
+                <div style="font-size:13px;opacity:.6">
+                    ${order.date}
+                </div>
+            </div>
+
+            <span style="
+                background:#f59e0b;
+                padding:6px 12px;
+                border-radius:10px;
+                font-size:12px;
+                font-weight:600;
+            ">
+                Pending
+            </span>
+        </div>
+    `;
+
+    preview.classList.remove("hidden");
+}
+
+function clearNewOrderForm() {
+    document.getElementById("newOrderNumber").value = "";
+    document.getElementById("newWarehouseName").value = "";
+    document.getElementById("newOrderDate").value = "";
+}
+
+// =============================
+// LOAD SECURE ORDERS
+// =============================
+function loadSecureOrders() {
+
+    const stored = localStorage.getItem("secureOrders");
+    if (!stored) return;
+
+    try {
+        const orders = JSON.parse(simpleDecrypt(stored));
+        allOrders = [...allOrders, ...orders];
+        updateDashboard();
+    } catch(e) {
+        console.error("Secure load failed");
+    }
+}
+function showDashboardHome() {
+    document.getElementById("newOrderTab").classList.add("hidden");
+
+    // اظهار محتوى الداشبورد
+    document.querySelector(".kpis").classList.remove("hidden");
+    document.querySelector(".warehouse-container").classList.remove("hidden");
+    document.querySelector(".sales-order").classList.remove("hidden");
+}
+function renderOrders() {
+
+    const container = document.getElementById("ordersTableBody");
+    container.innerHTML = "";
+
+    if (orders.length === 0) {
+        container.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align:center;padding:20px;color:#888">
+                    No Orders Yet
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    orders
+        .sort((a, b) => b.id - a.id)
+        .forEach(order => {
+
+            const statusColor =
+                order.status === "Pending" ? "#f39c12" :
+                order.status === "Approved" ? "#2ecc71" :
+                order.status === "Rejected" ? "#e74c3c" :
+                "#3498db";
+
+            const row = `
+                <tr style="transition:.2s">
+                    <td>#${order.id}</td>
+                    <td>${order.warehouse}</td>
+                    <td>${order.item}</td>
+                    <td>${order.qty}</td>
+                    <td>
+                        <span style="
+                            background:${statusColor};
+                            color:white;
+                            padding:4px 10px;
+                            border-radius:20px;
+                            font-size:12px;
+                            font-weight:600">
+                            ${order.status}
+                        </span>
+                    </td>
+                    <td>${new Date(order.date).toLocaleString()}</td>
+                </tr>
+            `;
+
+            container.innerHTML += row;
+        });
+}
 </script> 
 </body>  
 </html>
+
+
