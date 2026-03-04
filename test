@@ -5,577 +5,62 @@
     <meta charset="UTF-8">
     <title>Warehouse Dashboard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
-    <style>
-        :root {
-            --bg: #0f172a;
-            --sidebar: #020617;
-            --card: #111827;
-            --accent: #22c55e;
-            --warning: #f59e0b;
-            --text: #e5e7eb;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: Inter, sans-serif;
-        }
-
-        body {
-            background: var(--bg);
-            color: var(--text);
-        }
-
-        .hidden {
-            display: none !important
-        }
-
-        .app {
-            display: grid;
-            grid-template-columns: 240px 1fr;
-            min-height: 100vh
-        }
-
-        .sidebar {
-            background: var(--sidebar);
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px
-        }
-
-        .sidebar h2 {
-            color: var(--accent)
-        }
-
-        .sidebar a {
-            color: var(--text);
-            text-decoration: none;
-            padding: 10px;
-            border-radius: 8px
-        }
-
-        .sidebar a:hover {
-            background: #111827
-        }
-
-        .main {
-            padding: 20px
-        }
-
-        .card {
-            background: var(--card);
-            border-radius: 16px;
-            padding: 18px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, .35)
-        }
-
-        .kpis {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 16px
-        }
-
-        .kpi {
-            background: #020617;
-            padding: 18px;
-            border-radius: 14px;
-            text-align: center;
-            cursor: pointer
-        }
-
-        .kpi .value {
-            font-size: 32px;
-            font-weight: 700;
-            margin-top: 6px
-        }
-
-        .success {
-            color: var(--accent)
-        }
-
-        .warning {
-            color: var(--warning);
-            text-align: center;
-            margin-top: 16px;
-            font-style: oblique;
-        }
-
-        input,
-        button {
-            padding: 8px;
-            border-radius: 8px;
-            border: none;
-            background: #020617;
-            color: white
-        }
-
-        button {
-            cursor: pointer
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 12px
-        }
-
-        th,
-        td {
-            border: 1px solid #333;
-            padding: 8px;
-            text-align: center
-        }
-
-        th {
-            background: #111827;
-            color: var(--accent)
-        }
-
-        .warehouse-card {
-            background: #020617;
-            padding: 14px;
-            border-radius: 14px;
-            margin-bottom: 12px
-        }
-
-        #loginContainer {
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-        }
-
-        #orderDetails {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, .6);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 999
-        }
-
-        #orderDetails .card {
-            width: 90%;
-            max-width: 800px;
-            max-height: 85vh;
-            overflow: auto
-        }
-
-        .warehouse-container {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-top: 40px
-        }
-
-        .warehouse-container .card {
-            flex: 1
-        }
-
-        a {
-            color: white;
-            text-decoration: none
-        }
-
-        .sales-order {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-top: 20px;
-        }
-
-        .two-columns {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            align-items: flex-start;
-        }
-
-        /* Input أجمل */
-        .search-input {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 12px;
-            border-radius: 10px;
-            background: #020617;
-            border: 1px solid #1f2937;
-        }
-
-        /* Responsive للموبايل */
-        @media (max-width: 1024px) {
-            .two-columns {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* LOGIN BACKGROUND */
-        .login-wrapper {
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background:
-                radial-gradient(circle at top, #22c55e22, transparent 40%),
-                radial-gradient(circle at bottom, #0ea5e922, transparent 40%),
-                var(--bg);
-        }
-
-        /* LOGIN CARD */
-        .login-card {
-            width: 360px;
-            background: rgba(2, 6, 23, 0.9);
-            backdrop-filter: blur(10px);
-            padding: 30px 26px;
-            border-radius: 18px;
-            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
-            animation: fadeIn 0.6s ease;
-        }
-
-        /* TITLE */
-        .login-title {
-            text-align: center;
-            font-size: 28px;
-            margin-bottom: 24px;
-            color: white;
-        }
-
-        .login-title span {
-            color: var(--accent);
-        }
-
-        /* INPUT GROUP */
-        .input-group {
-            position: relative;
-            margin-bottom: 16px;
-        }
-
-        .input-group i {
-            position: absolute;
-            top: 50%;
-            left: 14px;
-            transform: translateY(-50%);
-            color: #9ca3af;
-        }
-
-        .input-group input {
-            width: 100%;
-            padding: 12px 14px 12px 42px;
-            border-radius: 12px;
-            background: #020617;
-            border: 1px solid #1f2937;
-            color: white;
-            font-size: 14px;
-        }
-
-        .input-group input:focus {
-            outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 2px #22c55e33;
-        }
-
-        /* BUTTON */
-        .login-btn {
-            width: 100%;
-            padding: 12px;
-            margin-top: 10px;
-            border-radius: 14px;
-            font-weight: 600;
-            background: linear-gradient(135deg, #22c55e, #16a34a);
-            color: #020617;
-            cursor: pointer;
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .login-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 30px #22c55e55;
-        }
-
-        /* ERROR */
-        .login-error {
-            margin-top: 14px;
-            text-align: center;
-            color: #ef4444;
-            font-size: 14px;
-        }
-
-        /* ANIMATION */
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* LOADING OVERLAY */
-        .loading-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(2, 6, 23, 0.95);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-
-        .loading-card {
-            text-align: center;
-            animation: fadeIn 0.4s ease;
-        }
-
-        .loading-card h2 {
-            margin-top: 18px;
-            font-size: 26px;
-            color: white;
-        }
-
-        .loading-card h2 span {
-            color: var(--accent);
-        }
-
-        .loading-card p {
-            margin-top: 6px;
-            color: #9ca3af;
-            font-size: 14px;
-        }
-.quick-menu {
-    position: relative;
-}
-
-.three-dots {
-    padding: 6px 10px;
-    font-size: 16px;
-    border-radius: 10px;
-    background: #020617;
-}
-
-.quick-dropdown {
-    position: absolute;
-    top: 38px;
-    right: 0;
-    min-width: 170px;
-    background: #020617;
-    border: 1px solid #1f2937;
-    border-radius: 14px;
-    box-shadow: 0 20px 40px rgba(0,0,0,.6);
-    z-index: 1000;
-    overflow: hidden;
-    animation: fadeIn 0.15s ease;
-}
-
-.quick-dropdown div {
-    padding: 10px 14px;
-    cursor: pointer;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    font-size: 14px;
-}
-.tracking-info {
-    margin-top: 12px;
-    padding: 14px;
-    background: #020617;
-    border: 1px solid #1f2937;
-    border-radius: 14px;
-    animation: fadeIn 0.3s ease;
-}
-
-.tracking-info h4 {
-    color: var(--accent);
-    margin-bottom: 6px;
-    font-size: 15px;
-}
-
-.tracking-info .meta {
-    display: flex;
-    gap: 16px;
-    font-size: 13px;
-    color: #9ca3af;
-}
-
-.tracking-info .meta i {
-    color: var(--accent);
-}
-
-.quick-dropdown div:hover {
-    background: #111827;
-}
-
-.quick-dropdown i {
-    color: var(--accent);
-}
-        /* SPINNER */
-        .spinner {
-            width: 64px;
-            height: 64px;
-            border: 5px solid #1f2937;
-            border-top: 5px solid var(--accent);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        .menu-item>a {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .submenu,
-        .subsubmenu {
-            display: none;
-            margin-top: 6px;
-            margin-left: 10px;
-        }
-
-        .submenu a,
-        .subsubmenu a {
-            display: block;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 14px;
-        }
-
-        .submenu a:hover,
-        .subsubmenu a:hover {
-            background: #111827;
-        }
-
-        .subsubmenu {
-            margin-left: 14px;
-            border-left: 2px solid #1f2937;
-            padding-left: 10px;
-        }
-
-        .arrow {
-            font-size: 12px;
-            transition: transform 0.2s ease;
-        }
-
-        .menu-open>a .arrow {
-            transform: rotate(180deg);
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 
 </head>
 
 <body>
-<div id="loginSection">
-  <!-- كل كود الـ login هنا -->
+    <div id="tooltip" class="tooltip hidden"></div>
 
-    <div id="loginContainer" class="login-wrapper">
-        <form id="loginForm" class="login-card">
-            <h2 class="login-title">
-                <span>MY</span>HOLDAL
-            </h2>
+    <div id="loginSection">
+        <!-- كل كود الـ login هنا -->
+        <div id="loginContainer" class="login-wrapper">
+            <form id="loginForm" class="login-card">
+                <h2 class="login-title">
+                    <span>MY</span>HOLDAL
+                </h2>
 
-            <div class="input-group">
-                <i class="fa-solid fa-user"></i>
-                <input id="username" placeholder="Username" required>
-            </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-user"></i>
+                    <input id="username" placeholder="Username" required>
+                </div>
 
-            <div class="input-group">
-                <i class="fa-solid fa-lock"></i>
-                <input id="password" type="password" placeholder="Password" required>
-            </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-lock"></i>
+                    <input id="password" type="password" placeholder="Password" required>
+                </div>
 
-            <button class="login-btn">
-                <i class="fa-solid fa-right-to-bracket"></i> Login
-            </button>
+                <button class="login-btn">
+                    <i class="fa-solid fa-right-to-bracket"></i> Login
+                </button>
 
-            <p id="loginError" class="login-error hidden">
-                <i class="fa-solid fa-circle-exclamation"></i>
-                Incorrect username or password
-            </p>
-        </form>
+                <p id="loginError" class="login-error hidden">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    Incorrect username or password
+                </p>
+            </form>
+        </div>
+
     </div>
-</div>
-   
-
     <div id="dashboard" class="hidden app">
         <aside class="sidebar">
             <h2><i class="fa-solid fa-warehouse"></i>Operation dashboard system</h2>
-            <a href="#">Dashboard</a>
+            <a href="#" onclick="showDashboardHome()">
+                <i class="fa-solid fa-chart-line"></i> Dashboard</a>
             <div class="menu-item">
                 <a href="#" onclick="toggleMenu('warehousesMenu')">
-<a href="#" onclick="toggleMenu('warehousesMenu')">
-  <a href="./p&c.html"><i class="fa-solid fa-boxes-stacked"></i> Warehouses</a>                 
-            
 
-                <div id="warehousesMenu" class="submenu">
+                    <a href="#" onclick="toggleMenu('warehousesMenu')">
+                        <a href="./p&c.html"><i class="fa-solid fa-boxes-stacked"></i> Warehouses</a>
 
-                    <!-- P&C -->
-                    <div class="submenu-item">
-                        <a href="#" onclick="toggleMenu('pcMenu')">P&amp;C</a>
-                        <div id="pcMenu" class="subsubmenu">
-                            <a href="./p&c.html">MyHoldal</a>
-                            <a href="#">Return</a>
-                            <a href="#">KPI</a>
-                        </div>
-                    </div>
-
-                    <!-- Pharma -->
-                    <div class="submenu-item">
-                        <a href="#" onclick="toggleMenu('pharmaMenu')">Pharma</a>
-                        <div id="pharmaMenu" class="subsubmenu">
-                            <a href="#">MyHoldal</a>
-                            <a href="#">Return</a>
-                            <a href="#">KPI</a>
-                        </div>
-                    </div>
-
-                    <!-- Retail -->
-                    <div class="submenu-item">
-                        <a href="#" onclick="toggleMenu('retailMenu')">Retail</a>
-                        <div id="retailMenu" class="subsubmenu">
-                            <a href="#">MyHoldal</a>
-                            <a href="#">Return</a>
-                            <a href="#">KPI</a>
-                        </div>
-                    </div>
-
-                    <!-- LOREAL -->
-                    <div class="submenu-item">
-                        <a href="#" onclick="toggleMenu('lorealMenu')">L’Oréal Lux</a>
-                        <div id="lorealMenu" class="subsubmenu">
-                            <a href="#">MyHoldal</a>
-                            <a href="#">Return</a>
-                            <a href="#">KPI</a>
-                        </div>
-                    </div>
-
-                    <!-- BEESLINE -->
-                    <div class="submenu-item">
-                        <a href="#" onclick="toggleMenu('beeslineMenu')">Beesline</a>
-                        <div id="beeslineMenu" class="subsubmenu">
-                            <a href="#">MyHoldal</a>
-                            <a href="#">Return</a>
-                            <a href="#">KPI</a>
-                        </div>
-                    </div>
-
-                </div>
             </div>
             <a href="#" onclick="signOut()" style="color:#ef4444">Logout</a>
+            <a href="#" onclick="showNewOrderTab()">
+                <i class="fa-solid fa-plus"></i> New Orders</a>
         </aside>
 
         <main class="main">
@@ -589,29 +74,118 @@
                     <button type="button" id="toggleToDate" style="padding:4px 8px; font-size:12px;"> to</button>
 
                     <input type="date" id="dateTo" onchange="updateDashboard()">
+
+                    <div class="quick-menu">
+                        <button class="three-dots" onclick="toggleQuickMenu(event)">
+                            <i class="fa-solid fa-ellipsis-vertical"></i>
+                        </button>
+
+                        <div id="quickDateMenu" class="quick-dropdown hidden">
+                            <div onclick="setQuickDate('today')">
+                                <i class="fa-regular fa-calendar-day"></i> Today
+                            </div>
+                            <div onclick="setQuickDate('yesterday')">
+                                <i class="fa-regular fa-calendar-minus"></i> Yesterday
+                            </div>
+                            <div onclick="setQuickDate('week')">
+                                <i class="fa-regular fa-calendar-week"></i> This Week
+                            </div>
+                            <div onclick="setQuickDate('month')">
+                                <i class="fa-regular fa-calendar"></i> This Month
+                            </div>
+                            <button id="resetFiltersBtn" onclick="resetFilters()" style="  
+                             padding:6px 10px;  
+                             border-radius:10px;  
+                             background:#7f1d1d;  
+                             font-size:12px;  
+                             ">
+       
+                                Reset
+
+                            </button>
+
+                        </div>
+                    </div>
                 </div>
-                <div class="quick-menu">
-    <button class="three-dots" onclick="toggleQuickMenu(event)">
-        <i class="fa-solid fa-ellipsis-vertical"></i>
-    </button>
+                <div id="liveStatus" style="  
+padding:6px 10px;  
+border-radius:10px;  
+background:#020617;  
+font-size:12px;  
+display:flex;  
+gap:6px;  
+align-items:center;
 
-    <div id="quickDateMenu" class="quick-dropdown hidden">
-        <div onclick="setQuickDate('today')">
-            <i class="fa-regular fa-calendar-day"></i> Today
-        </div>
-        <div onclick="setQuickDate('yesterday')">
-            <i class="fa-regular fa-calendar-minus"></i> Yesterday
-        </div>
-        <div onclick="setQuickDate('week')">
-            <i class="fa-regular fa-calendar-week"></i> This Week
-        </div>
-        <div onclick="setQuickDate('month')">
-            <i class="fa-regular fa-calendar"></i> This Month
-        </div>
-    </div>
-</div>
+">
+                    <span id="liveDot" style="  
+width:8px;  
+height:8px;  
+border-radius:50%;  
+background:#22c55e;  
+"></span>
+                    <span id="liveText">LIVE</span>
+
+                </div>
             </header>
+            <div id="newOrderTab" class="card hidden" style="margin-top:30px">
 
+                <h3 style="
+        color:var(--accent);
+        margin-bottom:20px;
+        display:flex;
+        align-items:center;
+        gap:10px;
+        font-size:20px;
+    ">
+                    <i class="fa-solid fa-circle-plus"></i>
+                    Add New Order
+                </h3>
+
+                <div class="new-order-grid">
+
+                    <div class="input-group">
+                        <i class="fa-solid fa-hashtag"></i>
+                        <input type="text" id="newOrderNumber" placeholder="Order Number">
+                    </div>
+
+                    <div class="input-group">
+                        <i class="fa-solid fa-warehouse"></i>
+                        <input type="text" id="newWarehouseName" placeholder="Warehouse Name">
+                    </div>
+
+                    <div class="input-group">
+                        <i class="fa-solid fa-calendar"></i>
+                        <input type="date" id="newOrderDate">
+                    </div>
+
+                    <button onclick="saveNewOrder()" class="save-order-btn">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        Save Order
+                    </button>
+                    <div style="margin-bottom:15px; position:relative;">
+                        <input type="text" id="newOrderSearch" placeholder="Search by Order #..." style="
+            width:100%;
+            padding:10px 14px 10px 40px;
+            margin-top:20px;
+            border-radius:12px;
+            border:1px solid #1f2937;
+            background:#0f172a;
+            color:white;
+            outline:none;
+            font-size:14px;
+        " />
+
+
+                        </span>
+                    </div>
+                </div>
+
+                <div id="newOrderPreview" class="hidden">
+                    <h3 style="margin-bottom:15px">Recent Orders</h3>
+                    <div id="newOrdersList"></div>
+                </div>
+
+            </div>
             <div class="kpis">
                 <div class="kpi" onclick="showOrderDetails('total')">
                     <div>Total Orders</div>
@@ -619,15 +193,26 @@
                 </div>
                 <div class="kpi" onclick="showOrderDetails('completed')">
                     <div>In-Packing</div>
-                    <div id="completed" class="value success">0</div>
+                    <div id="completed" class="value success">
+                        <div class="main-number">0</div>
+                        <div class="sub-number"></div>
+                    </div>
                 </div>
+
                 <div class="kpi" onclick="showOrderDetails('pending')">
                     <div>Pending</div>
-                    <div id="pending" class="value warning">0</div>
+                    <div id="pending" class="value warning">
+                        <div class="main-number">0</div>
+                        <div class="sub-number"></div>
+                    </div>
                 </div>
                 <div class="kpi" onclick="showOrderDetails('distributed')">
                     <div>Distributed</div>
                     <div id="distributed" class="value success">0</div>
+                </div>
+                <div class="kpi" onclick="showOrderDetails('canceled')">
+                    <div>Canceled Before Delivery</div>
+                    <div id="canceled" class="value" style="color:#f76666">0</div>
                 </div>
             </div>
 
@@ -660,6 +245,7 @@
                     <div id="searchResultsCard" style="display:none">
                         <div id="searchResultsTable"></div>
                     </div>
+
                 </div>
 
             </div>
@@ -668,791 +254,1331 @@
     </div>
     </main>
     </div>
-</div>
+
+    </div>
     <div id="orderDetails" class="hidden">
-       
         <div class="card">
-             <div style="margin-bottom:10px; font-size:13px;">
-    <span style="color:#16a34a; font-weight:600">● In-Packing</span>
-    &nbsp;&nbsp;
-    <span style="color:#f59e0b; font-weight:600">● Partial / pending</span>
-    &nbsp;&nbsp;
-    <span style="color:#22c55e; font-weight:600">● Distributed</span>
-</div>
+            <div style="margin-bottom:10px; font-size:13px;">
+                <span style="color:#16a34a; font-weight:600">● In-Packing</span>
+                &nbsp;&nbsp;
+                <span style="color:#f59e0b; font-weight:600">● Partial / pending</span>
+                &nbsp;&nbsp;
+                <span style="color:#22c55e; font-weight:600">● Distributed</span>
+
+            </div>
             <button onclick="closeOrderDetails()" style="float:right;background:#ef4444">Close</button>
             <button onclick="exportOrderDetailsToExcel()" style="float:right;margin-right:8px;background:#22c55e">Export
                 to Excel</button>
             <h3 style="color:var(--accent)" id="orderDetailsTitle">Order Details</h3>
             <div id="orderList"></div>
         </div>
-    </div>
-
-    <!-- LOADING OVERLAY -->
+    </div> <!-- LOADING OVERLAY -->
     <div id="loadingOverlay" class="loading-overlay hidden">
         <div class="loading-card">
             <div class="spinner"></div>
             <h2><span>MY</span> HOLDAL</h2>
             <p>Loading Dashboard...</p>
         </div>
-    
-<div id="toast" style="
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: #020617;
-    color: white;
-    padding: 14px 18px;
-    border-radius: 14px;
-    box-shadow: 0 20px 40px rgba(0,0,0,.6);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 14px;
-    opacity: 0;
-    transform: translateY(20px);
-    transition: all .3s ease;
-    z-index: 99999;
-">
-    <i class="fa-solid fa-bell" style="color:#22c55e"></i>
-    <span id="toastText">New orders received</span>
-</div>
 
-<audio id="toastSound">
-    <source src="https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3" type="audio/mpeg">
-</audio>
+        <div id="toast" style="  
+    position: fixed;  
+    bottom: 20px;  
+    right: 20px;  
+    background: #020617;  
+    color: white;  
+    padding: 14px 18px;  
+    border-radius: 14px;  
+    box-shadow: 0 20px 40px rgba(0,0,0,.6);  
+    display: flex;  
+    align-items: center;  
+    gap: 10px;  
+    font-size: 14px;  
+    opacity: 0;  
+    transform: translateY(20px);  
+    transition: all .3s ease;  
+    z-index: 99999;  
+">
+            <i class="fa-solid fa-bell" style="color:#22c55e"></i>
+            <span id="toastText">New orders received</span>
+        </div>
+
+        <audio id="toastSound">
+            <source src="https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3"
+                type="audio/mpeg">
+        </audio>
+        <!-- NEW ORDER TAB -->
+
+    </div>
+
+
+    <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAI1MdaVUyB8LurtoAh-X6a9amGPJX_d6Y",
+    authDomain: "dushboard-system.firebaseapp.com",
+    databaseURL: "https://dushboard-system-default-rtdb.firebaseio.com",
+    projectId: "dushboard-system",
+    storageBucket: "dushboard-system.firebasestorage.app",
+    messagingSenderId: "531831609541",
+    appId: "1:531831609541:web:388c78af1ba30174f738ac",
+    measurementId: "G-1W4C77DHNJ"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const database = getDatabase(app);
+
+  // 🔥 نجعلها متاحة عالمياً
+  window.db = database;
+  window.ref = ref;
+  window.push = push;
+  window.onValue = onValue;
+</script>
 </body>
+
+
+
+
 
 <script>
 
-// إغلاق الـ modal عند الضغط خارج البطاقة
-const orderDetails = document.getElementById("orderDetails");
+    const orderDetails = document.getElementById("orderDetails");
 
-orderDetails.addEventListener("click", (e) => {
-    // إذا تم الضغط على الـ overlay وليس داخل البطاقة
-    if (e.target === orderDetails) {
-        orderDetails.classList.add("hidden");
+    orderDetails.addEventListener("click", (e) => {
+        if (e.target === orderDetails) {
+            orderDetails.classList.add("hidden");
+        }
+    });
+
+
+    let refreshTimer = null;
+    let isRefreshing = false;
+    let showOnlyBacklog = false;
+    let firstLoad = true;
+
+    let dataCache = null;
+    let lastDataHash = "";
+    let isLoading = false;
+
+    function hashData(data) {
+        return JSON.stringify(
+            data
+                .slice()
+                .sort((a, b) => a.orderNo.localeCompare(b.orderNo))
+                .map(o => ({
+                    orderNo: o.orderNo,
+                    status: o.status,
+                    wh: o.warehouses
+                        .slice()
+                        .sort((a, b) => a.base.localeCompare(b.base))
+                        .map(w => w.base + w.packed + w.distributed)
+                }))
+        );
     }
-});
+
+    const loginContainer = document.getElementById("loginContainer");
+    const dashboard = document.getElementById("dashboard");
+    window.addEventListener('DOMContentLoaded', () => {
+        const loggedIn = localStorage.getItem("isLoggedIn");
+
+        if (loggedIn === "true") {
+            loginContainer.style.display = "none";
+            dashboard.classList.remove("hidden");
+            loadData();
+            startLiveDashboard();
+            listenToOrders();
+        }
+    });
+
+    const users = [
+        { username: "manager", password: "123456", warehouse: "P&C" },
+        { username: "pharmaUser", password: "123456", warehouse: "Pharma" },
+        { username: "retailUser", password: "123456", warehouse: "Retail" }
+    ];
+    const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?output=csv";
+
+    let allOrders = [];
+    const distributionSheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTecpCEwZ10-Ncz2y0xSsAnNdLXcWDGt_GiAeJlbWYhgg9B8zlhvJ1DeDH8H0NDSg/pub?output=csv";
+    let distributedOrders = new Set(); // 
+
+    let distributedOrdersMap = {};
 
 
-let refreshTimer = null;
-let lastSheetModified = null;
+    const canceledSheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTecpCEwZ10-Ncz2y0xSsAnNdLXcWDGt_GiAeJlbWYhgg9B8zlhvJ1DeDH8H0NDSg/pub?gid=508410365&single=true&output=csv";
+    let canceledOrdersSet = new Set();
 
-let isRefreshing = false;
+    async function loadCanceledOrders() {
 
-let firstLoad = true;
+        const res = await fetch(canceledSheetURL + "&t=" + Date.now(), {
+            cache: "no-store"
+        });
 
-//const REFRESH_INTERVAL = 60000; // 60 ثانية (professional)
-let dataCache = null;
-let lastDataHash = "";
-let isLoading = false;
+        const csv = await res.text();
+        const parsed = Papa.parse(csv, { skipEmptyLines: true });
+        const rows = parsed.data;
 
-function hashData(data) {
-    return JSON.stringify(data.map(o => ({
-        orderNo: o.orderNo,
-        status: o.status,
-        wh: o.warehouses.map(w => w.base + w.packed + w.distributed)
-    })));
-}
+        if (!rows.length) return;
 
-const loginContainer = document.getElementById("loginContainer");
-const dashboard = document.getElementById("dashboard");
-window.addEventListener('DOMContentLoaded', () => {
-    const loggedIn = localStorage.getItem("isLoggedIn");
+        const headers = rows.shift().map(h => h.toLowerCase().trim());
 
-    if (loggedIn === "true") {
+        const ORDER_COL = headers.indexOf("order #"); //  lowercase
+
+        if (ORDER_COL === -1) {
+            console.warn("Canceled column not found", headers);
+            return;
+        }
+
+        let newSet = new Set();
+
+        rows.forEach(r => {
+            const orderNo = r[ORDER_COL]?.trim().toUpperCase();
+            if (orderNo) newSet.add(orderNo);
+        });
+
+        canceledOrdersSet = newSet;
+
+        console.log("Canceled Orders Loaded:", canceledOrdersSet.size);
+    }
+
+
+    let lastDistributionHash = "";
+    let distributionCache = {};
+    function hashDistribution(dataMap) {
+        return JSON.stringify(
+            Object.keys(dataMap)
+                .sort()
+                .map(key => ({
+                    orderNo: key,
+                    date: dataMap[key].date,
+                    company: dataMap[key].company
+                }))
+        );
+    }
+    function loadDistributedOrders() {
+
+        return fetch(distributionSheetURL + "&t=" + Date.now(), {
+            cache: "no-store"
+        })
+            .then(r => r.text())
+            .then(csv => {
+
+                const parsed = Papa.parse(csv, { skipEmptyLines: true });
+                const rows = parsed.data;
+                if (!rows.length) return;
+
+                const headers = rows
+                    .shift()
+                    .map(h => h.toString().trim().toLowerCase());
+
+                const ORDER_COL = headers.indexOf("request number");
+                const DATE_COL = headers.indexOf("request registration date time");
+                const COMPANY_COL = headers.findIndex(h => h.includes("company"));
+
+                if (ORDER_COL === -1 || DATE_COL === -1) {
+                    console.warn("❌ Distribution columns not found");
+                    return;
+                }
+
+                let newMap = {};
+
+                rows.forEach(r => {
+
+                    const orderNo = r[ORDER_COL]?.trim().toUpperCase();
+                    const rawDate = r[DATE_COL];
+                    const company = COMPANY_COL !== -1 ? r[COMPANY_COL]?.trim() : "";
+
+                    if (!orderNo || !rawDate) return;
+
+                    const formattedDate = formatDateForInput(rawDate);
+                    if (!formattedDate) return;
+
+                    newMap[orderNo] = {
+                        date: formattedDate,
+                        company: company || "LMD"
+                    };
+                });
+
+                const newHash = hashDistribution(newMap);
+
+                // 🔥 BLOCK إذا رجعت نسخة قديمة
+                if (lastDistributionHash && newHash === lastDistributionHash) {
+                    return; // لا يوجد تغيير
+                }
+
+                // 🔥 لو النسخة أقدم (عدد أقل) تجاهلها
+                if (
+                    Object.keys(newMap).length <
+                    Object.keys(distributionCache).length
+                ) {
+                    console.warn("⚠️ Older distribution snapshot blocked");
+                    return;
+                }
+
+                // ✅ اعتماد النسخة الجديدة
+                distributionCache = newMap;
+                distributedOrdersMap = newMap;
+                lastDistributionHash = newHash;
+
+                console.log("✅ Distribution updated safely");
+            })
+            .catch(err => {
+                console.error("Distribution load error:", err);
+            });
+    }
+    function resetFilters() {
+
+        // 🔹 إلغاء Today Mode  
+        todayOnlyMode = false;
+
+        const todayBtn = document.getElementById("todayToggleBtn");
+        if (todayBtn) {
+            todayBtn.style.background = "#020617";
+            todayBtn.style.color = "white";
+            todayBtn.textContent = "Today Only";
+        }
+
+        // 🔹 إعادة التاريخ للقيمة الافتراضية  
+        const defaultStart = "2026-02-01";  // 01-Feb-2026  
+        const today = new Date().toISOString().slice(0, 10);
+
+        dateFrom.value = defaultStart;
+        dateTo.value = today;
+
+        // 🔹 إعادة ترتيب الطلبات  
+        orderSortMode = "newest";
+
+        // 🔹 تحديث الداشبورد  
+        updateDashboard();
+    }
+    let lastDisplayedOrders = [];
+
+    function updateSearch() {
+        const query = document.getElementById("orderSearch").value.trim().toLowerCase();
+        const resultsDiv = document.getElementById("searchResultsCard");
+        const tableDiv = document.getElementById("searchResultsTable");
+
+        if (!query) {
+            resultsDiv.style.display = "none";
+            return;
+        }
+
+        const filtered = allOrders.filter(o =>
+            o.orderNo.toLowerCase().includes(query)
+        );
+
+        if (!filtered.length) {
+            tableDiv.innerHTML =
+                "<p style='color:var(--warning)'>No matching orders found.</p>";
+            resultsDiv.style.display = "block";
+            return;
+        }
+
+        tableDiv.innerHTML = `  
+    <table>  
+        <tr>  
+            <th>Order #</th>  
+            <th>Warehouses</th>  
+            <th>Status</th>  
+        </tr>  
+        ${filtered.map(order => {
+
+            /* ---------------- STATUS ---------------- */
+
+            let statusText = "";
+
+            if (order.status === "distributed") {
+                statusText = `<span style="color:#22c55e;font-weight:600;">Distributed</span>`;
+            }
+            else if (order.status === "canceled") {
+                statusText = `<span style="color:#f59e0b;font-weight:600;">canceled</span>`;
+            }
+            else if (order.status === "completed") {
+                statusText = `<span style="color:#22c55e;font-weight:600;">In-Packing</span>`;
+            }
+            else if (order.status === "partial") {
+                statusText = `<span style="color:#f59e0b;font-weight:600;">Partial</span>`;
+            }
+            else {
+                statusText = `<span style="color:#f59e0b;font-weight:600;">Pending</span>`;
+            }
+
+            /* ---------------- WAREHOUSES ---------------- */
+
+            const warehousesHTML = `  
+                <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center">  
+                    ${order.warehouses.map(w => {
+
+                const color = getWarehouseBadgeColor(order, w);
+
+                let tooltipText = "";
+
+                if (order.status === "distributed") {
+                    tooltipText = `Distributed at: ${distributedOrdersMap[order.orderNo]?.date || "-"}`;
+                }
+                else if (w.packed) {
+                    tooltipText = `Received at Packing: ${w.packingTime || w.receivedTime || "-"}`;
+                }
+                else {
+                    tooltipText = `Received in Warehouse: ${w.receivedTime || "-"}`;
+                }
+
+                return `  
+                        <div style="position:relative;display:inline-block;">  
+                            <span style="  
+                                display:inline-block;  
+                                padding:5px 10px;  
+                                border-radius:8px;  
+                                font-size:12px;  
+                                font-weight:600;  
+                                background:${color};  
+                                color:black;  
+                                cursor:pointer;  
+                            ">  
+                                ${w.base.toUpperCase()}  
+                            </span>  
+  
+                            <div style="  
+                                position:absolute;  
+                                bottom:130%;  
+                                left:50%;  
+                                transform:translateX(-50%);  
+                                background:#0f172a;  
+                                color:white;  
+                                padding:8px 10px;  
+                                border-radius:8px;  
+                                font-size:12px;  
+                                white-space:nowrap;  
+                                opacity:0;  
+                                pointer-events:none;  
+                                transition:.2s ease;  
+                                box-shadow:0 8px 25px rgba(0,0,0,.4);  
+                                z-index:9999;  
+                            " class="wh-tooltip">  
+                                ${tooltipText}  
+                            </div>  
+                        </div>  
+                        `;
+            }).join("")}  
+                </div>  
+            `;
+
+            /* ---------------- DISTRIBUTED BOX ---------------- */
+
+            const distributedBox =
+                order.status === "distributed" && distributedOrdersMap[order.orderNo]
+                    ? `  
+                <div style="  
+                    margin-top:8px;  
+                    padding:8px 10px;  
+                    border-radius:10px;  
+                    background:#022c22;  
+                    border:1px solid #065f46;  
+                    font-size:12px;  
+                    display:inline-block;  
+                ">  
+                    <div style="color:#22c55e;font-weight:600;">  
+                        <i class="fa-solid fa-truck"></i>  
+                        Distributed by ${distributedOrdersMap[order.orderNo].company}  
+                    </div>  
+                    <div style="opacity:.7;margin-top:2px;">  
+                        ${distributedOrdersMap[order.orderNo].date}  
+                    </div>  
+                </div>  
+                `
+                    : "";
+
+            /* ---------------- ROW ---------------- */
+
+            return `  
+                <tr>  
+                    <td>  
+                        <div style="font-weight:600;">  
+                            ${order.orderNo}  
+                        </div>  
+                        ${distributedBox}  
+                    </td>  
+  
+                    <td>${warehousesHTML}</td>  
+  
+                    <td>${statusText}</td>  
+                </tr>  
+            `;
+        }).join("")}  
+    </table>  
+    `;
+
+        /* -------- Tooltip Hover Fix -------- */
+
+        setTimeout(() => {
+            document.querySelectorAll("td div > span").forEach(badge => {
+                badge.addEventListener("mouseenter", function () {
+                    const tooltip = this.parentElement.querySelector(".wh-tooltip");
+                    if (tooltip) tooltip.style.opacity = "1";
+                });
+                badge.addEventListener("mouseleave", function () {
+                    const tooltip = this.parentElement.querySelector(".wh-tooltip");
+                    if (tooltip) tooltip.style.opacity = "0";
+                });
+            });
+        }, 0);
+
+        resultsDiv.style.display = "block";
+    }
+
+
+    // LOGIN  
+    loginForm.onsubmit = e => {
+        e.preventDefault();
+
+        const u = users.find(
+            x => x.username === username.value && x.password === password.value
+        );
+
+        if (!u) {
+            loginError.classList.remove("hidden");
+            return;
+        }
+
+        loginError.classList.add("hidden");
+
+        localStorage.setItem("isLoggedIn", "true");
+
+        // ✅ تخزين المستودع
+        localStorage.setItem("currentWarehouse", u.warehouse);
+
         loginContainer.style.display = "none";
         dashboard.classList.remove("hidden");
+
         loadData();
-startAutoRefresh()
+        startLiveDashboard();
+    };
+
+    function getWarehouseBadgeColor(order, warehouse) {
+
+        if (order.status === "canceled") {
+            return "#ef4444"; // red
+        }
+
+        if (order.status === "distributed") {
+            return "#22c55e";
+        }
+
+        if (order.status === "partial") {
+            return warehouse.packed ? "#22c55e" : "#f59e0b";
+        }
+
+        if (order.status === "completed") {
+            return "#16a34a";
+        }
+
+        return "#7c2d12";
     }
-});
+    function toggleQuickMenu(e) {
+        e.stopPropagation();
+        document.getElementById("quickDateMenu").classList.toggle("hidden");
+    }
 
-    const users = [{ username: "manager", password: "123456" }];
-    const sheetURL =  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?output=csv"; 
-     let allOrders = [];
-     let lastOrderId = null;
+    // إغلاق القائمة عند الضغط خارجها  
+    document.addEventListener("click", () => {
+        document.getElementById("quickDateMenu").classList.add("hidden");
+    });
 
- // const sheetURL=""
+    function setQuickDate(type) {
+        const today = new Date();
 
-const distributionSheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTecpCEwZ10-Ncz2y0xSsAnNdLXcWDGt_GiAeJlbWYhgg9B8zlhvJ1DeDH8H0NDSg/pub?output=csv";
-let distributedOrders = new Set(); // قائمة الطلبات الموزعة
+        const format = d => d.toISOString().slice(0, 10);
 
-let distributedOrdersMap = {}; 
-// الشكل النهائي:
-// {
-//   "#L3029": "10:00",
-//   "#M48717": "10:00"
-// }
+        let from, to;
 
-function loadDistributedOrders() {
-    return fetch(distributionSheetURL)
-        .then(r => r.text())
-        .then(csv => {
+        switch (type) {
+            case "today":
+                from = to = format(today);
+                break;
+
+            case "yesterday":
+                const y = new Date(today);
+                y.setDate(y.getDate() - 1);
+                from = to = format(y);
+                break;
+
+            case "week":
+                const startOfWeek = new Date(today);
+                startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday  
+                from = format(startOfWeek);
+                to = format(today);
+                break;
+
+            case "month":
+                const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                from = format(startOfMonth);
+                to = format(today);
+                break;
+        }
+
+        dateFrom.value = from;
+        dateTo.value = to;
+
+        updateDashboard();
+    }
+
+
+
+
+    // FORMAT DATE  
+    function formatDateForInput(value) {
+        if (!value) return null;
+
+        let v = String(value).trim();
+
+        // إزالة الوقت إن وجد  
+        // 27/01/2026 12:54:26  -->  27/01/2026  
+        v = v.split(" ")[0];
+
+        // YYYY-MM-DD  
+        if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+
+        // DD/MM/YYYY  ✅ (الحالة الموجودة في الصورة)  
+        if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v)) {
+            const [d, m, y] = v.split("/");
+            return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+        }
+
+        // DD-MM-YYYY  
+        if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(v)) {
+            const [d, m, y] = v.split("-");
+            return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+        }
+
+        // YYYY/MM/DD  
+        if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(v)) {
+            const [y, m, d] = v.split("/");
+            return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+        }
+
+        // fallback  
+        const parsed = new Date(value);
+        if (!isNaN(parsed)) return parsed.toISOString().slice(0, 10);
+
+        return null;
+    }
+    let highestOrderCountSeen = 0;
+    let highestEffectiveDateSeen = null;
+    async function loadData({ force = false, silent = false } = {}) {
+        if (isLoading) return;
+        isLoading = true;
+
+        if (!silent && !dataCache) loadingOverlay.classList.remove("hidden");
+
+        try {
+            await loadDistributedOrders();
+            await loadCanceledOrders();   // 🔥 هذا السطر كان ناقص 
+
+            const res = await fetch(sheetURL + "&t=" + Date.now(), {
+                cache: "no-store"
+            });
+            const csv = await res.text();
             const parsed = Papa.parse(csv, { skipEmptyLines: true });
             const rows = parsed.data;
             if (!rows.length) return;
 
-            const headers = rows
-                .shift()
-                .map(h => h.toString().trim().toLowerCase());
+            const headers = rows.shift().map(h => h.toLowerCase().trim());
+            const col = {};
+            headers.forEach((h, i) => col[h] = i);
 
-            const ORDER_COL = headers.indexOf("request number");
-            const DATE_COL  = headers.indexOf("request registration date time");
-           const COMPANY_COL = headers.findIndex(h => h.includes("company")); //
-            if (ORDER_COL === -1 || DATE_COL === -1) {
-                console.error("❌ Distribution columns not found", headers);
+            const ORDER = col["shopify order#"];
+            const DATE = col["order received in wh"];
+            const WH = col["warehouse name"];
+            const PACKED = col["packed"] || null;
+
+            const map = {};
+
+            rows.forEach(r => {
+                const orderNo = r[ORDER]?.trim().toUpperCase();
+                const date = formatDateForInput(r[DATE]);
+                const whRaw = r[WH]?.trim();
+                const packedRaw = PACKED ? r[PACKED]?.trim() : null;
+
+                if (!orderNo || !date || !whRaw) return;
+
+                if (!map[orderNo]) {
+                    map[orderNo] = { orderNo, date, wh: {} };
+                }
+
+                // normalize warehouse  
+                const w = normalizeWarehouse(whRaw);
+                if (!w.base) return;
+
+                if (!map[orderNo].wh[w.base]) {
+                    map[orderNo].wh[w.base] = {
+                        base: w.base,
+                        packed: false,
+                        receivedTime: formatDateForInput(r[DATE]),
+                        packingTime: null
+                    };
+                }
+
+                // ✅ معالجة جميع صيغ العمود Packed  
+                const packedValues = ["TRUE", "True", "true", "1", "Yes", "yes", "X", "x"];
+
+                if (w.packed || (packedRaw && packedValues.includes(packedRaw))) {
+                    map[orderNo].wh[w.base].packed = true;
+
+                    // ⬅️ هنا نخزن وقت التحويل إلى Packing
+                    map[orderNo].wh[w.base].packingTime = formatDateForInput(r[DATE]);
+                }
+            });
+
+            // بناء الطلبات النهائية مع تحديد الحالة بدقة  
+            // بناء الطلبات النهائية مع تحديد الحالة بدقة  
+            let newOrders = Object.values(map).map(o => {
+
+                const warehouses = Object.values(o.wh);
+                const totalWH = warehouses.length;
+                const packedWH = warehouses.filter(w => w.packed).length;
+
+                let status;
+
+                // 🔴 CANCELED FIRST (أولوية قصوى)
+                if (canceledOrdersSet.has(o.orderNo)) {
+                    status = "canceled";
+                }
+                else if (distributedOrdersMap[o.orderNo]) {
+                    status = "distributed";
+                    warehouses.forEach(w => w.distributed = true);
+                }
+                else if (totalWH === 1) {
+                    status = warehouses[0].packed ? "completed" : "pending";
+                }
+                else {
+                    if (packedWH === 0) status = "pending";
+                    else if (packedWH < totalWH) status = "partial";
+                    else status = "completed";
+                }
+
+                return {
+                    ...o,
+                    warehouses,
+                    warehouseCount: totalWH,
+                    status
+                };
+
+            });
+            // 🔥 احسب أحدث تاريخ فعلي في البيانات
+            const newestDateInSnapshot = newOrders
+                .map(o => getEffectiveDate(o))
+                .filter(Boolean)
+                .sort()
+                .pop(); // آخر عنصر = أحدث تاريخ
+
+            // 🔥 لو النسخة أقدم من آخر نسخة عرضناها → تجاهلها
+            if (highestEffectiveDateSeen && newestDateInSnapshot < highestEffectiveDateSeen) {
+                console.warn("⚠️ Older snapshot detected — BLOCKED");
                 return;
             }
 
-            distributedOrdersMap = {}; // reset
-
-            rows.forEach(r => {
-                const orderNo = r[ORDER_COL]?.trim();
-                const rawDate = r[DATE_COL];
-const company = COMPANY_COL !== -1 ? r[COMPANY_COL]?.trim() : "";
-                if (!orderNo || !rawDate) return;
-
-                const formattedDate = formatDateForInput(rawDate);
-                if (!formattedDate) return;
-
-                distributedOrdersMap[orderNo] = {
-                  date: formattedDate,
-                 company: company
-};
-            });
-
-            console.log("✅ Distributed orders loaded:", distributedOrdersMap);
-        })
-        .catch(err =>
-            console.error("Error loading distribution sheet:", err)
-        );
-}
-
-
- let lastDisplayedOrders = [];
-
-    function updateSearch() {
-    const query = document.getElementById("orderSearch").value.trim().toLowerCase();
-    const resultsDiv = document.getElementById("searchResultsCard");
-    const tableDiv = document.getElementById("searchResultsTable");
-
-    if (!query) {
-        resultsDiv.style.display = "none";
-        return;
-    }
-
-    const filtered = allOrders.filter(o =>
-        o.orderNo.toLowerCase().includes(query)
-    );
-
-    if (!filtered.length) {
-        tableDiv.innerHTML =
-            "<p style='color:var(--warning)'>No matching orders found.</p>";
-        resultsDiv.style.display = "block";
-        return;
-    }
-tableDiv.innerHTML = `
-<table>
-    <tr>
-        <th>Order #</th>
-        <th>Warehouse</th>
-        <th>Status</th>
-    </tr>
-    ${filtered.map(o =>
-        o.warehouses.map(w => {
-            let status;
-            if (w.distributed || o.status === "distributed") {
-                status = "Distributed";
-            } else if (w.packed) {
-                status = "In-Packing";
-            } else {
-                status = "Pending";
+            // حدّث أحدث تاريخ
+            highestEffectiveDateSeen = newestDateInSnapshot;
+            if (newOrders.length < highestOrderCountSeen) {
+                console.warn("⚠️ Sheet returned older snapshot — blocked");
+                return;
             }
 
-            return `
-            <tr>
-                <td>${o.orderNo}</td>
-                <td>${w.base.toUpperCase()}</td>
-                <td style="font-weight:600">${status}</td>
-            </tr>
-            `;
-        }).join("")
-    ).join("")}
-</table>
-`;
-
-/* ===== Distributor info card ===== */
-const dist = distributedOrdersMap[filtered[0].orderNo];
-
-if (dist) {
-    tableDiv.innerHTML += `
-    <div class="tracking-info">
-        <h4><i class="fa-solid fa-truck"></i> Distribution Details</h4>
-        <div class="meta">
-            <div>
-                <i class="fa-solid fa-building"></i>
-                ${dist.company || "Unknown Company"}
-            </div>
-            <div>
-                <i class="fa-regular fa-clock"></i>
-                ${dist.date}
-            </div>
-        </div>
-    </div>
-    `;
-}
-
-
-resultsDiv.style.display = "block";}
-
-
-
-    // LOGIN
-    loginForm.onsubmit = e => {
-    e.preventDefault();
-
-    const u = users.find(
-        x => x.username === username.value && x.password === password.value
-    );
-
-    if (!u) {
-        loginError.classList.remove("hidden");
-        return;
-    }
-
-    loginError.classList.add("hidden");
-
-    // تخزين حالة تسجيل الدخول
-    localStorage.setItem("isLoggedIn", "true");
-
-    // إخفاء login وإظهار dashboard
-    loginContainer.style.display = "none";
-    dashboard.classList.remove("hidden");
-
-    loadData();
-startAutoRefresh()
-};
-function toggleQuickMenu(e) {
-    e.stopPropagation();
-    document.getElementById("quickDateMenu").classList.toggle("hidden");
-}
-
-// إغلاق القائمة عند الضغط خارجها
-document.addEventListener("click", () => {
-    document.getElementById("quickDateMenu").classList.add("hidden");
-});
-
-function setQuickDate(type) {
-    const today = new Date();
-
-    const format = d => d.toISOString().slice(0, 10);
-
-    let from, to;
-
-    switch (type) {
-        case "today":
-            from = to = format(today);
-            break;
-
-        case "yesterday":
-            const y = new Date(today);
-            y.setDate(y.getDate() - 1);
-            from = to = format(y);
-            break;
-
-        case "week":
-            const startOfWeek = new Date(today);
-            startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday
-            from = format(startOfWeek);
-            to = format(today);
-            break;
-
-        case "month":
-            const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-            from = format(startOfMonth);
-            to = format(today);
-            break;
-    }
-
-    dateFrom.value = from;
-    dateTo.value = to;
-
-    updateDashboard();
-}
-
-
-
-
-    // FORMAT DATE
-function formatDateForInput(value) {
-    if (!value) return null;
-
-    let v = String(value).trim();
-
-    // إزالة الوقت إن وجد
-    // 27/01/2026 12:54:26  -->  27/01/2026
-    v = v.split(" ")[0];
-
-    // YYYY-MM-DD
-    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
-
-    // DD/MM/YYYY  ✅ (الحالة الموجودة في الصورة)
-    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v)) {
-        const [d, m, y] = v.split("/");
-        return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
-    }
-
-    // DD-MM-YYYY
-    if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(v)) {
-        const [d, m, y] = v.split("-");
-        return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
-    }
-
-    // YYYY/MM/DD
-    if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(v)) {
-        const [y, m, d] = v.split("/");
-        return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
-    }
-
-    // fallback
-    const parsed = new Date(value);
-    if (!isNaN(parsed)) return parsed.toISOString().slice(0, 10);
-
-    return null;
-}
-async function loadData({ force = false, silent = false } = {}) {
-    if (isLoading) return;
-    isLoading = true;
-
-    if (!silent && !dataCache) loadingOverlay.classList.remove("hidden");
-
-    try {
-        await loadDistributedOrders();
-
-        const res = await fetch(sheetURL, { cache: "no-store" });
-        const csv = await res.text();
-        const parsed = Papa.parse(csv, { skipEmptyLines: true });
-        const rows = parsed.data;
-        if (!rows.length) return;
-
-        const headers = rows.shift().map(h => h.toLowerCase().trim());
-        const col = {};
-        headers.forEach((h, i) => col[h] = i);
-
-        const ORDER = col["shopify order#"];
-        const DATE  = col["order received in wh"];
-        const WH    = col["warehouse name"];
-        const PACKED = col["packed"] || null;
-
-        const map = {};
-
-        rows.forEach(r => {
-            const orderNo = r[ORDER]?.trim().toUpperCase();
-            const date = formatDateForInput(r[DATE]);
-            const whRaw = r[WH]?.trim();
-            const packedRaw = PACKED ? r[PACKED]?.trim() : null;
-
-            if (!orderNo || !date || !whRaw) return;
-
-            if (!map[orderNo]) {
-                map[orderNo] = { orderNo, date, wh: {} };
+            highestOrderCountSeen = newOrders.length;
+            //  if (dataCache && newOrders.length < dataCache.length) {  
+            //   console.warn("Old version detected — skipped");  
+            //   return;  
+            //}  
+            // ❌ إذا رجعت نسخة أقل من الحالية — تجاهلها
+            if (dataCache && newOrders.length < dataCache.length) {
+                console.warn("⚠️ Older version detected — skipped");
+                return;
             }
 
-            // normalize warehouse
-            const w = normalizeWarehouse(whRaw);
-            if (!w.base) return;
+            // ❌ إذا الهَاش أقدم أو نفسه — تجاهل
+            const newHash = hashData(newOrders);
 
-            if (!map[orderNo].wh[w.base]) {
-                map[orderNo].wh[w.base] = { base: w.base, packed: false };
+            if (!force && dataCache && newHash === lastDataHash) {
+                return; // لا يوجد تغيير
+            }
+            // ❌ إذا لا يوجد تغيير — لا تفعل أي شيء  
+            if (!force && dataCache && newHash === lastDataHash) {
+                return; // يحافظ على الأرقام كما هي  
+            }
+            // إشعار بالطلبات الجديدة  
+            let newOnly = [];
+
+            if (dataCache && Array.isArray(dataCache)) {
+                const oldSet = new Set(dataCache.map(o => o.orderNo));
+                newOnly = newOrders.filter(o => !oldSet.has(o.orderNo));
             }
 
-            // ✅ معالجة جميع صيغ العمود Packed
-            const packedValues = ["TRUE", "True", "true", "1", "Yes", "yes", "X", "x"];
-            if (w.packed || (packedRaw && packedValues.includes(packedRaw))) {
-                map[orderNo].wh[w.base].packed = true;
+            if (dataCache && newOnly.length) {
+                showToast(`🔔 ${newOnly.length} new order(s) received`);
             }
-        });
 
-        // بناء الطلبات النهائية مع تحديد الحالة بدقة
-        // بناء الطلبات النهائية مع تحديد الحالة بدقة
-let newOrders = Object.values(map).map(o => {
-    const warehouses = Object.values(o.wh);
-    const totalWH = warehouses.length;
-    const packedWH = warehouses.filter(w => w.packed).length;
+            dataCache = newOrders;
+            allOrders = newOrders;
+            lastDataHash = newHash;
 
-    let status;
+            updateDashboard();
+            if (!dateFrom.value && !dateTo.value) initDate();
 
-    if (distributedOrdersMap[o.orderNo]) {
-        status = "distributed";
-        warehouses.forEach(w => w.distributed = true);
-    } 
-    else if (totalWH === 1) {
-        // طلب من مستودع واحد
-        status = warehouses[0].packed ? "completed" : "pending";
-    } 
-    else {
-        // طلب من أكثر من مستودع
-        if (packedWH === 0) status = "pending";
-        else if (packedWH < totalWH) status = "partial";
-        else status = "completed";
-    }
-
-    return {
-        ...o,
-        warehouses,
-        warehouseCount: totalWH,
-        status
-    };
-});
-
-        const newHash = hashData(newOrders);
-if (!force && dataCache && newHash === lastDataHash) {
-    isLoading = false;
-    return;
-}
-
-        // إشعار بالطلبات الجديدة
-        if (dataCache && newOrders.length > dataCache.length) {
-            showToast(`🔔 ${newOrders.length - dataCache.length} new order${newOrders.length - dataCache.length > 1 ? "s" : ""} received`);
+        } catch (e) {
+            console.error("Load error:", e);
+        } finally {
+            isLoading = false;
+            loadingOverlay.classList.add("hidden");
         }
+    }
 
-        dataCache = newOrders;
-        allOrders = newOrders;
-        if (newOrders.length > 0) {
-    lastOrderId = newOrders[newOrders.length - 1].id;
-}
+    // INIT DATE FILTER  
 
-        lastDataHash = newHash;
+    function initDate() {
+        const today = new Date().toISOString().slice(0, 10);
+
+        dateFrom.value = today;
+        dateTo.value = today;
 
         updateDashboard();
-        if (!dateFrom.value && !dateTo.value) initDate();
-
-    } catch (e) {
-        console.error("Load error:", e);
-    } finally {
-        isLoading = false;
-        loadingOverlay.classList.add("hidden");
     }
-}
-async function checkForNewOrders() {
-    try {
-        const res = await fetch(sheetURL, { cache: "no-store" });
-        const text = await res.text();
 
-        const rows = text.split("\n").map(r => r.split(","));
-        rows.shift(); // remove headers
 
-        const newOrders = rows.map(row => ({
-            id: row[0]?.trim(),
-            status: row[1]?.trim(),
-            amount: parseFloat(row[2]) || 0,
-            date: row[3]?.trim()
-        }));
+    function applyFilters() {
 
-        if (!lastOrderId && newOrders.length > 0) {
-            lastOrderId = newOrders[newOrders.length - 1].id;
-            return;
+        const from = dateFrom.value || null;
+        const to = dateTo.value || null;
+
+        return allOrders.filter(o => {
+
+            const dateToCheck = getEffectiveDate(o);
+
+            if (!dateToCheck) return false;
+            if (from && dateToCheck < from) return false;
+            if (to && dateToCheck > to) return false;
+
+            return true;
+        });
+    }
+    let lastKPI = {
+        total: 0,
+        completed: 0,
+        pending: 0,
+        distributed: 0
+    };
+
+    function getEffectiveDate(order) {
+
+        // Distributed
+        if (order.status === "distributed") {
+            return distributedOrdersMap[order.orderNo]?.date;
         }
 
-        const latestOrder = newOrders[newOrders.length - 1];
-
-        if (latestOrder && latestOrder.id !== lastOrderId) {
-
-            // 🔥 نحدد فقط الطلبات الجديدة
-            const index = newOrders.findIndex(o => o.id === lastOrderId);
-            const addedOrders = index >= 0
-                ? newOrders.slice(index + 1)
-                : newOrders;
-
-            if (addedOrders.length > 0) {
-
-                // نضيفهم للمصفوفة الحالية
-                allOrders = [...allOrders, ...addedOrders];
-
-                lastOrderId = latestOrder.id;
-
-                // تحديث الداشبورد فقط
-                processAndDisplayData(allOrders);
-
-                console.log("New orders added:", addedOrders.length);
-            }
+        // Completed (In-Packing)
+        if (order.status === "completed") {
+            const firstPackedWH = order.warehouses.find(w => w.packed);
+            return firstPackedWH?.packingTime || order.date;
         }
 
-    } catch (err) {
-        console.error("Incremental update failed:", err);
+        // Pending / Partial
+        return order.date;
     }
-}
+    //filteredOrders = Object.values(unique);  
+    function updateDashboard() {
 
-async function checkForSheetUpdate() {
-    try {
-        const response = await fetch(sheetURL, {
-            method: "HEAD",
-            cache: "no-store"
+        const todayOrders = applyFilters();
+        const ACCUMULATE_FROM = "2026-02-02";
+
+        const accumulatedOrders = allOrders.filter(o => {
+            const dateToCheck = getEffectiveDate(o);
+            if (!dateToCheck) return false;
+            return dateToCheck >= ACCUMULATE_FROM;
         });
 
-        const newModified = response.headers.get("Last-Modified");
+        // ================= TODAY =================
+        const CANCELED_START_DATE = "2026-02-02";
 
-        if (!lastSheetModified) {
-            lastSheetModified = newModified;
+        const canceledToday = allOrders.filter(o => {
+
+            if (o.status !== "canceled") return false;
+
+            const dateToCheck = getEffectiveDate(o);
+            if (!dateToCheck) return false;
+
+            return dateToCheck >= CANCELED_START_DATE;
+        });
+        const distributedToday = todayOrders.filter(o => o.status === "distributed");
+        const completedToday = todayOrders.filter(o => o.status === "completed");
+        const pendingToday = todayOrders.filter(o =>
+            (o.status === "pending" || o.status === "partial")
+            && o.status !== "canceled"
+        );
+
+        // ================= BACKLOG =================
+
+        const completedBacklog = accumulatedOrders.filter(o =>
+            o.status === "completed"
+        );
+
+        const pendingBacklog = accumulatedOrders.filter(o =>
+            o.status === "pending" || o.status === "partial"
+        );
+
+        // ================= DISPLAY =================
+
+        updateKPINumber("total", todayOrders.length);
+        updateKPINumber("distributed", distributedToday.length);
+        updateKPINumber("canceled", canceledToday.length);
+
+        updateKPIWithBacklog("completed", completedToday.length, completedBacklog.length);
+        updateKPIWithBacklog("pending", pendingToday.length, pendingBacklog.length);
+
+        renderWarehouseBreakdown(todayOrders);
+        renderMultiWHOrders(todayOrders);
+        renderSingleWHOrders(todayOrders);
+    }
+    function updateKPIWithBacklog(id, todayValue, backlogValue) {
+
+        const container = document.getElementById(id);
+        const main = container.querySelector(".main-number");
+        const sub = container.querySelector(".sub-number");
+
+        main.textContent = todayValue;
+
+        if (backlogValue > todayValue) {
+            const backlogOnly = backlogValue - todayValue;
+            sub.textContent = `(+${backlogOnly} backlog)`;
+        } else {
+            sub.textContent = "";
+        }
+    }
+
+    function updateKPINumber(id, newValue) {
+        if (lastKPI[id] === newValue) return;
+
+        lastKPI[id] = newValue;
+        document.getElementById(id).textContent = newValue;
+        const element = document.getElementById(id);
+        const currentValue = lastKPI[id];
+
+        // إذا زاد → فقط أضف الفرق
+        if (newValue > currentValue) {
+            const diff = newValue - currentValue;
+            lastKPI[id] += diff;
+            element.textContent = lastKPI[id];
             return;
         }
 
-        if (newModified && newModified !== lastSheetModified) {
-            lastSheetModified = newModified;
-            await loadData({ silent: true });
+        // إذا نقص (تغيير فلتر مثلاً) → حدّث مباشرة
+
+        element.textContent = newValue;
+    }
+    function showDistributedOrders() {
+        const from = dateFrom.value || null;
+        const to = dateTo.value || null;
+
+        const orders = allOrders.filter(o => {
+            const distDate = distributedOrdersMap[o.orderNo];
+            if (!distDate) return false;
+
+            if (from && distDate < from) return false;
+            if (to && distDate > to) return false;
+
+            return true;
+        });
+
+        displayOrders(orders, "Distributed Orders");
+    }
+
+    function renderWarehouseBreakdown(orders) {
+        const warehouseMap = {};
+        const grandTotal = { t: 0, c: 0, p: 0, d: 0 };
+
+        orders.forEach(order => {
+            // الطلب يُحسب مرة واحدة  
+            grandTotal.t++;
+
+            const isDistributed = order.status === "distributed";
+
+            order.warehouses.forEach(w => {
+                if (!warehouseMap[w.base]) {
+                    warehouseMap[w.base] = { t: 0, c: 0, p: 0, d: 0 };
+                }
+
+                warehouseMap[w.base].t++;
+
+                if (isDistributed) {
+                    warehouseMap[w.base].d++;
+                } else if (order.status === "completed") {
+                    warehouseMap[w.base].c++; // In-Packing  
+                } else {
+                    warehouseMap[w.base].p++; // Pending + Partial  
+                }
+            });
+
+            // grand totals  
+            if (isDistributed) {
+                grandTotal.d++;
+            } else if (order.status === "completed") {
+                grandTotal.c++;
+            } else {
+                grandTotal.p++;
+            }
+        });
+
+        warehouseBreakdownTable.innerHTML = `  
+<table>  
+  <tr>  
+    <th>Warehouse</th>  
+    <th>Total</th>  
+    <th>In-Packing</th>  
+    <th>Pending</th>  
+    <th>Delivered</th>  
+  </tr>  
+  
+  ${Object.entries(warehouseMap).map(([wh, v]) => {
+            if (!wh || !v) return ""; // منع أي صف فارغ  
+            const safeWh = wh.replace(/'/g, "\\'"); // escape single quotes  
+            return `  
+<tr>  
+  <td>${wh.toUpperCase()}</td>  
+  <td><a href="#" onclick="showWarehouseOrders('${safeWh}','total')">${v.t}</a></td>  
+  <td><a href="#" onclick="showWarehouseOrders('${safeWh}','completed')">${v.c}</a></td>  
+  <td><a href="#" onclick="showWarehouseOrders('${safeWh}','pending')">${v.p}</a></td>  
+  <td><a href="#" onclick="showWarehouseOrders('${safeWh}','distributed')">${v.d}</a></td>  
+</tr>  
+`;
+        }).join("")}  
+  
+  <tr style="font-weight:bold;background:#020617;color:#22c55e">  
+    <td>TOTAL</td>  
+    <td>${grandTotal.t}</td>  
+    <td>${grandTotal.c}</td>  
+    <td>${grandTotal.p}</td>  
+    <td>${grandTotal.d}</td>  
+  </tr>  
+</table>  
+`;
+    }
+
+
+    // MULTI-WAREHOUSE ORDERS  
+    function renderMultiWHOrders(orders) {
+        const m = orders.filter(x => x.warehouseCount > 1);
+        const completedOrders = m.filter(x => x.status === "completed");
+        const distributedOrders = m.filter(x => x.status === "distributed");
+        const pendingOrders = m.filter(x => x.status === "pending" || x.status === "partial")
+            .filter(o => !completedOrders.includes(o) && !distributedOrders.includes(o));
+
+        multiWHTable.innerHTML = `  
+<table>  
+<tr><th>Type</th><th>Orders</th></tr>  
+<tr><td>Total</td><td><a href="#" onclick="showMultiWHOrders('total')">${m.length}</a></td></tr>  
+<tr><td>In-Packing</td><td><a href="#" onclick="showMultiWHOrders('completed')">${completedOrders.length}</a></td></tr>  
+<tr><td>Pending / partial</td>  
+<td>  
+<a href="#" onclick="showMultiWHOrders('pending')">  
+${pendingOrders.length}</a>  
+</td></tr>  
+<tr><td>Distributed</td><td><a href="#" onclick="showMultiWHOrders('distributed')">${distributedOrders.length}</a></td></tr>  
+</table>`;
+    }
+
+    // SINGLE-WAREHOUSE ORDERS  
+    function renderSingleWHOrders(orders) {
+        const s = orders.filter(x => x.warehouseCount === 1);
+        const completedOrders = s.filter(x => x.status === "completed");
+        const distributedOrders = s.filter(x => x.status === "distributed");
+        const pendingOrders = s.filter(x => x.status === "pending")
+            .filter(o => !completedOrders.includes(o) && !distributedOrders.includes(o));
+
+        singleWHTable.innerHTML = `  
+<table>  
+<tr><th>Type</th><th>Orders</th></tr>  
+<tr><td>Total</td><td><a href="#" onclick="showSingleWHOrders('total')">${s.length}</a></td></tr>  
+<tr><td>In-Packing</td><td><a href="#" onclick="showSingleWHOrders('completed')">${completedOrders.length}</a></td></tr>  
+<tr>  
+  <td>Pending</td>  
+  <td>  
+    <a href="#" onclick="showSingleWHOrders('pending')">  
+      ${pendingOrders.length}  
+    </a>  
+  </td>  
+</tr>  
+<tr><td>Distributed</td><td><a href="#" onclick="showSingleWHOrders('distributed')">${distributedOrders.length}</a></td></tr>  
+</table>`;
+    }
+
+    // SHOW ORDER DETAILS  
+    function showOrderDetails(type) {
+
+        const ACCUMULATE_FROM = "2026-02-02";
+        const todayOrders = applyFilters();
+
+        let todayFiltered = todayOrders;
+
+        if (type === "canceled") {
+
+            const CANCELED_START_DATE = "2026-02-02";
+
+            todayFiltered = allOrders.filter(o => {
+
+                if (o.status !== "canceled") return false;
+
+                const dateToCheck = getEffectiveDate(o);
+                if (!dateToCheck) return false;
+
+                return dateToCheck >= CANCELED_START_DATE;
+            });
+        }
+        if (type === "completed") {
+            todayFiltered = todayOrders.filter(o => o.status === "completed");
         }
 
-    } catch (err) {
-        console.error("Sheet update check failed:", err);
+        if (type === "pending") {
+            todayFiltered = todayOrders.filter(o =>
+                (o.status === "pending" || o.status === "partial")
+                && o.status !== "canceled"
+            );
+        }
+
+        if (type === "distributed") {
+            todayFiltered = todayOrders.filter(o => o.status === "distributed");
+        }
+
+        if (type === "total") {
+            todayFiltered = todayOrders;
+        }
+
+        let backlogOrders = [];
+
+        if (type === "completed" || type === "pending") {
+
+            backlogOrders = allOrders.filter(o => {
+
+                const dateToCheck = getEffectiveDate(o);
+
+                if (!dateToCheck) return false;
+                if (dateToCheck < ACCUMULATE_FROM) return false;
+                if (todayFiltered.includes(o)) return false;
+
+                if (type === "completed") return o.status === "completed";
+                if (type === "pending") return o.status === "pending" || o.status === "partial";
+
+                return false;
+            });
+        }
+
+        lastTodayOrders = todayFiltered;
+        lastBacklogOrders = backlogOrders;
+        lastType = type;
+
+        displayOrdersWithBacklog(todayFiltered, backlogOrders, type);
     }
-}
 
 
 
-    // INIT DATE FILTER
-
-function initDate() {
-    const defaultFrom = "2026-01-30"; // تاريخ البداية الثابت
-    const today = new Date().toISOString().slice(0, 10); // تاريخ اليوم
-
-    dateFrom.value = defaultFrom;
-    dateTo.value = today;
-
-    updateDashboard();
-}
+    let lastTodayOrders = [];
+    let lastBacklogOrders = [];
+    let lastType = null;
 
 
+    function displayOrdersWithBacklog(todayOrders, backlogOrders, type) {
 
+        const orderList = document.getElementById("orderList");
 
-function applyFilters() {
-    const from = dateFrom.value || null;
-    const to   = dateTo.value || null;
+        function buildTable(orders) {
 
-    return allOrders.filter(o => {
-        const dateToCheck =
-            o.status === "distributed"
-                ? distributedOrdersMap[o.orderNo]?.date   // ✅ هنا التعديل
-                : o.date;
+            if (!orders.length) {
+                return `<p style="color:#9ca3af">No orders found.</p>`;
+            }
+            orders.sort((a, b) => {
 
-        if (!dateToCheck) return false;
-        if (from && dateToCheck < from) return false;
-        if (to && dateToCheck > to) return false;
+                const dateA =
+                    a.status === "distributed"
+                        ? distributedOrdersMap[a.orderNo]?.date
+                        : a.date;
 
-        return true;
-    });
-}
+                const dateB =
+                    b.status === "distributed"
+                        ? distributedOrdersMap[b.orderNo]?.date
+                        : b.date;
 
-//filteredOrders = Object.values(unique);
-    // UPDATE DASHBOARD KPIS
-function updateDashboard() {
-    const orders = applyFilters();
+                return new Date(dateB) - new Date(dateA); // ⬅️ من الأقدم للأحدث
 
-    total.textContent = orders.length;
+            });
+            return `
+        <table>
+            <tr>
+                <th>Order #</th>
+                <th>Warehouses</th>
+                <th>Status</th>
+            </tr>
+            ${orders.map(order => {
 
-    const distributedOrders = orders.filter(o => o.status === "distributed");
-    const completedOrders = orders.filter(o => o.status === "completed");
+                let statusText =
+                    order.status === "canceled" ? "Canceled" :
+                        order.status === "distributed" ? "Distributed" :
+                            order.status === "completed" ? "In-Packing" :
+                                order.status === "partial" ? "Partial" :
+                                    "Pending";
 
-    // Pending يجب استبعاد أي طلب موجود في In-Packing أو Distributed
-    const pendingOrders = orders.filter(o => 
-        o.status === "pending" || o.status === "partial"
-    ).filter(o => 
-        !completedOrders.includes(o) && !distributedOrders.includes(o)
-    );
+                return `
+                <tr>
+                    <td>${order.orderNo}</td>
+                    <td>
+                        ${order.warehouses.map(w => {
 
-    distributed.textContent = distributedOrders.length;
-    completed.textContent = completedOrders.length;
-    pending.textContent = pendingOrders.length;
+                    const badgeColor = getWarehouseBadgeColor(order, w);
 
-    renderWarehouseBreakdown(orders);
-    renderMultiWHOrders(orders);
-    renderSingleWHOrders(orders);
-}
+                    let tooltipText = "";
 
-function showDistributedOrders() {
-    const from = dateFrom.value || null;
-    const to   = dateTo.value || null;
+                    if (order.status === "distributed") {
+                        tooltipText = `Distributed at: ${distributedOrdersMap[order.orderNo]?.date || "-"}`;
+                    }
+                    else if (w.packed) {
+                        tooltipText = `
+        Received: ${w.receivedTime || "-"} 
+        <br>
+        Packed: ${w.packingTime || "-"}
+    `;
+                    }
+                    else {
+                        tooltipText = `Received in Warehouse: ${w.receivedTime || "-"}`;
+                    }
 
-    const orders = allOrders.filter(o => {
-        const distDate = distributedOrdersMap[o.orderNo];
-        if (!distDate) return false;
+                    return `
+        <div class="tooltip-wrapper">
+            <span style="
+                display:inline-block;
+                margin:2px;
+                padding:4px 8px;
+                border-radius:6px;
+                font-size:12px;
+                font-weight:600;
+                background:${badgeColor};
+                color:black;
+                cursor:pointer;
+            ">
+                ${w.base.toUpperCase()}
+            </span>
+            <div class="tooltip-box">
+                ${tooltipText}
+            </div>
+        </div>
+    `;
+                }).join("")}
+                    </td>
+                    <td>${statusText}</td>
+                </tr>
+                `;
+            }).join("")}
+        </table>
+    `;
+        }
 
-        if (from && distDate < from) return false;
-        if (to && distDate > to) return false;
-
-        return true;
-    });
-
-    displayOrders(orders, "Distributed Orders");
-}
-
-  function renderWarehouseBreakdown(orders) {
-  const warehouseMap = {};
-  const grandTotal = { t: 0, c: 0, p: 0, d: 0 };
-
-  orders.forEach(order => {
-    // الطلب يُحسب مرة واحدة
-    grandTotal.t++;
-
-    const isDistributed = order.status === "distributed";
-
-    order.warehouses.forEach(w => {
-      if (!warehouseMap[w.base]) {
-        warehouseMap[w.base] = { t: 0, c: 0, p: 0, d: 0 };
-      }
-
-      warehouseMap[w.base].t++;
-
-    if (isDistributed) {
-    warehouseMap[w.base].d++;
-} else if (order.status === "completed") {
-    warehouseMap[w.base].c++; // In-Packing
-} else {
-    warehouseMap[w.base].p++; // Pending + Partial
-}
-    });
-
-    // grand totals
-    if (isDistributed) {
-    grandTotal.d++;
-} else if (order.status === "completed") {
-    grandTotal.c++;
-} else {
-    grandTotal.p++;
-}
-  });
-
-  warehouseBreakdownTable.innerHTML = `
-<table>
-  <tr>
-    <th>Warehouse</th>
-    <th>Total</th>
-    <th>In-Packing</th>
-    <th>Pending</th>
-    <th>distributed</th>
-  </tr>
-
-  ${Object.entries(warehouseMap).map(([wh, v]) => {
-  if (!wh || !v) return ""; // منع أي صف فارغ
-  const safeWh = wh.replace(/'/g, "\\'"); // escape single quotes
-  return `
-<tr>
-  <td>${wh.toUpperCase()}</td>
-  <td><a href="#" onclick="showWarehouseOrders('${safeWh}','total')">${v.t}</a></td>
-  <td><a href="#" onclick="showWarehouseOrders('${safeWh}','completed')">${v.c}</a></td>
-  <td><a href="#" onclick="showWarehouseOrders('${safeWh}','pending')">${v.p}</a></td>
-  <td><a href="#" onclick="showWarehouseOrders('${safeWh}','distributed')">${v.d}</a></td>
-</tr>
+        let html = `
+    <div style="display:flex;gap:10px;margin-bottom:15px">
+        <button onclick="toggleBacklogView(false)" class="toggle-btn">
+            All
+        </button>
+        <button onclick="toggleBacklogView(true)" class="toggle-btn">
+            Show Only Backlog
+        </button>
+    </div>
 `;
-}).join("")}
 
-  <tr style="font-weight:bold;background:#020617;color:#22c55e">
-    <td>TOTAL</td>
-    <td>${grandTotal.t}</td>
-    <td>${grandTotal.c}</td>
-    <td>${grandTotal.p}</td>
-    <td>${grandTotal.d}</td>
-  </tr>
-</table>
-`;
-}
+        if (!showOnlyBacklog) {
+            html += `
+        <h3 style="color:#22c55e;margin-bottom:10px">
+            Today Orders (${todayOrders.length})
+        </h3>
+        ${buildTable(todayOrders)}
+    `;
+        }
 
+        if (backlogOrders.length) {
 
-    // MULTI-WAREHOUSE ORDERS
-    function renderMultiWHOrders(orders) {
-    const m = orders.filter(x => x.warehouseCount > 1);
-    const completedOrders = m.filter(x => x.status === "completed");
-    const distributedOrders = m.filter(x => x.status === "distributed");
-    const pendingOrders = m.filter(x => x.status === "pending" || x.status === "partial")
-                           .filter(o => !completedOrders.includes(o) && !distributedOrders.includes(o));
+            // 🔥 تجميع الطلبات حسب التاريخ الفعلي
+            const grouped = {};
 
-    multiWHTable.innerHTML = `
-<table>
-<tr><th>Type</th><th>Orders</th></tr>
-<tr><td>Total</td><td><a href="#" onclick="showMultiWHOrders('total')">${m.length}</a></td></tr>
-<tr><td>In-Packing</td><td><a href="#" onclick="showMultiWHOrders('completed')">${completedOrders.length}</a></td></tr>
-<tr><td>Pending</td>
-<td>
-<a href="#" onclick="showMultiWHOrders('pending')">
-${pendingOrders.length}</a>
-</td></tr>
-<tr><td>Distributed</td><td><a href="#" onclick="showMultiWHOrders('distributed')">${distributedOrders.length}</a></td></tr>
-</table>`;
-}
+            backlogOrders.forEach(order => {
 
-    // SINGLE-WAREHOUSE ORDERS
-    function renderSingleWHOrders(orders) {
-    const s = orders.filter(x => x.warehouseCount === 1);
-    const completedOrders = s.filter(x => x.status === "completed");
-    const distributedOrders = s.filter(x => x.status === "distributed");
-    const pendingOrders = s.filter(x => x.status === "pending")
-                           .filter(o => !completedOrders.includes(o) && !distributedOrders.includes(o));
+                const dateKey = getEffectiveDate(order) || "No Date";
 
-    singleWHTable.innerHTML = `
-<table>
-<tr><th>Type</th><th>Orders</th></tr>
-<tr><td>Total</td><td><a href="#" onclick="showSingleWHOrders('total')">${s.length}</a></td></tr>
-<tr><td>In-Packing</td><td><a href="#" onclick="showSingleWHOrders('completed')">${completedOrders.length}</a></td></tr>
-<tr>
-  <td>Pending</td>
-  <td>
-    <a href="#" onclick="showSingleWHOrders('pending')">
-      ${pendingOrders.length}
-    </a>
-  </td>
-</tr>
-<tr><td>Distributed</td><td><a href="#" onclick="showSingleWHOrders('distributed')">${distributedOrders.length}</a></td></tr>
-</table>`;
-}
+                if (!grouped[dateKey]) {
+                    grouped[dateKey] = [];
+                }
 
-    // SHOW ORDER DETAILS
-    function showOrderDetails(type) {
-    let o = applyFilters();
+                grouped[dateKey].push(order);
+            });
 
-    if (type === "completed") {
-        o = o.filter(x => x.status === "completed");
+            // ترتيب التواريخ من الأحدث للأقدم
+            const sortedDates = Object.keys(grouped)
+                .sort((a, b) => new Date(b) - new Date(a));
+
+            html += `
+        <h3 style="color:#f59e0b;margin:30px 0 10px 0">
+            Backlog Orders (${backlogOrders.length})
+        </h3>
+    `;
+
+            sortedDates.forEach(date => {
+
+                html += `
+            <h4 style="
+                margin:20px 0 8px 0;
+                color:#eab308;
+                font-weight:600;
+                border-bottom:1px solid #1f2937;
+                padding-bottom:4px;
+            ">
+                📅 ${date}
+            </h4>
+        `;
+
+                html += buildTable(grouped[date]);
+            });
+        }
+
+        orderList.innerHTML = html;
+
+        document.getElementById("orderDetails").classList.remove("hidden");
+    }
+    function toggleBacklogView(value) {
+        showOnlyBacklog = value;
+        updateLastOrderDetailsView();
+    }
+    function updateLastOrderDetailsView() {
+        displayOrdersWithBacklog(lastTodayOrders, lastBacklogOrders, lastType);
+    }
+    // SHOW WAREHOUSE ORDERS  
+    function showWarehouseOrders(warehouse, type) {
+        let o = applyFilters();
+
+        if (warehouse !== 'all') {
+            o = o.filter(order =>
+                order.warehouses.some(w => w.base === warehouse)
+            );
+        }
+
+        if (type === "completed") o = o.filter(x => x.status === "completed");
+        if (type === "pending") o = o.filter(x => x.status === "pending" || x.status === "partial");
+        if (type === "distributed") o = o.filter(x => x.status === "distributed");
+        if (type === "total") o = o; // all filtered orders  
+
+        displayOrders(o, warehouse === 'all' ? 'All Warehouses' : `Warehouse: ${warehouse}`);
     }
 
-    if (type === "pending") {
-        o = o.filter(x =>
-            x.status === "pending" || x.status === "partial"
-        );
-    }
-
-    if (type === "distributed") {
-        o = o.filter(x => x.status === "distributed");
-    }
-
-    displayOrders(o);
-}
-
-    // SHOW WAREHOUSE ORDERS
-   function showWarehouseOrders(warehouse, type) {
-    let o = applyFilters();
-
-    if (warehouse !== 'all') {
-        o = o.filter(order =>
-            order.warehouses.some(w => w.base === warehouse)
-        );
-    }
-
-    if (type === "completed") o = o.filter(x => x.status === "completed");
-   if (type === "pending")   o = o.filter(x => x.status === "pending" || x.status === "partial");   
- if (type === "distributed") o = o.filter(x => x.status === "distributed");
-    if (type === "total") o = o; // all filtered orders
-
-    displayOrders(o, warehouse === 'all' ? 'All Warehouses' : `Warehouse: ${warehouse}`);
-}
-
-    // SHOW MULTI/SINGLE-WAREHOUSE ORDERS
+    // SHOW MULTI/SINGLE-WAREHOUSE ORDERS  
     function showMultiWHOrders(type) {
         let o = applyFilters().filter(x => x.warehouseCount > 1);
         if (type === "completed") o = o.filter(x => x.status === "completed");
         if (type === "pending") {
-        o = o.filter(x =>
-            x.status === "pending" || x.status === "partial"
-        );
-    }    if (type === "distributed") o = o.filter(x => x.status === "distributed");
+            o = o.filter(x =>
+                x.status === "pending" || x.status === "partial"
+            );
+        } if (type === "distributed") o = o.filter(x => x.status === "distributed");
         displayOrders(o, "Multi-Warehouse Orders");
     }
 
@@ -1464,97 +1590,141 @@ ${pendingOrders.length}</a>
         displayOrders(o, "Single-Warehouse Orders");
     }
 
-  function displayOrders(orders, title = "Order Details") {
-    const orderList = document.getElementById("orderList");
-    lastDisplayedOrders = orders; // مهم للتصدير
+    function displayOrders(orders, title = "Order Details") {
+        orders.sort((a, b) => {
 
-    let html = `
-    <table>
-      <thead>
-        <tr>
-          <th>Order #</th>
-          <th>Warehouses</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
+            function getFullDate(order) {
+
+                // لو الطلب Distributed
+                if (order.status === "distributed") {
+                    return new Date(distributedOrdersMap[order.orderNo]?.date);
+                }
+
+                // أخذ أول وقت استلام من أول warehouse
+                const firstWH = order.warehouses[0];
+
+                if (firstWH?.receivedTime) {
+                    return new Date(firstWH.receivedTime);
+                }
+
+                return new Date(order.date); // fallback
+            }
+
+            return getFullDate(b) - getFullDate(a); // ⬅️ الأحدث أولاً حسب الوقت
+        });
+        const orderList = document.getElementById("orderList");
+        lastDisplayedOrders = orders; // مهم للتصدير  
+
+        let html = `  
+    <table>  
+      <thead>  
+        <tr>  
+          <th>Order #</th>  
+          <th>Warehouses</th>  
+          <th>Status</th>  
+        </tr>  
+      </thead>  
+      <tbody>  
     `;
 
-    const seen = new Set();
+        const seen = new Set();
 
-    orders.forEach(order => {
-        const key = order.orderNo.toUpperCase();
-if (seen.has(key)) return;
-seen.add(key);
+        orders.forEach(order => {
+            const key = order.orderNo.toUpperCase();
+            if (seen.has(key)) return;
+            seen.add(key);
 
-        // تحديد حالة الطلب
-        let statusText = "";
+            // تحديد حالة الطلب  
+            let statusText = "";
 
-if (order.status === "distributed") {
-    statusText = "Distributed";
-} else if (order.status === "completed") {
-    statusText = "In-Packing";
-} else if (order.status === "partial") {
-    statusText = "Partial";
-} else {
-    statusText = "Pending";
-}
-
-        html += `
-        <tr>
-          <td>${order.orderNo}</td>
-          <td>
+            if (order.status === "canceled") {
+                statusText = "Canceled";
+            }
+            else if (order.status === "distributed") {
+                statusText = "Distributed";
+            }
+            else if (order.status === "completed") {
+                statusText = "In-Packing";
+            }
+            else if (order.status === "partial") {
+                statusText = "Partial";
+            }
+            else {
+                statusText = "Pending";
+            }
+            html += `  
+        <tr>  
+          <td>${order.orderNo}</td>  
+          <td>  
             ${order.warehouses.map(w => {
-                // تحديد لون الـ badge لكل warehouse
+                // تحديد لون الـ badge لكل warehouse  
                 let color, text;
 
-if (order.status === "distributed") {
-    color = "#22c55e";
-    text = "Distributed";
-} else if (w.packed) {
-    color = "#22c55e";
-    text = "In-Packing";
-} else {
-    color = "#7c2d12";
-    text = "Pending";
-}
+                if (order.status === "distributed") {
+                    color = "#22c55e";
+                    text = "Distributed";
+                } else if (w.packed) {
+                    color = "#22c55e";
+                    text = "In-Packing";
+                } else {
+                    color = "#7c2d12";
+                    text = "Pending";
+                }
 
-                return `
-                <span style="
-                    display:inline-block;
-                    margin:2px;
-                    padding:4px 8px;
-                    border-radius:6px;
-                    font-size:12px;
-                    font-weight:600;
-                    background:${color};
-                    color:${(order.status === "distributed" || w.distributed) ? '#000' : 'black'};
-                ">
-                    ${w.base.toUpperCase()} 
-                </span>
-                `;
-            }).join("")}
-          </td>
-          <td style="font-weight:600; color:#9ca3af">
-            ${statusText}
-          </td>
-        </tr>
+                let tooltipText = "";
+
+                if (order.status === "distributed") {
+                    tooltipText = `Distributed at: ${distributedOrdersMap[order.orderNo]?.date || "-"}`;
+                }
+                else if (w.packed) {
+                    tooltipText = `Received at Packing Station: ${w.receivedTime || "-"}`;
+                }
+                else {
+                    tooltipText = `Received in Warehouse: ${w.receivedTime || "-"}`;
+                }
+
+                return `  
+<div class="tooltip-wrapper">  
+    <span style="  
+        display:inline-block;  
+        margin:2px;  
+        padding:4px 8px;  
+        border-radius:6px;  
+        font-size:12px;  
+        font-weight:600;  
+        background:${color};  
+        color:black;  
+        cursor:pointer;  
+    ">  
+        ${w.base.toUpperCase()}  
+    </span>  
+    <div class="tooltip-box">  
+        ${tooltipText}  
+    </div>  
+</div>  
+`;
+            }).join("")}  
+          </td>  
+          <td style="font-weight:600; color:#9ca3af">  
+            ${statusText}  
+          </td>  
+        </tr>  
         `;
-    });
+        });
 
-    html += `
-      </tbody>
-    </table>
+        html += `  
+      </tbody>  
+    </table>  
     `;
 
-    orderList.innerHTML = `
-      <h3 style="color:var(--accent); margin-bottom:12px"></h3>
-      ${html}
+        orderList.innerHTML = `  
+      <h3 style="color:var(--accent); margin-bottom:12px"></h3>  
+      ${html}  
     `;
 
-    // إظهار نافذة التفاصيل
-    document.getElementById("orderDetails").classList.remove("hidden");
-}
+        // إظهار نافذة التفاصيل  
+        document.getElementById("orderDetails").classList.remove("hidden");
+    }
     function toggleMenu(id) {
         const menu = document.getElementById(id);
         if (!menu) return;
@@ -1569,149 +1739,627 @@ if (order.status === "distributed") {
     const toggleToDateBtn = document.getElementById("toggleToDate");
     const dateToInput = document.getElementById("dateTo");
 
-    // 
+    //   
 
-    // CLOSE MODAL
+    // CLOSE MODAL  
     function closeOrderDetails() { orderDetails.classList.add("hidden"); }
 
-    // EXPORT TO EXCEL
+    // EXPORT TO EXCEL  
     function exportOrderDetailsToExcel() {
-        if (!lastDisplayedOrders.length) {
+
+        let exportOrders = [];
+        let fileType = "filtered";
+
+        // ===============================
+        // تحديد مصدر البيانات
+        // ===============================
+
+        if (lastType !== null) {
+
+            if (showOnlyBacklog) {
+                exportOrders = lastBacklogOrders;
+                fileType = "backlog";
+            }
+            else if (lastBacklogOrders.length > 0) {
+                exportOrders = [
+                    ...lastTodayOrders,
+                    ...lastBacklogOrders
+                ];
+                fileType = "all";
+            }
+            else {
+                exportOrders = lastTodayOrders;
+                fileType = "today";
+            }
+
+        } else {
+            exportOrders = lastDisplayedOrders;
+            fileType = "filtered";
+        }
+
+        if (!exportOrders || !exportOrders.length) {
             alert("No orders to export!");
             return;
         }
 
-        const headers = ["Order", "Status", "Warehouses", "Distributor"];
+        // إزالة التكرار
+        const uniqueMap = {};
+        exportOrders.forEach(o => {
+            uniqueMap[o.orderNo] = o;
+        });
 
-        const rows = lastDisplayedOrders.map(o => {
-            const whs = o.warehouses.map(w => {
-                let status = w.packed ? "In-Packing" : "Pending";
-                if (w.distributed) status = "Distributed";
-                return `${w.base}`;
-            }).join(" | ");
+        const unique = Object.values(uniqueMap);
+
+        const headers = ["Order #", "Status", "Warehouses", "Date"];
+
+        const rows = unique.map(o => {
+
+            const whs = o.warehouses
+                .map(w => w.base.toUpperCase())
+                .join(" | ");
 
             return [
                 o.orderNo,
                 o.status,
                 whs,
-                o.distributor || ""
+                o.date
             ];
         });
 
-        // CSV with proper escaping
-        const csv = [
-            headers.join(","),
-            ...rows.map(r =>
-                r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")
-            )
-        ].join("\r\n");
+        const csvContent =
+            "\uFEFF" +
+            [
+                headers.join(","),
+                ...rows.map(r =>
+                    r.map(v =>
+                        `"${String(v).replace(/"/g, '""')}"`
+                    ).join(",")
+                )
+            ].join("\r\n");
 
-        // Use Blob (Excel-safe)
-        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const blob = new Blob([csvContent], {
+            type: "text/csv;charset=utf-8;"
+        });
+
         const url = URL.createObjectURL(blob);
+
+        const today = new Date().toISOString().slice(0, 10);
 
         const link = document.createElement("a");
         link.href = url;
-        link.download = "order_details.csv";
+        link.download = `orders_${fileType}_${today}.csv`;
+
         document.body.appendChild(link);
         link.click();
 
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
     }
-function normalizeWarehouse(name) {
-    if (!name) return { base: "", packed: false };
+    function normalizeWarehouse(name) {
+        if (!name) return { base: "", packed: false };
 
-    const raw = name.toLowerCase();
+        const raw = name.toLowerCase();
 
-    const packed = /pack/.test(raw);
+        const packed = /pack/.test(raw);
 
-    const base = raw
-        .replace(/pack/gi, "")
-        .replace(/wh/gi, "")
-        .replace(/[-_]+/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
+        const base = raw
+            .replace(/pack/gi, "")
+            .replace(/wh/gi, "")
+            .replace(/[-_]+/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
 
-    return { base, packed };
-}
-    // SHOW WAREHOUSES PAGE
+        return { base, packed };
+    }
+    // SHOW WAREHOUSES PAGE  
     function showWarehouses() { }
-let refreshInterval = 10000; // 30 ثانية ثابتة
+    let currentInterval = 3000; // يبدأ 30 ثانية  
+    // ==============================  
+    // 🔥 ENTERPRISE LIVE ENGINE  
+    // ==============================  
 
-function startAutoRefresh() {
-    if (refreshTimer) return;
+    const FAST_INTERVAL = 2000;   // نشط  
+    const SLOW_INTERVAL = 3000;  // خمول  
 
-    refreshTimer = setInterval(async () => {
+    let liveTimer = null;
+    let idleTimer = null;
+    let isIdle = false;
 
-        if (document.hidden) return;
-        if (isLoading) return;
+    function startLiveDashboard() {
+        stopLiveDashboard();
 
-await checkForNewOrders();
+        runLiveCycle(FAST_INTERVAL);
 
-    }, refreshInterval);
-}
+        // كشف الخمول  
+        resetIdleTimer();
+        ["mousemove", "keydown", "click", "touchstart"].forEach(evt =>
+            document.addEventListener(evt, resetIdleTimer)
+        );
 
+        // عند الرجوع للتاب  
+        document.addEventListener("visibilitychange", () => {
+            if (!document.hidden) {
+                loadData({ force: true, silent: true });
+            }
+        });
+    }
 
-function stopAutoRefresh() {
-    if (refreshTimer) {
+    function stopLiveDashboard() {
+        if (liveTimer) clearInterval(liveTimer);
+        if (idleTimer) clearTimeout(idleTimer);
+    }
+
+    function runLiveCycle(interval) {
+        if (liveTimer) clearInterval(liveTimer);
+
+        liveTimer = setInterval(async () => {
+            if (isLoading) return;
+
+            try {
+                await loadData({ silent: true });
+
+            } catch (e) {
+                console.error("Live error:", e);
+            }
+        }, interval);
+    }
+
+    function resetIdleTimer() {
+        isIdle = false;
+        runLiveCycle(FAST_INTERVAL);
+
+        if (idleTimer) clearTimeout(idleTimer);
+
+        idleTimer = setTimeout(() => {
+            isIdle = true;
+            runLiveCycle(SLOW_INTERVAL);
+        }, 60000); // بعد دقيقة خمول  
+    }
+
+    //function stopAutoRefresh() {  
+    // clearInterval(refreshTimer);  
+    //  refreshTimer = null;  
+    //}  
+    // SIGN OUT  
+    function signOut() {
         clearInterval(refreshTimer);
         refreshTimer = null;
+
+        localStorage.removeItem("isLoggedIn");
+
+        localStorage.removeItem("currentWarehouse");
+
+        location.reload();
+        dashboard.classList.add("hidden");
+        loginContainer.style.display = "flex";
+        stopLiveDashboard()
+    }
+    // REFRESH PAGE ON ENTER  
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            const tag = document.activeElement.tagName.toLowerCase();
+            if (tag === "input" || tag === "textarea") return;
+
+            e.preventDefault();
+            loadData({ force: true });
+        }
+    });
+    function showToast(message) {
+        const toast = document.getElementById("toast");
+        const sound = document.getElementById("toastSound");
+
+        document.getElementById("toastText").textContent = message;
+
+        toast.style.opacity = "1";
+        toast.style.transform = "translateY(0)";
+
+        sound.currentTime = 0;
+        sound.play().catch(() => { });
+
+        setTimeout(() => {
+            toast.style.opacity = "0";
+            toast.style.transform = "translateY(20px)";
+        }, 4000);
+    }
+    document.addEventListener("mouseover", function (e) {
+
+        const row = e.target.closest(".order-row");
+        if (!row) return;
+
+        const tooltip = document.getElementById("tooltip");
+
+        const status = row.dataset.status;
+        const receivedWH = row.dataset.wh;
+        const receivedPack = row.dataset.pack;
+
+        let text = "";
+
+        if (status === "pending" || status === "partial") {
+            text = "Received at WH: " + receivedWH;
+        }
+
+        if (status === "completed") {
+            text = "Received at Packing Station: " + receivedPack;
+        }
+
+        if (!text) return;
+
+        tooltip.textContent = text;
+        tooltip.classList.remove("hidden");
+    });
+
+    document.addEventListener("mousemove", function (e) {
+        const tooltip = document.getElementById("tooltip");
+        tooltip.style.top = (e.pageY + 15) + "px";
+        tooltip.style.left = (e.pageX + 15) + "px";
+    });
+
+    document.addEventListener("mouseout", function (e) {
+        if (e.target.closest(".order-row")) {
+            document.getElementById("tooltip").classList.add("hidden");
+        }
+    });
+
+
+    // =============================
+    // SHOW TAB
+    // =============================
+    function showNewOrderTab() {
+
+        document.querySelectorAll(".main > div").forEach(div => {
+            if (div.id !== "newOrderTab") div.classList.add("hidden");
+        });
+
+        document.getElementById("newOrderTab").classList.remove("hidden");
+        const warehouseInput = document.getElementById("newWarehouseName");
+        const userWarehouse = localStorage.getItem("currentWarehouse");
+
+        if (userWarehouse) {
+            warehouseInput.value = userWarehouse;
+            warehouseInput.readOnly = true; // يمنع التعديل
+        }
+        setTodayForNewOrder()
+    }
+    function setTodayForNewOrder() {
+        const today = new Date().toISOString().slice(0, 10);
+        document.getElementById("newOrderDate").value = today;
+    }
+    // =============================
+    // SIMPLE ENCRYPTION
+    // =============================
+    function simpleEncrypt(text) {
+        return btoa(text); // Base64 encode
+    }
+
+    function simpleDecrypt(text) {
+        return atob(text);
+    }
+
+    // =============================
+    // SAVE NEW ORDER
+    // =============================
+    function saveNewOrder() {
+
+        const orderNo = document.getElementById("newOrderNumber").value.trim();
+        const warehouse = document.getElementById("newWarehouseName").value.trim();
+        const date = document.getElementById("newOrderDate").value;
+
+        if (!orderNo || !warehouse || !date) {
+            showToast("⚠️ Please fill all fields");
+            return;
+        }
+
+const now = new Date();
+
+const formattedDate = now.toISOString().slice(0, 10); // YYYY-MM-DD
+const formattedTime = now.toLocaleTimeString(); // الوقت المحلي
+
+const newOrder = {
+    orderNo: orderNo.toUpperCase(),
+    date: formattedDate,
+    time: formattedTime,   // 🔥 إضافة الوقت
+    createdAt: now.toISOString(), // وقت كامل دقيق للفرز
+    warehouses: [{
+        base: warehouse,
+        packed: false,
+        receivedTime: formattedDate
+    }],
+    warehouseCount: 1,
+    status: "pending",
+    comment: ""
+};
+// 🔥 إرسال إلى Google Sheet
+const ordersRef = ref(db, "orders");
+
+push(ordersRef, newOrder)
+  .then(() => {
+      console.log("Saved to Firebase");
+  })
+  .catch(err => {
+      console.error("Firebase Error:", err);
+  });
+        allOrders.push(newOrder);
+
+        updateDashboard();
+
+        showToast(`✅ Order ${orderNo} added successfully`);
+
+        showOrderPreview(newOrder);
+
+        clearNewOrderForm();
+    }
+    const newOrderInput = document.getElementById("newOrderNumber");
+
+    newOrderInput.addEventListener("input", function () {
+
+        const value = this.value.trim();
+
+        // يتحقق من الصيغة: #m + 5 أرقام
+        const pattern = /^#m\d{5}$/i;
+
+        if (pattern.test(value)) {
+
+            // منع التكرار إذا نفس الرقم
+            if (this.dataset.saved === value) return;
+
+            this.dataset.saved = value;
+
+            // تنفيذ الحفظ تلقائياً
+            saveNewOrder();
+
+            // تفريغ الحقل بعد الحفظ
+            this.value = "";
+
+        }
+    });
+
+    document.getElementById("newOrderSearch")
+        .addEventListener("input", function () {
+
+            const query = this.value.toLowerCase().trim();
+            const cards = document.querySelectorAll("#newOrdersList > div");
+
+            cards.forEach(card => {
+
+                const text = card.innerText.toLowerCase();
+
+                if (text.includes(query)) {
+                    card.style.display = "flex";
+                } else {
+                    card.style.display = "none";
+                }
+
+            });
+        });
+
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz7O-KhP-qVecKdapMORuIlpQWaPzRFWAk4GRImEQAGAWM4Kk72RdLjgTNue95dEUp3JA/exec";
+function showOrderPreview(order) {
+
+    const previewContainer = document.getElementById("newOrderPreview");
+    const list = document.getElementById("newOrdersList");
+
+    const orderCard = document.createElement("div");
+
+    orderCard.style.cssText = `
+        background:#0f172a;
+        border:1px solid #1f2937;
+        padding:16px;
+        border-radius:14px;
+        margin-bottom:12px;
+        animation:fadeIn .3s ease;
+    `;
+
+    orderCard.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center">
+
+            <div>
+                <div style="font-size:15px;font-weight:600">
+                    ${order.orderNo}
+                </div>
+
+                <div style="font-size:12px;opacity:.7;margin-top:4px">
+                    📅 ${order.date} &nbsp; ⏰ ${order.time || ""}
+                </div>
+
+                <div class="saved-comment" style="
+                    margin-top:6px;
+                    font-size:12px;
+                    color:#22c55e;
+                    font-weight:600;
+                ">
+                    ${order.comment ? "📝 " + order.comment : ""}
+                </div>
+
+                <div style="
+                    font-size:12px;
+                    margin-top:6px;
+                    display:inline-block;
+                    background:#1e293b;
+                    padding:4px 10px;
+                    border-radius:8px;
+                    font-weight:600;
+                    color:#38bdf8;
+                ">
+                </div>
+            </div>
+
+            <span style="
+                background:#f59e0b;
+                padding:6px 14px;
+                border-radius:20px;
+                font-size:11px;
+                font-weight:600;
+            ">
+                Pending
+            </span>
+        </div>
+
+        <div style="margin-top:12px">
+            <textarea 
+                placeholder="Write comment..."
+                style="
+                    width:100%;
+                    background:#020617;
+                    border:1px solid #1f2937;
+                    border-radius:10px;
+                    padding:8px;
+                    color:white;
+                    font-size:13px;
+                    resize:vertical;
+                    min-height:50px;
+                    outline:none;
+                "
+            ></textarea>
+
+            <button style="
+                margin-top:8px;
+                background:#22c55e;
+                border:none;
+                padding:6px 14px;
+                border-radius:8px;
+                font-size:12px;
+                font-weight:600;
+                cursor:pointer;
+            ">
+                Save
+            </button>
+        </div>
+    `;
+
+    const textarea = orderCard.querySelector("textarea");
+    const saveBtn = orderCard.querySelector("button");
+    const savedCommentDiv = orderCard.querySelector(".saved-comment");
+
+    // تحميل التعليق السابق داخل التكست
+    textarea.value = order.comment || "";
+
+    saveBtn.addEventListener("click", function () {
+
+        const value = textarea.value.trim();
+
+        order.comment = value;
+
+        savedCommentDiv.textContent = value ? "📝 " + value : "";
+
+        saveCommentsToStorage();
+
+        textarea.value = "";
+
+        showToast("💾 Comment saved");
+    });
+
+    list.prepend(orderCard);
+    previewContainer.classList.remove("hidden");
+
+    const maxItems = 10;
+    if (list.children.length > maxItems) {
+        list.removeChild(list.lastChild);
     }
 }
 
-document.addEventListener("visibilitychange", () => {
-    if (document.hidden) {
-        stopAutoRefresh();
-    } else {
-        startAutoRefresh();
+
+
+function clearNewOrderForm() {
+
+        document.getElementById("newOrderNumber").value = "";
+
+        // لا تمسح المستودع إذا كان من المستخدم المسجل
+        const warehouseInput = document.getElementById("newWarehouseName");
+        const userWarehouse = localStorage.getItem("currentWarehouse");
+
+        if (userWarehouse) {
+            warehouseInput.value = userWarehouse;
+            warehouseInput.readOnly = true;
+        } else {
+            warehouseInput.value = "";
+        }
+
+        // أعد ضبط التاريخ لليوم
+        setTodayForNewOrder();
     }
-});
+    // =============================
+    // LOAD SECURE ORDERS
+    // =============================
+function listenToOrders() {
 
+    const ordersRef = ref(db, "orders");
 
-//function stopAutoRefresh() {
-   // clearInterval(refreshTimer);
-  //  refreshTimer = null;
-//}
-    // SIGN OUT
-    function signOut() {
-    clearInterval(refreshTimer);
-    refreshTimer = null;
+    onValue(ordersRef, (snapshot) => {
 
-    localStorage.removeItem("isLoggedIn");
-    dashboard.classList.add("hidden");
-    loginContainer.style.display = "flex";
+        const data = snapshot.val();
+        if (!data) return;
+
+        const firebaseOrders = Object.values(data);
+
+        allOrders = firebaseOrders;
+
+        updateDashboard();
+
+    });
 }
-// REFRESH PAGE ON ENTER
-document.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-        const tag = document.activeElement.tagName.toLowerCase();
-        if (tag === "input" || tag === "textarea") return;
 
-        e.preventDefault();
-        loadData({ force: true });
+    function showDashboardHome() {
+        document.getElementById("newOrderTab").classList.add("hidden");
+
+        // اظهار محتوى الداشبورد
+        document.querySelector(".kpis").classList.remove("hidden");
+        document.querySelector(".warehouse-container").classList.remove("hidden");
+        document.querySelector(".sales-order").classList.remove("hidden");
     }
-});
-function showToast(message) {
-    const toast = document.getElementById("toast");
-    const text = document.getElementById("toastText");
-    const sound = document.getElementById("toastSound");
+    function renderOrders() {
 
-    text.textContent = message;
+        const container = document.getElementById("ordersTableBody");
+        container.innerHTML = "";
 
-    toast.style.opacity = "1";
-    toast.style.transform = "translateY(0)";
+        if (orders.length === 0) {
+            container.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align:center;padding:20px;color:#888">
+                    No Orders Yet
+                </td>
+            </tr>
+        `;
+            return;
+        }
 
-    // صوت (خفيف)
-    sound.currentTime = 0;
-    sound.play().catch(() => {});
+        orders
+            .sort((a, b) => b.id - a.id)
+            .forEach(order => {
 
-    setTimeout(() => {
-        toast.style.opacity = "0";
-        toast.style.transform = "translateY(20px)";
-    }, 4000);
-}
+                const statusColor =
+                    order.status === "Pending" ? "#f39c12" :
+                        order.status === "Approved" ? "#2ecc71" :
+                            order.status === "Rejected" ? "#e74c3c" :
+                                "#3498db";
+
+                const row = `
+                <tr style="transition:.2s">
+                    <td>#${order.id}</td>
+                    <td>${order.warehouse}</td>
+                    <td>${order.item}</td>
+                    <td>${order.qty}</td>
+                    <td>
+                        <span style="
+                            background:${statusColor};
+                            color:white;
+                            padding:4px 10px;
+                            border-radius:20px;
+                            font-size:12px;
+                            font-weight:600">
+                            ${order.status}
+                        </span>
+                    </td>
+                    <td>${new Date(order.date).toLocaleString()}</td>
+                </tr>
+            `;
+
+                container.innerHTML += row;
+            });
+    }
 </script>
+
+
+
 </body>
 
-    </html>
+</html>
