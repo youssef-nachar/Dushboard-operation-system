@@ -186,6 +186,31 @@ background:#22c55e;
                 </div>
 
             </div>
+<p>
+
+
+<p>User (Warehouse)
+      │
+      ▼
+Firebase
+status = pending
+
+Packing Station
+      │
+      ▼
+Firebase
+status = in-packing
+
+Distribution Sheet
+      │
+      ▼
+status = distributed
+
+Canceled Sheet
+      │
+      ▼
+status = canceled</p>
+</p>
             <div class="kpis">
                 <div class="kpi" onclick="showOrderDetails('total')">
                     <div>Total Orders</div>
