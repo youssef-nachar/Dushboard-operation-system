@@ -186,31 +186,6 @@ background:#22c55e;
                 </div>
 
             </div>
-<p>
-
-
-<p>User (Warehouse)
-      │
-      ▼
-Firebase
-status = pending
-
-Packing Station
-      │
-      ▼
-Firebase
-status = in-packing
-
-Distribution Sheet
-      │
-      ▼
-status = distributed
-
-Canceled Sheet
-      │
-      ▼
-status = canceled</p>
-</p>
             <div class="kpis">
                 <div class="kpi" onclick="showOrderDetails('total')">
                     <div>Total Orders</div>
@@ -404,24 +379,58 @@ status = canceled</p>
 
     const loginContainer = document.getElementById("loginContainer");
     const dashboard = document.getElementById("dashboard");
-    window.addEventListener('DOMContentLoaded', () => {
-        const loggedIn = localStorage.getItem("isLoggedIn");
+window.addEventListener('DOMContentLoaded', () => {
 
-        if (loggedIn === "true") {
-            loginContainer.style.display = "none";
-            dashboard.classList.remove("hidden");
+    const loggedIn = localStorage.getItem("isLoggedIn");
+    const role = localStorage.getItem("userRole");
+
+    if (loggedIn === "true") {
+
+        loginContainer.style.display = "none";
+        dashboard.classList.remove("hidden");
+
+        if (role === "manager") {
+
             loadData();
             startLiveDashboard();
             listenToOrders();
-        }
-    });
 
-    const users = [
-        { username: "manager", password: "123456", warehouse: "P&C" },
-        { username: "pharmaUser", password: "123456", warehouse: "Pharma" },
-        { username: "retailUser", password: "123456", warehouse: "Retail" }
-    ];
-    const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?output=csv";
+        } else {
+
+            document.querySelector(".kpis").style.display = "none";
+            document.querySelector(".warehouse-container").style.display = "none";
+            document.querySelector(".sales-order").style.display = "none";
+
+            showNewOrderTab();
+
+            const aside = document.querySelector("aside");
+
+            aside.innerHTML = `
+                <button onclick="signOut()" style="
+                    width:100%;
+                    padding:12px;
+                    background:#ef4444;
+                    border:none;
+                    border-radius:8px;
+                    color:white;
+                    font-weight:600;
+                    cursor:pointer;
+                ">
+                Add orders
+                    Logout
+                </button>
+            `;
+        }
+    }
+});
+const users = [
+    { username: "manager", password: "123456", warehouse: "P&C", role: "manager" },
+
+    { username: "pharmaUser", password: "123456", warehouse: "Pharma", role: "user" },
+    { username: "retailUser", password: "123456", warehouse: "Retail", role: "user" },
+    { username: "packing", password: "123456", warehouse: "Packing Station", role: "user" }
+];
+ //   const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?output=csv";
 
     let allOrders = [];
     const distributionSheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTecpCEwZ10-Ncz2y0xSsAnNdLXcWDGt_GiAeJlbWYhgg9B8zlhvJ1DeDH8H0NDSg/pub?output=csv";
@@ -460,7 +469,15 @@ status = canceled</p>
             const orderNo = r[ORDER_COL]?.trim().toUpperCase();
             if (orderNo) newSet.add(orderNo);
         });
+allOrders.forEach(order=>{
 
+if(canceledOrdersSet.has(order.orderNo)){
+
+order.status="canceled";
+
+}
+
+});
         canceledOrdersSet = newSet;
 
         console.log("Canceled Orders Loaded:", canceledOrdersSet.size);
@@ -523,7 +540,15 @@ status = canceled</p>
                         company: company || "LMD"
                     };
                 });
+allOrders.forEach(order=>{
 
+if(distributedOrdersMap[order.orderNo]){
+
+order.status="distributed";
+
+}
+
+});
                 const newHash = hashDistribution(newMap);
 
                 // 🔥 BLOCK إذا رجعت نسخة قديمة
@@ -753,33 +778,74 @@ status = canceled</p>
 
 
     // LOGIN  
-    loginForm.onsubmit = e => {
-        e.preventDefault();
+loginForm.onsubmit = e => {
+    e.preventDefault();
 
-        const u = users.find(
-            x => x.username === username.value && x.password === password.value
-        );
+    const u = users.find(
+        x => x.username === username.value && x.password === password.value
+    );
 
-        if (!u) {
-            loginError.classList.remove("hidden");
-            return;
-        }
+    if (!u) {
+        loginError.classList.remove("hidden");
+        return;
+    }
+if(u.warehouse === "Packing Station"){
 
-        loginError.classList.add("hidden");
+autoMoveToPacking();
 
-        localStorage.setItem("isLoggedIn", "true");
+}
 
-        // ✅ تخزين المستودع
-        localStorage.setItem("currentWarehouse", u.warehouse);
+    loginError.classList.add("hidden");
 
-        loginContainer.style.display = "none";
-        dashboard.classList.remove("hidden");
+    localStorage.setItem("isLoggedIn", "true");
+    localStorage.setItem("currentWarehouse", u.warehouse);
+    localStorage.setItem("userRole", u.role);
+
+    loginContainer.style.display = "none";
+    dashboard.classList.remove("hidden");
+
+    // 🔥 manager يرى كل شيء
+    if (u.role === "manager") {
 
         loadData();
         startLiveDashboard();
-    };
+        listenToOrders();
 
-    function getWarehouseBadgeColor(order, warehouse) {
+    } 
+    
+    // 🔥 باقي المستخدمين New Order فقط
+    else {
+
+        // إخفاء الداشبورد
+        document.querySelector(".kpis").style.display = "none";
+        document.querySelector(".warehouse-container").style.display = "none";
+        document.querySelector(".sales-order").style.display = "none";
+
+        // اظهار New Order
+        showNewOrderTab();
+
+        // تعديل القائمة الجانبية
+        const aside = document.querySelector("aside");
+
+        aside.innerHTML = `
+            <button onclick="signOut()" style="
+                width:100%;
+                padding:12px;
+                background:#ef4444;
+                border:none;
+                border-radius:8px;
+                color:white;
+                font-weight:600;
+                cursor:pointer;
+            ">
+                Logout
+            </button>
+        `;
+    }
+};  
+
+
+function getWarehouseBadgeColor(order, warehouse) {
 
         if (order.status === "canceled") {
             return "#ef4444"; // red
@@ -1110,7 +1176,9 @@ status = canceled</p>
     }
     //filteredOrders = Object.values(unique);  
     function updateDashboard() {
-
+allOrders.forEach(order=>{
+order.status = resolveOrderStatus(order);
+});
         const todayOrders = applyFilters();
         const ACCUMULATE_FROM = "2026-02-02";
 
@@ -2137,7 +2205,30 @@ push(ordersRef, newOrder)
 
         }
     });
+function markInPacking(orderNo){
 
+const ordersRef = ref(db,"orders");
+
+onValue(ordersRef,(snapshot)=>{
+
+const data = snapshot.val();
+
+Object.entries(data).forEach(([key,order])=>{
+
+if(order.orderNo === orderNo){
+
+update(ref(db,"orders/"+key),{
+status:"in-packing",
+packingTime:new Date().toISOString()
+});
+
+}
+
+});
+
+},{onlyOnce:true});
+
+}
     document.getElementById("newOrderSearch")
         .addEventListener("input", function () {
 
@@ -2156,8 +2247,24 @@ push(ordersRef, newOrder)
 
             });
         });
+function resolveOrderStatus(order){
 
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz7O-KhP-qVecKdapMORuIlpQWaPzRFWAk4GRImEQAGAWM4Kk72RdLjgTNue95dEUp3JA/exec";
+if(canceledOrdersSet.has(order.orderNo)){
+return "canceled";
+}
+
+if(distributedOrdersMap[order.orderNo]){
+return "distributed";
+}
+
+if(order.status==="in-packing"){
+return "in-packing";
+}
+
+return "pending";
+
+}
+    //const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz7O-KhP-qVecKdapMORuIlpQWaPzRFWAk4GRImEQAGAWM4Kk72RdLjgTNue95dEUp3JA/exec";
 function showOrderPreview(order) {
 
     const previewContainer = document.getElementById("newOrderPreview");
@@ -2381,6 +2488,36 @@ function listenToOrders() {
                 container.innerHTML += row;
             });
     }
+const currentWarehouse = localStorage.getItem("currentWarehouse");
+    function autoMoveToPacking(){
+
+const currentWarehouse = localStorage.getItem("currentWarehouse");
+
+if(currentWarehouse !== "Packing Station") return;
+
+const ordersRef = ref(db,"orders");
+
+onValue(ordersRef,(snapshot)=>{
+
+const data = snapshot.val();
+if(!data) return;
+
+Object.entries(data).forEach(([key,order])=>{
+
+if(order.status === "pending"){
+
+update(ref(db,"orders/"+key),{
+status:"in-packing",
+packingTime:new Date().toISOString()
+});
+
+}
+
+});
+
+},{onlyOnce:true});
+
+}
 </script>
 
 
