@@ -310,13 +310,50 @@ background:#22c55e;
 
     </div>
 </body>
+ <script type="module">
 
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, push, onValue, get, runTransaction, update, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";      
+  import { remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAI1MdaVUyB8LurtoAh-X6a9amGPJX_d6Y",
+            authDomain: "dushboard-system.firebaseapp.com",
+            databaseURL: "https://dushboard-system-default-rtdb.firebaseio.com",
+            projectId: "dushboard-system",
+            storageBucket: "dushboard-system.firebasestorage.app",
+            messagingSenderId: "531831609541",
+            appId: "1:531831609541:web:388c78af1ba30174f738ac",
+            measurementId: "G-1W4C77DHNJ"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+window.set = set;
+        window.db = database;
+        window.ref = ref;
+        window.push = push;
+        window.onValue = onValue;
+        window.get = get;
+        window.update = update;
+        window.runTransaction = runTransaction;
+        window.remove = remove;
+
+    </script>
 
 
 
 
 <script>
-
+async function saveOrdersToFirebase(orders) {
+    try {
+await window.set(window.ref(window.db, "orders"), orders);      
+  console.log("✅ Data saved to Firebase");
+    } catch (e) {
+        console.error("❌ Firebase save error:", e);
+    }
+}
     const orderDetails = document.getElementById("orderDetails");
 
     orderDetails.addEventListener("click", (e) => {
@@ -324,8 +361,6 @@ background:#22c55e;
             orderDetails.classList.add("hidden");
         }
     });
-
-
     let refreshTimer = null;
     let isRefreshing = false;
     let showOnlyBacklog = false;
@@ -350,7 +385,6 @@ background:#22c55e;
                 }))
         );
     }
-
     const loginContainer = document.getElementById("loginContainer");
     const dashboard = document.getElementById("dashboard");
     window.addEventListener('DOMContentLoaded', () => {
@@ -364,7 +398,6 @@ background:#22c55e;
             startLiveDashboard()
         }
     });
-
     const users = [
         { username: "manager", password: "123456", warehouse: "P&C" },
         { username: "pharmaUser", password: "123456", warehouse: "Pharma" },
@@ -382,40 +415,64 @@ background:#22c55e;
     const canceledSheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTecpCEwZ10-Ncz2y0xSsAnNdLXcWDGt_GiAeJlbWYhgg9B8zlhvJ1DeDH8H0NDSg/pub?gid=508410365&single=true&output=csv";
     let canceledOrdersSet = new Set();
 
-    async function loadCanceledOrders() {
+ async function loadCanceledOrders() {
 
-        const res = await fetch(canceledSheetURL + "&t=" + Date.now(), {
-            cache: "no-store"
-        });
+    const res = await fetch(canceledSheetURL + "&t=" + Date.now(), {
+        cache: "no-store"
+    });
 
-        const csv = await res.text();
-        const parsed = Papa.parse(csv, { skipEmptyLines: true });
-        const rows = parsed.data;
+    const csv = await res.text();
+    const parsed = Papa.parse(csv, { skipEmptyLines: true });
+    const rows = parsed.data;
 
-        if (!rows.length) return;
+    if (!rows.length) return;
 
-        const headers = rows.shift().map(h => h.toLowerCase().trim());
+    const headers = rows.shift().map(h => h.toLowerCase().trim());
+    const ORDER_COL = headers.indexOf("order #");
 
-        const ORDER_COL = headers.indexOf("order #"); //  lowercase
-
-        if (ORDER_COL === -1) {
-            console.warn("Canceled column not found", headers);
-            return;
-        }
-
-        let newSet = new Set();
-
-        rows.forEach(r => {
-            const orderNo = r[ORDER_COL]?.trim().toUpperCase();
-            if (orderNo) newSet.add(orderNo);
-        });
-
-        canceledOrdersSet = newSet;
-
-        console.log("Canceled Orders Loaded:", canceledOrdersSet.size);
+    if (ORDER_COL === -1) {
+        console.warn("Canceled column not found", headers);
+        return;
     }
+    let newSet = new Set();
 
+    rows.forEach(r => {
+        const orderNo = r[ORDER_COL]?.trim().toUpperCase();
+        if (orderNo) newSet.add(orderNo);
+    });
+    canceledOrdersSet = newSet;
+    console.log("Canceled Orders Loaded:", canceledOrdersSet.size);
 
+    // ✅ 🔥 احفظ في Firebase
+  if (canceledOrdersSet.size > 0) {
+    await saveCanceledToFirebase([...canceledOrdersSet]);
+}}
+async function saveCanceledToFirebase(canceledArray) {
+    const canceledRef = window.ref(window.db, "canceledOrders");
+
+    const snapshot = await window.get(canceledRef);
+    const existing = snapshot.val() || [];
+
+    // دمج القديم + الجديد
+    const merged = [...new Set([...existing, ...canceledArray])];
+
+    await window.set(canceledRef, merged);
+
+    console.log("✅ Canceled merged & saved");
+}
+function loadCanceledFromFirebase() {
+    const canceledRef = window.ref(window.db, "canceledOrders");
+
+    window.onValue(canceledRef, snapshot => {
+        const data = snapshot.val();
+
+        if (!data) return;
+
+        canceledOrdersSet = new Set(data);
+
+        console.log("✅ Canceled loaded from Firebase");
+    });
+}
     let lastDistributionHash = "";
     let distributionCache = {};
     function hashDistribution(dataMap) {
@@ -430,56 +487,43 @@ background:#22c55e;
         );
     }
     function loadDistributedOrders() {
-
         return fetch(distributionSheetURL + "&t=" + Date.now(), {
             cache: "no-store"
         })
             .then(r => r.text())
             .then(csv => {
-
                 const parsed = Papa.parse(csv, { skipEmptyLines: true });
                 const rows = parsed.data;
                 if (!rows.length) return;
-
                 const headers = rows
                     .shift()
                     .map(h => h.toString().trim().toLowerCase());
-
                 const ORDER_COL = headers.indexOf("request number");
                 const DATE_COL = headers.indexOf("request registration date time");
                 const COMPANY_COL = headers.findIndex(h => h.includes("company"));
-
                 if (ORDER_COL === -1 || DATE_COL === -1) {
                     console.warn("❌ Distribution columns not found");
                     return;
                 }
-
                 let newMap = {};
-
                 rows.forEach(r => {
 
                     const orderNo = r[ORDER_COL]?.trim().toUpperCase();
                     const rawDate = r[DATE_COL];
                     const company = COMPANY_COL !== -1 ? r[COMPANY_COL]?.trim() : "";
-
                     if (!orderNo || !rawDate) return;
-
                     const formattedDate = formatDateForInput(rawDate);
                     if (!formattedDate) return;
-
                     newMap[orderNo] = {
                         date: formattedDate,
                         company: company || "LMD"
                     };
                 });
-
                 const newHash = hashDistribution(newMap);
-
                 // 🔥 BLOCK إذا رجعت نسخة قديمة
                 if (lastDistributionHash && newHash === lastDistributionHash) {
                     return; // لا يوجد تغيير
                 }
-
                 // 🔥 لو النسخة أقدم (عدد أقل) تجاهلها
                 if (
                     Object.keys(newMap).length <
@@ -488,12 +532,10 @@ background:#22c55e;
                     console.warn("⚠️ Older distribution snapshot blocked");
                     return;
                 }
-
                 // ✅ اعتماد النسخة الجديدة
                 distributionCache = newMap;
                 distributedOrdersMap = newMap;
                 lastDistributionHash = newHash;
-
                 console.log("✅ Distribution updated safely");
             })
             .catch(err => {
@@ -501,42 +543,34 @@ background:#22c55e;
             });
     }
     function resetFilters() {
-
         // 🔹 إلغاء Today Mode  
         todayOnlyMode = false;
-
         const todayBtn = document.getElementById("todayToggleBtn");
         if (todayBtn) {
             todayBtn.style.background = "#020617";
             todayBtn.style.color = "white";
             todayBtn.textContent = "Today Only";
         }
-
         // 🔹 إعادة التاريخ للقيمة الافتراضية  
         const defaultStart = "2026-02-01";  // 01-Feb-2026  
         const today = new Date().toISOString().slice(0, 10);
 
         dateFrom.value = defaultStart;
         dateTo.value = today;
-
         // 🔹 إعادة ترتيب الطلبات  
         orderSortMode = "newest";
-
         // 🔹 تحديث الداشبورد  
         updateDashboard();
     }
     let lastDisplayedOrders = [];
-
     function updateSearch() {
         const query = document.getElementById("orderSearch").value.trim().toLowerCase();
         const resultsDiv = document.getElementById("searchResultsCard");
         const tableDiv = document.getElementById("searchResultsTable");
-
         if (!query) {
             resultsDiv.style.display = "none";
             return;
         }
-
         const filtered = allOrders.filter(o =>
             o.orderNo.toLowerCase().includes(query)
         );
@@ -547,7 +581,6 @@ background:#22c55e;
             resultsDiv.style.display = "block";
             return;
         }
-
         tableDiv.innerHTML = `  
     <table>  
         <tr>  
@@ -556,9 +589,7 @@ background:#22c55e;
             <th>Status</th>  
         </tr>  
         ${filtered.map(order => {
-
             /* ---------------- STATUS ---------------- */
-
             let statusText = "";
 
             if (order.status === "distributed") {
@@ -576,9 +607,7 @@ background:#22c55e;
             else {
                 statusText = `<span style="color:#f59e0b;font-weight:600;">Pending</span>`;
             }
-
             /* ---------------- WAREHOUSES ---------------- */
-
             const warehousesHTML = `  
                 <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center">  
                     ${order.warehouses.map(w => {
@@ -596,7 +625,6 @@ background:#22c55e;
                 else {
                     tooltipText = `Received in Warehouse: ${w.receivedTime || "-"}`;
                 }
-
                 return `  
                         <div style="position:relative;display:inline-block;">  
                             <span style="  
@@ -611,7 +639,6 @@ background:#22c55e;
                             ">  
                                 ${w.base.toUpperCase()}  
                             </span>  
-  
                             <div style="  
                                 position:absolute;  
                                 bottom:130%;  
@@ -636,9 +663,7 @@ background:#22c55e;
             }).join("")}  
                 </div>  
             `;
-
             /* ---------------- DISTRIBUTED BOX ---------------- */
-
             const distributedBox =
                 order.status === "distributed" && distributedOrdersMap[order.orderNo]
                     ? `  
@@ -661,9 +686,7 @@ background:#22c55e;
                 </div>  
                 `
                     : "";
-
-            /* ---------------- ROW ---------------- */
-
+            /* --------------- ROW ---------------- */
             return `  
                 <tr>  
                     <td>  
@@ -681,9 +704,7 @@ background:#22c55e;
         }).join("")}  
     </table>  
     `;
-
         /* -------- Tooltip Hover Fix -------- */
-
         setTimeout(() => {
             document.querySelectorAll("td div > span").forEach(badge => {
                 badge.addEventListener("mouseenter", function () {
@@ -699,141 +720,102 @@ background:#22c55e;
 
         resultsDiv.style.display = "block";
     }
-
-
     // LOGIN  
     loginForm.onsubmit = e => {
         e.preventDefault();
-
         const u = users.find(
             x => x.username === username.value && x.password === password.value
         );
-
         if (!u) {
             loginError.classList.remove("hidden");
             return;
         }
-
         loginError.classList.add("hidden");
-
         localStorage.setItem("isLoggedIn", "true");
-
         // ✅ تخزين المستودع
         localStorage.setItem("currentWarehouse", u.warehouse);
-
         loginContainer.style.display = "none";
         dashboard.classList.remove("hidden");
-
         loadData();
         startLiveDashboard();
+        loadCanceledFromFirebase();
     };
-
     function getWarehouseBadgeColor(order, warehouse) {
 
         if (order.status === "canceled") {
             return "#ef4444"; // red
         }
-
         if (order.status === "distributed") {
             return "#22c55e";
         }
-
         if (order.status === "partial") {
             return warehouse.packed ? "#22c55e" : "#f59e0b";
         }
-
         if (order.status === "completed") {
             return "#16a34a";
         }
-
         return "#7c2d12";
     }
     function toggleQuickMenu(e) {
         e.stopPropagation();
         document.getElementById("quickDateMenu").classList.toggle("hidden");
     }
-
     // إغلاق القائمة عند الضغط خارجها  
     document.addEventListener("click", () => {
         document.getElementById("quickDateMenu").classList.add("hidden");
     });
-
     function setQuickDate(type) {
         const today = new Date();
-
         const format = d => d.toISOString().slice(0, 10);
-
         let from, to;
-
         switch (type) {
             case "today":
                 from = to = format(today);
                 break;
-
             case "yesterday":
                 const y = new Date(today);
                 y.setDate(y.getDate() - 1);
                 from = to = format(y);
                 break;
-
             case "week":
                 const startOfWeek = new Date(today);
                 startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday  
                 from = format(startOfWeek);
                 to = format(today);
                 break;
-
             case "month":
                 const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
                 from = format(startOfMonth);
                 to = format(today);
                 break;
         }
-
         dateFrom.value = from;
         dateTo.value = to;
-
         updateDashboard();
     }
-
-
-
-
     // FORMAT DATE  
     function formatDateForInput(value) {
         if (!value) return null;
-
         let v = String(value).trim();
-
-        // إزالة الوقت إن وجد  
-        // 27/01/2026 12:54:26  -->  27/01/2026  
         v = v.split(" ")[0];
-
-        // YYYY-MM-DD  
         if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
-
-        // DD/MM/YYYY  ✅ (الحالة الموجودة في الصورة)  
         if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v)) {
             const [d, m, y] = v.split("/");
             return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
         }
-
         // DD-MM-YYYY  
         if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(v)) {
             const [d, m, y] = v.split("-");
             return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
         }
-
         // YYYY/MM/DD  
         if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(v)) {
             const [y, m, d] = v.split("/");
             return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
         }
-
         // fallback  
         const parsed = new Date(value);
         if (!isNaN(parsed)) return parsed.toISOString().slice(0, 10);
-
         return null;
     }
     let highestOrderCountSeen = 0;
@@ -841,13 +823,10 @@ background:#22c55e;
     async function loadData({ force = false, silent = false } = {}) {
         if (isLoading) return;
         isLoading = true;
-
         if (!silent && !dataCache) loadingOverlay.classList.remove("hidden");
-
         try {
             await loadDistributedOrders();
             await loadCanceledOrders();   // 🔥 هذا السطر كان ناقص 
-
             const res = await fetch(sheetURL + "&t=" + Date.now(), {
                 cache: "no-store"
             });
@@ -855,34 +834,26 @@ background:#22c55e;
             const parsed = Papa.parse(csv, { skipEmptyLines: true });
             const rows = parsed.data;
             if (!rows.length) return;
-
             const headers = rows.shift().map(h => h.toLowerCase().trim());
             const col = {};
             headers.forEach((h, i) => col[h] = i);
-
             const ORDER = col["shopify order#"];
             const DATE = col["order received in wh"];
             const WH = col["warehouse name"];
             const PACKED = col["packed"] || null;
-
             const map = {};
-
             rows.forEach(r => {
                 const orderNo = r[ORDER]?.trim().toUpperCase();
                 const date = formatDateForInput(r[DATE]);
                 const whRaw = r[WH]?.trim();
                 const packedRaw = PACKED ? r[PACKED]?.trim() : null;
-
                 if (!orderNo || !date || !whRaw) return;
-
                 if (!map[orderNo]) {
                     map[orderNo] = { orderNo, date, wh: {} };
                 }
-
                 // normalize warehouse  
                 const w = normalizeWarehouse(whRaw);
                 if (!w.base) return;
-
                 if (!map[orderNo].wh[w.base]) {
                     map[orderNo].wh[w.base] = {
                         base: w.base,
@@ -891,7 +862,6 @@ background:#22c55e;
                         packingTime: null
                     };
                 }
-
                 // ✅ معالجة جميع صيغ العمود Packed  
                 const packedValues = ["TRUE", "True", "true", "1", "Yes", "yes", "X", "x"];
 
@@ -902,18 +872,11 @@ background:#22c55e;
                     map[orderNo].wh[w.base].packingTime = formatDateForInput(r[DATE]);
                 }
             });
-
-            // بناء الطلبات النهائية مع تحديد الحالة بدقة  
-            // بناء الطلبات النهائية مع تحديد الحالة بدقة  
             let newOrders = Object.values(map).map(o => {
-
                 const warehouses = Object.values(o.wh);
                 const totalWH = warehouses.length;
                 const packedWH = warehouses.filter(w => w.packed).length;
-
                 let status;
-
-                // 🔴 CANCELED FIRST (أولوية قصوى)
                 if (canceledOrdersSet.has(o.orderNo)) {
                     status = "canceled";
                 }
@@ -929,14 +892,12 @@ background:#22c55e;
                     else if (packedWH < totalWH) status = "partial";
                     else status = "completed";
                 }
-
                 return {
                     ...o,
                     warehouses,
                     warehouseCount: totalWH,
                     status
                 };
-
             });
             // 🔥 احسب أحدث تاريخ فعلي في البيانات
             const newestDateInSnapshot = newOrders
@@ -945,59 +906,43 @@ background:#22c55e;
                 .sort()
                 .pop(); // آخر عنصر = أحدث تاريخ
 
-            // 🔥 لو النسخة أقدم من آخر نسخة عرضناها → تجاهلها
             if (highestEffectiveDateSeen && newestDateInSnapshot < highestEffectiveDateSeen) {
                 console.warn("⚠️ Older snapshot detected — BLOCKED");
                 return;
             }
-
-            // حدّث أحدث تاريخ
             highestEffectiveDateSeen = newestDateInSnapshot;
             if (newOrders.length < highestOrderCountSeen) {
                 console.warn("⚠️ Sheet returned older snapshot — blocked");
                 return;
             }
-
-            highestOrderCountSeen = newOrders.length;
-            //  if (dataCache && newOrders.length < dataCache.length) {  
-            //   console.warn("Old version detected — skipped");  
-            //   return;  
-            //}  
+            highestOrderCountSeen = newOrders.length; 
             // ❌ إذا رجعت نسخة أقل من الحالية — تجاهلها
             if (dataCache && newOrders.length < dataCache.length) {
                 console.warn("⚠️ Older version detected — skipped");
                 return;
             }
-
-            // ❌ إذا الهَاش أقدم أو نفسه — تجاهل
             const newHash = hashData(newOrders);
-
             if (!force && dataCache && newHash === lastDataHash) {
                 return; // لا يوجد تغيير
             }
-            // ❌ إذا لا يوجد تغيير — لا تفعل أي شيء  
             if (!force && dataCache && newHash === lastDataHash) {
                 return; // يحافظ على الأرقام كما هي  
             }
             // إشعار بالطلبات الجديدة  
             let newOnly = [];
-
             if (dataCache && Array.isArray(dataCache)) {
                 const oldSet = new Set(dataCache.map(o => o.orderNo));
                 newOnly = newOrders.filter(o => !oldSet.has(o.orderNo));
             }
-
             if (dataCache && newOnly.length) {
                 showToast(`🔔 ${newOnly.length} new order(s) received`);
             }
-
             dataCache = newOrders;
             allOrders = newOrders;
             lastDataHash = newHash;
-
+saveOrdersToFirebase(newOrders);
             updateDashboard();
             if (!dateFrom.value && !dateTo.value) initDate();
-
         } catch (e) {
             console.error("Load error:", e);
         } finally {
@@ -1005,9 +950,6 @@ background:#22c55e;
             loadingOverlay.classList.add("hidden");
         }
     }
-
-    // INIT DATE FILTER  
-
     function initDate() {
         const today = new Date().toISOString().slice(0, 10);
 
@@ -1016,17 +958,11 @@ background:#22c55e;
 
         updateDashboard();
     }
-
-
     function applyFilters() {
-
         const from = dateFrom.value || null;
         const to = dateTo.value || null;
-
         return allOrders.filter(o => {
-
             const dateToCheck = getEffectiveDate(o);
-
             if (!dateToCheck) return false;
             if (from && dateToCheck < from) return false;
             if (to && dateToCheck > to) return false;
@@ -1040,42 +976,28 @@ background:#22c55e;
         pending: 0,
         distributed: 0
     };
-
     function getEffectiveDate(order) {
-
-        // Distributed
         if (order.status === "distributed") {
             return distributedOrdersMap[order.orderNo]?.date;
         }
-
-        // Completed (In-Packing)
         if (order.status === "completed") {
             const firstPackedWH = order.warehouses.find(w => w.packed);
             return firstPackedWH?.packingTime || order.date;
         }
-
         // Pending / Partial
         return order.date;
     }
-    //filteredOrders = Object.values(unique);  
     function updateDashboard() {
-
         const todayOrders = applyFilters();
         const ACCUMULATE_FROM = "2026-02-02";
-
         const accumulatedOrders = allOrders.filter(o => {
             const dateToCheck = getEffectiveDate(o);
             if (!dateToCheck) return false;
             return dateToCheck >= ACCUMULATE_FROM;
         });
-
-        // ================= TODAY =================
         const CANCELED_START_DATE = "2026-02-02";
-
         const canceledToday = allOrders.filter(o => {
-
             if (o.status !== "canceled") return false;
-
             const dateToCheck = getEffectiveDate(o);
             if (!dateToCheck) return false;
 
@@ -1827,13 +1749,13 @@ ${pendingOrders.length}</a>
     }
     // SHOW WAREHOUSES PAGE  
     function showWarehouses() { }
-    let currentInterval = 3000; // يبدأ 30 ثانية  
+    let currentInterval = 300000; // يبدأ 30 ثانية  
     // ==============================  
     // 🔥 ENTERPRISE LIVE ENGINE  
     // ==============================  
 
-    const FAST_INTERVAL = 2000;   // نشط  
-    const SLOW_INTERVAL = 3000;  // خمول  
+    const FAST_INTERVAL = 600000;   // نشط  
+    const SLOW_INTERVAL = 600000;  // خمول  
 
     let liveTimer = null;
     let idleTimer = null;
@@ -1887,7 +1809,7 @@ ${pendingOrders.length}</a>
         idleTimer = setTimeout(() => {
             isIdle = true;
             runLiveCycle(SLOW_INTERVAL);
-        }, 60000); // بعد دقيقة خمول  
+        }, 600000); // بعد دقيقة خمول  
     }
 
     //function stopAutoRefresh() {  
