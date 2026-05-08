@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="test.css">
 
 </head>
 
@@ -22,7 +22,7 @@
             <form id="loginForm" class="login-card">
                 <h2 class="login-title">
                     <span>MY</span>HOLDAL
-                </h2>
+                </h2> 
 
                 <div class="input-group">
                     <i class="fa-solid fa-user"></i>
@@ -338,57 +338,23 @@ window.set = set;
         window.get = get;
         window.update = update;
         window.runTransaction = runTransaction;
-window.remove = remove;
+        window.remove = remove;
 
-// 🔥 مراقبة الطلبات من Firebase
-window.onValue(window.ref(window.db, "orders"), snapshot => {
-
-    const data = snapshot.val();
-
-    if (!data) return;
-
-    allOrders = Object.values(data);
-
-    updateDashboard();
-
-    console.log("✅ Orders synced from Firebase");
-
-});
     </script>
+
+
+
+
 <script>
 async function saveOrdersToFirebase(orders) {
     try {
-
-        const ordersRef = window.ref(window.db, "orders");
-
-        // قراءة البيانات القديمة
-        const snapshot = await window.get(ordersRef);
-        const existing = snapshot.val() || {};
-
-        // تحويل الطلبات الجديدة إلى object
-        const newData = {};
-
-        orders.forEach(order => {
-            newData[order.orderNo] = order;
-        });
-
-        // دمج القديم مع الجديد
-        const merged = {
-            ...existing,
-            ...newData
-        };
-
-        // حفظ بدون حذف القديم
-        await window.set(ordersRef, merged);
-
-        console.log("✅ Orders merged successfully");
-
+await window.set(window.ref(window.db, "orders"), orders);      
+  console.log("✅ Data saved to Firebase");
     } catch (e) {
         console.error("❌ Firebase save error:", e);
     }
 }
-
-const orderDetails = document.getElementById("orderDetails");
+    const orderDetails = document.getElementById("orderDetails");
 
     orderDetails.addEventListener("click", (e) => {
         if (e.target === orderDetails) {
