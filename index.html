@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="test.css">
 
 </head>
 
@@ -346,15 +346,61 @@ window.set = set;
 
 
 <script>
-async function saveOrdersToFirebase(orders) {
+async function loadOrdersFromFirebaseFirst() {
+
     try {
-await window.set(window.ref(window.db, "orders"), orders);      
-  console.log("✅ Data saved to Firebase");
+
+        const snapshot = await window.get(
+            window.ref(window.db, "orders")
+        );
+
+        const firebaseData = snapshot.val() || {};
+const firebaseOrders = Object.values(firebaseData);
+
+        if (!firebaseOrders || !firebaseOrders.length) {
+            console.warn("No Firebase cache");
+            return;
+        }
+
+        allOrders = firebaseOrders;
+        dataCache = firebaseOrders;
+
+        updateDashboard();
+
+        console.log("⚡ Loaded instantly from Firebase");
+
     } catch (e) {
-        console.error("❌ Firebase save error:", e);
+
+        console.error("Firebase preload failed:", e);
+
     }
 }
-    const orderDetails = document.getElementById("orderDetails");
+async function saveOrdersToFirebase(orders) {
+
+    try {
+
+        const updates = {};
+
+        orders.forEach(order => {
+
+            updates["orders/" + order.orderNo] = order;
+
+        });
+
+        await window.update(
+            window.ref(window.db),
+            updates
+        );
+
+        console.log("✅ Orders merged safely");
+
+    } catch (e) {
+
+        console.error("❌ Firebase save error:", e);
+
+    }
+}  
+const orderDetails = document.getElementById("orderDetails");
 
     orderDetails.addEventListener("click", (e) => {
         if (e.target === orderDetails) {
@@ -387,17 +433,28 @@ await window.set(window.ref(window.db, "orders"), orders);
     }
     const loginContainer = document.getElementById("loginContainer");
     const dashboard = document.getElementById("dashboard");
-    window.addEventListener('DOMContentLoaded', () => {
-        const loggedIn = localStorage.getItem("isLoggedIn");
+    window.addEventListener('DOMContentLoaded', async () => {
 
-        if (loggedIn === "true") {
-            loginContainer.style.display = "none";
-            dashboard.classList.remove("hidden");
-            loadData();
-            loadSecureOrders();
-            startLiveDashboard()
-        }
-    });
+    const loggedIn = localStorage.getItem("isLoggedIn");
+
+    if (loggedIn === "true") {
+
+        loginContainer.style.display = "none";
+
+        dashboard.classList.remove("hidden");
+
+        await loadOrdersFromFirebaseFirst();
+
+setTimeout(() => {
+    loadData({ silent: true });
+}, 2000);
+
+        loadSecureOrders();
+
+        startLiveDashboard();
+    }
+
+});
     const users = [
         { username: "manager", password: "123456", warehouse: "P&C" },
         { username: "pharmaUser", password: "123456", warehouse: "Pharma" },
@@ -560,6 +617,7 @@ function loadCanceledFromFirebase() {
         // 🔹 إعادة ترتيب الطلبات  
         orderSortMode = "newest";
         // 🔹 تحديث الداشبورد  
+if (newHash === lastDataHash) return;
         updateDashboard();
     }
     let lastDisplayedOrders = [];
@@ -825,11 +883,16 @@ function loadCanceledFromFirebase() {
         isLoading = true;
         if (!silent && !dataCache) loadingOverlay.classList.remove("hidden");
         try {
-            await loadDistributedOrders();
-            await loadCanceledOrders();   // 🔥 هذا السطر كان ناقص 
-            const res = await fetch(sheetURL + "&t=" + Date.now(), {
-                cache: "no-store"
-            });
+            const [_, __, res] = await Promise.all([
+
+    loadDistributedOrders(),
+    loadCanceledOrders(),
+
+    fetch(sheetURL + "&t=" + Date.now(), {
+        cache: "no-store"
+    })
+
+]);
             const csv = await res.text();
             const parsed = Papa.parse(csv, { skipEmptyLines: true });
             const rows = parsed.data;
@@ -937,10 +1000,60 @@ function loadCanceledFromFirebase() {
             if (dataCache && newOnly.length) {
                 showToast(`🔔 ${newOnly.length} new order(s) received`);
             }
-            dataCache = newOrders;
-            allOrders = newOrders;
-            lastDataHash = newHash;
-saveOrdersToFirebase(newOrders);
+            // ===============================
+// الحفاظ على الطلبات المحلية
+// ===============================
+
+// الطلبات المضافة من users
+// ===============================
+// تحميل الطلبات القديمة من Firebase
+// ===============================
+
+const ordersRef = window.ref(window.db, "orders");
+const snapshot = await window.get(ordersRef);
+
+const firebaseData = snapshot.val() || {};
+const firebaseOrders = Object.values(firebaseData);
+
+// الطلبات الموجودة فقط في Firebase
+const firebaseOnlyOrders = firebaseOrders.filter(firebaseOrder => {
+
+    return !newOrders.some(sheetOrder =>
+        sheetOrder.orderNo === firebaseOrder.orderNo
+    );
+
+});
+
+// دمج بيانات الشيت + بيانات Firebase
+const mergedOrders = [
+    ...newOrders,
+    ...firebaseOnlyOrders
+];
+// 🔥 حماية من مسح الشيت أو رجوع snapshot قديم
+
+if (
+    firebaseOrders.length > 0 &&
+    mergedOrders.length < firebaseOrders.length
+) {
+    console.warn("⚠️ Prevented Firebase overwrite with smaller dataset");
+    return;
+}
+// تحديث الكاش
+dataCache = mergedOrders;
+allOrders = mergedOrders;
+lastDataHash = newHash;
+
+// حفظ النسخة الجديدة
+if (newHash !== lastDataHash) {
+    await saveOrdersToFirebase(mergedOrders);
+}
+// تحديث البيانات
+dataCache = mergedOrders;
+allOrders = mergedOrders;
+lastDataHash = newHash;
+
+// حفظ النسخة المدموجة
+saveOrdersToFirebase(mergedOrders);
             updateDashboard();
             if (!dateFrom.value && !dateTo.value) initDate();
         } catch (e) {
@@ -1934,7 +2047,7 @@ ${pendingOrders.length}</a>
     // =============================
     // SAVE NEW ORDER
     // =============================
-    function saveNewOrder() {
+    async function saveNewOrder() {
 
         const orderNo = document.getElementById("newOrderNumber").value.trim();
         const warehouse = document.getElementById("newWarehouseName").value.trim();
@@ -1984,8 +2097,10 @@ fetch(GOOGLE_SCRIPT_URL, {
 .catch(err => {
     console.error("Sheet Error:", err);
 });
-        allOrders.push(newOrder);
-
+      await window.set(
+    window.ref(window.db, "orders/" + newOrder.orderNo),
+    newOrder
+);
         updateDashboard();
 
         showToast(`✅ Order ${orderNo} added successfully`);
