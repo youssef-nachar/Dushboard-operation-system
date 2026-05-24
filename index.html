@@ -211,7 +211,7 @@ background:#22c55e;
             </div>
             <div class="kpis">
                 <div class="kpi" onclick="showOrderDetails('total')">
-                
+                        <i class="fa-solid fa-box"></i>
 
                     <div>Total Orders</div>
                     <div id="total" class="value">0</div>
@@ -404,27 +404,49 @@ async function saveOrdersToFirebase(orders) {
 
     try {
 
+        const rootRef = window.ref(window.db, "orders");
+
+        // تحميل البيانات الحالية
+        const snapshot = await window.get(rootRef);
+
+        const existingData = snapshot.val() || {};
+
         const updates = {};
 
-        orders.forEach(order => {
+        for (const order of orders) {
 
-            updates["orders/" + order.orderNo] = order;
+            // البحث عن الطلب الحالي
+            const existingOrder =
+                existingData[order.orderNo] || {};
 
-        });
+            // دمج القديم + الجديد
+            updates[order.orderNo] = {
 
-        await window.update(
-            window.ref(window.db),
-            updates
-        );
+                ...existingOrder, // القديم
+                ...order,         // الجديد من الشيت
 
-        console.log("✅ Orders merged safely");
+                // حماية البيانات المحلية
+                comment:
+                    existingOrder.comment || "",
+
+                source:
+                    existingOrder.source || "sheet",
+
+                firebaseId:
+                    existingOrder.firebaseId || order.orderNo
+            };
+        }
+
+        await window.update(rootRef, updates);
+
+        console.log("✅ Smart merge completed");
 
     } catch (e) {
 
-        console.error("❌ Firebase save error:", e);
+        console.error("❌ Merge save failed:", e);
 
     }
-}  
+}
 const orderDetails = document.getElementById("orderDetails");
 
     orderDetails.addEventListener("click", (e) => {
@@ -1066,11 +1088,12 @@ if (
 // تحديث الكاش
 dataCache = mergedOrders;
 allOrders = mergedOrders;
-lastDataHash = newHash;
-
 // حفظ النسخة الجديدة
 if (newHash !== lastDataHash) {
+
     await saveOrdersToFirebase(mergedOrders);
+
+    lastDataHash = newHash;
 }
 // تحديث البيانات
 dataCache = mergedOrders;
@@ -1078,7 +1101,6 @@ allOrders = mergedOrders;
 lastDataHash = newHash;
 
 // حفظ النسخة المدموجة
-saveOrdersToFirebase(mergedOrders);
             updateDashboard();
             if (!dateFrom.value && !dateTo.value) initDate();
         } catch (e) {
@@ -2123,7 +2145,7 @@ fetch(GOOGLE_SCRIPT_URL, {
     console.error("Sheet Error:", err);
 });
       await window.set(
-    window.ref(window.db, "orders/" + newOrder.orderNo),
+    window.ref(window.db, "manualOrders/" + newOrder.orderNo),
     newOrder
 );
         updateDashboard();
