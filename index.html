@@ -666,7 +666,164 @@ if (newHash === lastDataHash) return;
         updateDashboard();
     }
     let lastDisplayedOrders = [];
+    function updateSearch() {
+        const query = document.getElementById("orderSearch").value.trim().toLowerCase();
+        const resultsDiv = document.getElementById("searchResultsCard");
+        const tableDiv = document.getElementById("searchResultsTable");
+        if (!query) {
+            resultsDiv.style.display = "none";
+            return;
+        }
+        const filtered = allOrders.filter(o =>
+            o.orderNo.toLowerCase().includes(query)
+        );
 
+        if (!filtered.length) {
+            tableDiv.innerHTML =
+                "<p style='color:var(--warning)'>No matching orders found.</p>";
+            resultsDiv.style.display = "block";
+            return;
+        }
+        tableDiv.innerHTML = `  
+    <table>  
+        <tr>  
+            <th>Order #</th>  
+            <th>Warehouses</th>  
+            <th>Status</th>  
+        </tr>  
+        ${filtered.map(order => {
+            /* ---------------- STATUS ---------------- */
+            let statusText = "";
+
+            if (order.status === "distributed") {
+                statusText = `<span style="color:#22c55e;font-weight:600;">Distributed</span>`;
+            }
+            else if (order.status === "canceled") {
+                statusText = `<span style="color:#f59e0b;font-weight:600;">canceled</span>`;
+            }
+            else if (order.status === "completed") {
+                statusText = `<span style="color:#22c55e;font-weight:600;">In-Packing</span>`;
+            }
+            else if (order.status === "partial") {
+                statusText = `<span style="color:#f59e0b;font-weight:600;">Partial</span>`;
+            }
+            else {
+                statusText = `<span style="color:#f59e0b;font-weight:600;">Pending</span>`;
+            }
+            /* ---------------- WAREHOUSES ---------------- */
+            const warehousesHTML = `  
+                <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center">  
+                    ${order.warehouses.map(w => {
+
+                const color = getWarehouseBadgeColor(order, w);
+
+                let tooltipText = "";
+
+                if (order.status === "distributed") {
+                    tooltipText = `Distributed at: ${distributedOrdersMap[order.orderNo]?.date || "-"}`;
+                }
+                else if (w.packed) {
+                    tooltipText = `Received at Packing: ${w.packingTime || w.receivedTime || "-"}`;
+                }
+                else {
+                    tooltipText = `Received in Warehouse: ${w.receivedTime || "-"}`;
+                }
+                return `  
+                        <div style="position:relative;display:inline-block;">  
+                            <span style="  
+                                display:inline-block;  
+                                padding:5px 10px;  
+                                border-radius:8px;  
+                                font-size:12px;  
+                                font-weight:600;  
+                                background:${color};  
+                                color:black;  
+                                cursor:pointer;  
+                            ">  
+                                ${w.base.toUpperCase()}  
+                            </span>  
+                            <div style="  
+                                position:absolute;  
+                                bottom:130%;  
+                                left:50%;  
+                                transform:translateX(-50%);  
+                                background:#0f172a;  
+                                color:white;  
+                                padding:8px 10px;  
+                                border-radius:8px;  
+                                font-size:12px;  
+                                white-space:nowrap;  
+                                opacity:0;  
+                                pointer-events:none;  
+                                transition:.2s ease;  
+                                box-shadow:0 8px 25px rgba(0,0,0,.4);  
+                                z-index:9999;  
+                            " class="wh-tooltip">  
+                                ${tooltipText}  
+                            </div>  
+                        </div>  
+                        `;
+            }).join("")}  
+                </div>  
+            `;
+            /* ---------------- DISTRIBUTED BOX ---------------- */
+            const distributedBox =
+                order.status === "distributed" && distributedOrdersMap[order.orderNo]
+                    ? `  
+                <div style="  
+                    margin-top:8px;  
+                    padding:8px 10px;  
+                    border-radius:10px;  
+                    background:#022c22;  
+                    border:1px solid #065f46;  
+                    font-size:12px;  
+                    display:inline-block;  
+                ">  
+                    <div style="color:#22c55e;font-weight:600;">  
+                        <i class="fa-solid fa-truck"></i>  
+                        Distributed by ${distributedOrdersMap[order.orderNo].company}  
+                    </div>  
+                    <div style="opacity:.7;margin-top:2px;">  
+                        ${distributedOrdersMap[order.orderNo].date}  
+                    </div>  
+                </div>  
+                `
+                    : "";
+            /* --------------- ROW ---------------- */
+            return `  
+                <tr>  
+                    <td>  
+                        <div style="font-weight:600;">  
+                            ${order.orderNo}  
+                        </div>  
+                        ${distributedBox}  
+                    </td>  
+  
+                    <td>${warehousesHTML}</td>  
+  
+                    <td>${statusText}</td>  
+                </tr>  
+            `;
+        }).join("")}  
+    </table>  
+    `;
+        /* -------- Tooltip Hover Fix -------- */
+        setTimeout(() => {
+            document.querySelectorAll("td div > span").forEach(badge => {
+                badge.addEventListener("mouseenter", function () {
+                    const tooltip = this.parentElement.querySelector(".wh-tooltip");
+                    if (tooltip) tooltip.style.opacity = "1";
+                });
+                badge.addEventListener("mouseleave", function () {
+                    const tooltip = this.parentElement.querySelector(".wh-tooltip");
+                    if (tooltip) tooltip.style.opacity = "0";
+                });
+            });
+        }, 0);
+
+        resultsDiv.style.display = "block";
+    }
+   
     loginForm.onsubmit = e => {
         e.preventDefault();
         const u = users.find(
@@ -1495,7 +1652,142 @@ ${pendingOrders.length}</a>
         } if (type === "distributed") o = o.filter(x => x.status === "distributed");
         displayOrders(o, "Multi-Warehouse Orders");
     }
+    function displayOrders(orders, title = "Order Details") {
+        orders.sort((a, b) => {
 
+            function getFullDate(order) {
+
+                // لو الطلب Distributed
+                if (order.status === "distributed") {
+                    return new Date(distributedOrdersMap[order.orderNo]?.date);
+                }
+
+                // أخذ أول وقت استلام من أول warehouse
+                const firstWH = order.warehouses[0];
+
+                if (firstWH?.receivedTime) {
+                    return new Date(firstWH.receivedTime);
+                }
+
+                return new Date(order.date); // fallback
+            }
+
+            return getFullDate(b) - getFullDate(a); // ⬅️ الأحدث أولاً حسب الوقت
+        });
+        const orderList = document.getElementById("orderList");
+        lastDisplayedOrders = orders; // مهم للتصدير  
+
+        let html = `  
+    <table>  
+      <thead>  
+        <tr>  
+          <th>Order #</th>  
+          <th>Warehouses</th>  
+          <th>Status</th>  
+        </tr>  
+      </thead>  
+      <tbody>  
+    `;
+
+        const seen = new Set();
+
+        orders.forEach(order => {
+            const key = order.orderNo.toUpperCase();
+            if (seen.has(key)) return;
+            seen.add(key);
+
+            // تحديد حالة الطلب  
+            let statusText = "";
+
+            if (order.status === "canceled") {
+                statusText = "Canceled";
+            }
+            else if (order.status === "distributed") {
+                statusText = "Distributed";
+            }
+            else if (order.status === "completed") {
+                statusText = "In-Packing";
+            }
+            else if (order.status === "partial") {
+                statusText = "Partial";
+            }
+            else {
+                statusText = "Pending";
+            }
+            html += `  
+        <tr>  
+          <td>${order.orderNo}</td>  
+          <td>  
+            ${order.warehouses.map(w => {
+                // تحديد لون الـ badge لكل warehouse  
+                let color, text;
+
+                if (order.status === "distributed") {
+                    color = "#22c55e";
+                    text = "Distributed";
+                } else if (w.packed) {
+                    color = "#22c55e";
+                    text = "In-Packing";
+                } else {
+                    color = "#7c2d12";
+                    text = "Pending";
+                }
+
+                let tooltipText = "";
+
+                if (order.status === "distributed") {
+                    tooltipText = `Distributed at: ${distributedOrdersMap[order.orderNo]?.date || "-"}`;
+                }
+                else if (w.packed) {
+                    tooltipText = `Received at Packing Station: ${w.receivedTime || "-"}`;
+                }
+                else {
+                    tooltipText = `Received in Warehouse: ${w.receivedTime || "-"}`;
+                }
+
+                return `  
+<div class="tooltip-wrapper">  
+    <span style="  
+        display:inline-block;  
+        margin:2px;  
+        padding:4px 8px;  
+        border-radius:6px;  
+        font-size:12px;  
+        font-weight:600;  
+        background:${color};  
+        color:black;  
+        cursor:pointer;  
+    ">  
+        ${w.base.toUpperCase()}  
+    </span>  
+    <div class="tooltip-box">  
+        ${tooltipText}  
+    </div>  
+</div>  
+`;
+            }).join("")}  
+          </td>  
+          <td style="font-weight:600; color:#9ca3af">  
+            ${statusText}  
+          </td>  
+        </tr>  
+        `;
+        });
+
+        html += `  
+      </tbody>  
+    </table>  
+    `;
+
+        orderList.innerHTML = `  
+      <h3 style="color:var(--accent); margin-bottom:12px"></h3>  
+      ${html}  
+    `;
+
+        // إظهار نافذة التفاصيل  
+        document.getElementById("orderDetails").classList.remove("hidden");
+    }
+ 
     function showSingleWHOrders(type) {
         let o = applyFilters().filter(x => x.warehouseCount === 1);
         if (type === "completed") o = o.filter(x => x.status === "completed");
