@@ -8,70 +8,47 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<link rel="stylesheet"
-href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="style.css">
-<link rel="preconnect" href="https://fonts.googleapis.com">
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-<link rel="stylesheet"
-href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 
 <body>
     <div id="tooltip" class="tooltip hidden"></div>
 
-<div id="loginSection">
+    <div id="loginSection">
+        <!-- كل كود الـ login هنا -->
+        <div id="loginContainer" class="login-wrapper">
+            <form id="loginForm" class="login-card">
+                <h2 class="login-title">
+                    <span>MY</span>HOLDAL
+                </h2> 
 
-    <div id="loginContainer" class="login-wrapper">
+                <div class="input-group">
+                    <i class="fa-solid fa-user"></i>
+                    <input id="username" placeholder="Username" required>
+                </div>
 
-   <form id="loginForm" class="login-card">
+                <div class="input-group">
+                    <i class="fa-solid fa-lock"></i>
+                    <input id="password" type="password" placeholder="Password" required>
+                </div>
 
-    <!-- LOGO -->
+                <button class="login-btn">
+                    <i class="fa-solid fa-right-to-bracket"></i> Login
+                </button>
 
-     <div class="login-logo">
-        <img src="https://lh5.googleusercontent.com/7lBW3j5HqbadbeeiHB2ATG3KI7qtkZ8Hatu3B3cQN0ehCY71tuLnlkTGkpnwH9SLXqjc2UVg5aPvTrclw2Wa-x8MIvHjkcolJ_irVro_E4DE9wnFAaLkbVDgv9MO7UUI7BU6v9a7"
-             alt="MYHOLDAL Logo">
+                <p id="loginError" class="login-error hidden">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    Incorrect username or password
+                </p>
+            </form>
+        </div>
+
     </div>
-
-    <p class="login-subtitle">
-        Warehouse Management Dashboard
-    </p>
-
-    <div class="input-group">
-        <input id="username"
-               placeholder="Username"
-               required>
-
-        <i class="fa-solid fa-user"></i>
-    </div>
-
-    <div class="input-group">
-        <input id="password"
-               type="password"
-               placeholder="Password"
-               required>
-
-        <i class="fa-solid fa-lock"></i>
-    </div>
-
-    <button class="login-btn">
-        <i class="fa-solid fa-right-to-bracket"></i>
-        Login
-    </button>
-<p id="loginError" class="login-error hidden">
-    <i class="fa-solid fa-circle-exclamation"></i>
-    Incorrect username or password
-</p>
-</form>
-    </div>
-
-</div>
     <div id="dashboard" class="hidden app">
         <aside class="sidebar">
-            <h2>Warehouse Management Dashboard</h2>
+            <h2><i class="fa-solid fa-warehouse"></i>Operation dashboard system</h2>
             <a href="#" onclick="showDashboardHome()">
                 <i class="fa-solid fa-chart-line"></i> Dashboard</a>
             <div class="menu-item">
@@ -211,8 +188,6 @@ background:#22c55e;
             </div>
             <div class="kpis">
                 <div class="kpi" onclick="showOrderDetails('total')">
-                        <i class="fa-solid fa-box"></i>
-
                     <div>Total Orders</div>
                     <div id="total" class="value">0</div>
                 </div>
@@ -371,81 +346,15 @@ window.set = set;
 
 
 <script>
-    function safeFirebaseKey(key) {
-    return String(key)
-        .replace(/[.#$/\[\]]/g, "_");
-}
-async function loadOrdersFromFirebaseFirst() {
-
-    try {
-
-        const snapshot = await window.get(
-            window.ref(window.db, "orders")
-        );
-
-        const firebaseData = snapshot.val() || {};
-const firebaseOrders = Object.values(firebaseData);
-
-        if (!firebaseOrders || !firebaseOrders.length) {
-            console.warn("No Firebase cache");
-            return;
-        }
-
-        allOrders = firebaseOrders;
-        dataCache = firebaseOrders;
-
-        updateDashboard();
-
-        console.log("⚡ Loaded instantly from Firebase");
-
-    } catch (e) {
-
-        console.error("Firebase preload failed:", e);
-
-    }
-}
 async function saveOrdersToFirebase(orders) {
-
     try {
-
-        const rootRef = window.ref(window.db, "orders");
-
-        // تحميل البيانات الحالية
-        const snapshot = await window.get(rootRef);
-
-        const existingData = snapshot.val() || {};
-
-        const updates = {};
-
-        for (const order of orders) {
-
-            // البحث عن الطلب الحالي
-            const existingOrder =
-                existingData[order.orderNo] || {};
-
-            // دمج القديم + الجديد
-const safeKey = safeFirebaseKey(order.orderNo);
-
-updates[safeKey] = {
-    ...existingOrder,
-    ...order,
-    comment: existingOrder.comment || "",
-    source: existingOrder.source || "sheet",
-    firebaseId: existingOrder.firebaseId || safeKey
-};
-        }
-
-        await window.update(rootRef, updates);
-
-        console.log("✅ Smart merge completed");
-
+await window.set(window.ref(window.db, "orders"), orders);      
+  console.log("✅ Data saved to Firebase");
     } catch (e) {
-
-        console.error("❌ Merge save failed:", e);
-
+        console.error("❌ Firebase save error:", e);
     }
 }
-const orderDetails = document.getElementById("orderDetails");
+    const orderDetails = document.getElementById("orderDetails");
 
     orderDetails.addEventListener("click", (e) => {
         if (e.target === orderDetails) {
@@ -478,28 +387,17 @@ const orderDetails = document.getElementById("orderDetails");
     }
     const loginContainer = document.getElementById("loginContainer");
     const dashboard = document.getElementById("dashboard");
-    window.addEventListener('DOMContentLoaded', async () => {
+    window.addEventListener('DOMContentLoaded', () => {
+        const loggedIn = localStorage.getItem("isLoggedIn");
 
-    const loggedIn = localStorage.getItem("isLoggedIn");
-
-    if (loggedIn === "true") {
-
-        loginContainer.style.display = "none";
-
-        dashboard.classList.remove("hidden");
-
-        await loadOrdersFromFirebaseFirst();
-
-setTimeout(() => {
-    loadData({ silent: true });
-}, 2000);
-
-        loadSecureOrders();
-
-        startLiveDashboard();
-    }
-
-});
+        if (loggedIn === "true") {
+            loginContainer.style.display = "none";
+            dashboard.classList.remove("hidden");
+            loadData();
+            loadSecureOrders();
+            startLiveDashboard()
+        }
+    });
     const users = [
         { username: "manager", password: "123456", warehouse: "P&C" },
         { username: "pharmaUser", password: "123456", warehouse: "Pharma" },
@@ -662,7 +560,6 @@ function loadCanceledFromFirebase() {
         // 🔹 إعادة ترتيب الطلبات  
         orderSortMode = "newest";
         // 🔹 تحديث الداشبورد  
-if (newHash === lastDataHash) return;
         updateDashboard();
     }
     let lastDisplayedOrders = [];
@@ -823,7 +720,7 @@ if (newHash === lastDataHash) return;
 
         resultsDiv.style.display = "block";
     }
-   
+    // LOGIN  
     loginForm.onsubmit = e => {
         e.preventDefault();
         const u = users.find(
@@ -928,16 +825,11 @@ if (newHash === lastDataHash) return;
         isLoading = true;
         if (!silent && !dataCache) loadingOverlay.classList.remove("hidden");
         try {
-            const [_, __, res] = await Promise.all([
-
-    loadDistributedOrders(),
-    loadCanceledOrders(),
-
-    fetch(sheetURL + "&t=" + Date.now(), {
-        cache: "no-store"
-    })
-
-]);
+            await loadDistributedOrders();
+            await loadCanceledOrders();   // 🔥 هذا السطر كان ناقص 
+            const res = await fetch(sheetURL + "&t=" + Date.now(), {
+                cache: "no-store"
+            });
             const csv = await res.text();
             const parsed = Papa.parse(csv, { skipEmptyLines: true });
             const rows = parsed.data;
@@ -960,28 +852,16 @@ if (newHash === lastDataHash) return;
                     map[orderNo] = { orderNo, date, wh: {} };
                 }
                 // normalize warehouse  
-const w = normalizeWarehouse(whRaw);
-
-// ❌ حماية قوية ضد التواريخ والقيم الغريبة
-if (
-    !w.base ||
-    /^\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}/.test(w.base) ||
-    w.base.includes("1899") ||
-    w.base.length > 50
-) {
-    console.warn("Skipped invalid warehouse:", whRaw);
-    return;
-}
-           const whKey = safeKey(w.base);
-
-if (!map[orderNo].wh[whKey]) {
-    map[orderNo].wh[whKey] = {
-        base: w.base,
-        packed: false,
-        receivedTime: formatDateForInput(r[DATE]),
-        packingTime: null
-    };
-}
+                const w = normalizeWarehouse(whRaw);
+                if (!w.base) return;
+                if (!map[orderNo].wh[w.base]) {
+                    map[orderNo].wh[w.base] = {
+                        base: w.base,
+                        packed: false,
+                        receivedTime: formatDateForInput(r[DATE]),
+                        packingTime: null
+                    };
+                }
                 // ✅ معالجة جميع صيغ العمود Packed  
                 const packedValues = ["TRUE", "True", "true", "1", "Yes", "yes", "X", "x"];
 
@@ -1057,60 +937,10 @@ if (!map[orderNo].wh[whKey]) {
             if (dataCache && newOnly.length) {
                 showToast(`🔔 ${newOnly.length} new order(s) received`);
             }
-            // ===============================
-// الحفاظ على الطلبات المحلية
-// ===============================
-
-// الطلبات المضافة من users
-// ===============================
-// تحميل الطلبات القديمة من Firebase
-// ===============================
-
-const ordersRef = window.ref(window.db, "orders");
-const snapshot = await window.get(ordersRef);
-
-const firebaseData = snapshot.val() || {};
-const firebaseOrders = Object.values(firebaseData);
-
-// الطلبات الموجودة فقط في Firebase
-const firebaseOnlyOrders = firebaseOrders.filter(firebaseOrder => {
-
-    return !newOrders.some(sheetOrder =>
-        sheetOrder.orderNo === firebaseOrder.orderNo
-    );
-
-});
-
-// دمج بيانات الشيت + بيانات Firebase
-const mergedOrders = [
-    ...newOrders,
-    ...firebaseOnlyOrders
-];
-// 🔥 حماية من مسح الشيت أو رجوع snapshot قديم
-
-if (
-    firebaseOrders.length > 0 &&
-    mergedOrders.length < firebaseOrders.length
-) {
-    console.warn("⚠️ Prevented Firebase overwrite with smaller dataset");
-    return;
-}
-// تحديث الكاش
-dataCache = mergedOrders;
-allOrders = mergedOrders;
-// حفظ النسخة الجديدة
-if (newHash !== lastDataHash) {
-
-    await saveOrdersToFirebase(mergedOrders);
-
-    lastDataHash = newHash;
-}
-// تحديث البيانات
-dataCache = mergedOrders;
-allOrders = mergedOrders;
-lastDataHash = newHash;
-
-// حفظ النسخة المدموجة
+            dataCache = newOrders;
+            allOrders = newOrders;
+            lastDataHash = newHash;
+saveOrdersToFirebase(newOrders);
             updateDashboard();
             if (!dateFrom.value && !dateTo.value) initDate();
         } catch (e) {
@@ -1128,11 +958,6 @@ lastDataHash = newHash;
 
         updateDashboard();
     }
-    function safeKey(key) {
-    return String(key)
-        .trim()
-        .replace(/[.#$/\[\]]/g, "_");
-}
     function applyFilters() {
         const from = dateFrom.value || null;
         const to = dateTo.value || null;
@@ -1652,6 +1477,15 @@ ${pendingOrders.length}</a>
         } if (type === "distributed") o = o.filter(x => x.status === "distributed");
         displayOrders(o, "Multi-Warehouse Orders");
     }
+
+    function showSingleWHOrders(type) {
+        let o = applyFilters().filter(x => x.warehouseCount === 1);
+        if (type === "completed") o = o.filter(x => x.status === "completed");
+        if (type === "pending") o = o.filter(x => x.status === "pending");
+        if (type === "distributed") o = o.filter(x => x.status === "distributed");
+        displayOrders(o, "Single-Warehouse Orders");
+    }
+
     function displayOrders(orders, title = "Order Details") {
         orders.sort((a, b) => {
 
@@ -1787,16 +1621,7 @@ ${pendingOrders.length}</a>
         // إظهار نافذة التفاصيل  
         document.getElementById("orderDetails").classList.remove("hidden");
     }
- 
-    function showSingleWHOrders(type) {
-        let o = applyFilters().filter(x => x.warehouseCount === 1);
-        if (type === "completed") o = o.filter(x => x.status === "completed");
-        if (type === "pending") o = o.filter(x => x.status === "pending");
-        if (type === "distributed") o = o.filter(x => x.status === "distributed");
-        displayOrders(o, "Single-Warehouse Orders");
-    }
-
-  function toggleMenu(id) {
+    function toggleMenu(id) {
         const menu = document.getElementById(id);
         if (!menu) return;
 
@@ -2109,7 +1934,7 @@ ${pendingOrders.length}</a>
     // =============================
     // SAVE NEW ORDER
     // =============================
-    async function saveNewOrder() {
+    function saveNewOrder() {
 
         const orderNo = document.getElementById("newOrderNumber").value.trim();
         const warehouse = document.getElementById("newWarehouseName").value.trim();
@@ -2159,12 +1984,8 @@ fetch(GOOGLE_SCRIPT_URL, {
 .catch(err => {
     console.error("Sheet Error:", err);
 });
-const safeKey = safeFirebaseKey(newOrder.orderNo);
+        allOrders.push(newOrder);
 
-window.set(
-    ref(db, "manualOrders/" + safeKey),
-    newOrder
-);
         updateDashboard();
 
         showToast(`✅ Order ${orderNo} added successfully`);
