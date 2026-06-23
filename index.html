@@ -427,9 +427,13 @@ await window.set(window.ref(window.db, "orders"), orders);
 
     if (!rows.length) return;
 
-    const headers = rows.shift().map(h => h.toLowerCase().trim());
-    const ORDER_COL = headers.indexOf("order #");
+const headers = rows.shift().map(h =>
+    h.toString().toLowerCase().trim().replace(/\s+/g, " ")
+);
 
+const ORDER_COL = headers.findIndex(h =>
+    h.includes("order") && h.includes("#")
+);
     if (ORDER_COL === -1) {
         console.warn("Canceled column not found", headers);
         return;
@@ -994,17 +998,21 @@ saveOrdersToFirebase(newOrders);
         pending: 0,
         distributed: 0
     };
-    function getEffectiveDate(order) {
-        if (order.status === "distributed") {
-            return distributedOrdersMap[order.orderNo]?.date;
-        }
-        if (order.status === "completed") {
-            const firstPackedWH = order.warehouses.find(w => w.packed);
-            return firstPackedWH?.packingTime || order.date;
-        }
-        // Pending / Partial
-        return order.date;
+function getEffectiveDate(order) {
+    let date;
+
+    if (order.status === "distributed") {
+        date = distributedOrdersMap[order.orderNo]?.date;
     }
+    else if (order.status === "completed") {
+        const firstPackedWH = order.warehouses.find(w => w.packed);
+        date = firstPackedWH?.packingTime || order.date;
+    }
+    else {
+        date = order.date;
+    }
+    return date ? date.split(" ")[0] : null;
+}
     function updateDashboard() {
         const todayOrders = applyFilters();
         const ACCUMULATE_FROM = "2026-02-02";
@@ -1268,20 +1276,36 @@ ${pendingOrders.length}</a>
 
         if (type === "completed" || type === "pending") {
 
-            backlogOrders = allOrders.filter(o => {
+const todayDates = new Set(
+    todayFiltered.map(o =>
+        (getEffectiveDate(o) || "").split(" ")[0]
+    )
+);
 
-                const dateToCheck = getEffectiveDate(o);
+const todayOrderNos = new Set(
+    todayFiltered.map(o => o.orderNo)
+);
 
-                if (!dateToCheck) return false;
-                if (dateToCheck < ACCUMULATE_FROM) return false;
-                if (todayFiltered.includes(o)) return false;
+backlogOrders = allOrders.filter(o => {
+    const dateToCheck = getEffectiveDate(o);
 
-                if (type === "completed") return o.status === "completed";
-                if (type === "pending") return o.status === "pending" || o.status === "partial";
+    if (!dateToCheck) return false;
 
-                return false;
-            });
-        }
+    const orderDate = dateToCheck.split(" ")[0];
+
+    if (orderDate < ACCUMULATE_FROM) return false;
+
+    // استبعاد أي طلب موجود في Today Orders
+    if (todayOrderNos.has(o.orderNo)) return false;
+
+    if (type === "completed") return o.status === "completed";
+    if (type === "pending") {
+        return o.status === "pending" || o.status === "partial";
+    }
+
+    return false;
+});    
+}
 
         lastTodayOrders = todayFiltered;
         lastBacklogOrders = backlogOrders;
@@ -1416,17 +1440,19 @@ ${pendingOrders.length}</a>
             // 🔥 تجميع الطلبات حسب التاريخ الفعلي
             const grouped = {};
 
-            backlogOrders.forEach(order => {
+   backlogOrders.forEach(order => {
+    const fullDate = getEffectiveDate(order);
 
-                const dateKey = getEffectiveDate(order) || "No Date";
+    const dateKey = fullDate
+        ? fullDate.split(" ")[0]
+        : "No Date";
 
-                if (!grouped[dateKey]) {
-                    grouped[dateKey] = [];
-                }
+    if (!grouped[dateKey]) {
+        grouped[dateKey] = [];
+    }
 
-                grouped[dateKey].push(order);
-            });
-
+    grouped[dateKey].push(order);
+});
             // ترتيب التواريخ من الأحدث للأقدم
             const sortedDates = Object.keys(grouped)
                 .sort((a, b) => new Date(b) - new Date(a));
