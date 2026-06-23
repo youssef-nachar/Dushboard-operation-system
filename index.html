@@ -795,29 +795,47 @@ function loadCanceledFromFirebase() {
     }
     // FORMAT DATE  
     function formatDateForInput(value) {
-        if (!value) return null;
-        let v = String(value).trim();
-        v = v.split(" ")[0];
-        if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
-        if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v)) {
-            const [d, m, y] = v.split("/");
-            return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
-        }
-        // DD-MM-YYYY  
-        if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(v)) {
-            const [d, m, y] = v.split("-");
-            return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
-        }
-        // YYYY/MM/DD  
-        if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(v)) {
-            const [y, m, d] = v.split("/");
-            return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
-        }
-        // fallback  
-        const parsed = new Date(value);
-        if (!isNaN(parsed)) return parsed.toISOString().slice(0, 10);
-        return null;
+    if (!value) return null;
+
+    let v = String(value).trim();
+
+    // DD-MM-YYYY HH:mm:ss
+    const match = v.match(
+        /^(\d{1,2})-(\d{1,2})-(\d{4})(?:\s+(\d{1,2}):(\d{2}):(\d{2}))?$/
+    );
+
+    if (match) {
+        const [, d, m, y, h = "00", min = "00", s = "00"] = match;
+
+        return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")} ${h.padStart(2, "0")}:${min}:${s}`;
     }
+
+    // DD/MM/YYYY HH:mm:ss
+    const match2 = v.match(
+        /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}):(\d{2}))?$/
+    );
+
+    if (match2) {
+        const [, d, m, y, h = "00", min = "00", s = "00"] = match2;
+
+        return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")} ${h.padStart(2, "0")}:${min}:${s}`;
+    }
+
+    const parsed = new Date(v);
+
+    if (!isNaN(parsed)) {
+        const yyyy = parsed.getFullYear();
+        const mm = String(parsed.getMonth() + 1).padStart(2, "0");
+        const dd = String(parsed.getDate()).padStart(2, "0");
+        const hh = String(parsed.getHours()).padStart(2, "0");
+        const mi = String(parsed.getMinutes()).padStart(2, "0");
+        const ss = String(parsed.getSeconds()).padStart(2, "0");
+
+        return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+    }
+
+    return null;
+}
     let highestOrderCountSeen = 0;
     let highestEffectiveDateSeen = null;
     async function loadData({ force = false, silent = false } = {}) {
@@ -1934,7 +1952,7 @@ ${pendingOrders.length}</a>
     // =============================
     // SAVE NEW ORDER
     // =============================
-    function saveNewOrder() {
+    async function saveNewOrder() {
 
         const orderNo = document.getElementById("newOrderNumber").value.trim();
         const warehouse = document.getElementById("newWarehouseName").value.trim();
@@ -1980,11 +1998,15 @@ fetch(GOOGLE_SCRIPT_URL, {
 .then(res => res.json())
 .then(data => {
     console.log("Saved to Google Sheet:", data);
+
+    setTimeout(() => {
+        loadData({ force: true });
+    }, 2000);
 })
 .catch(err => {
     console.error("Sheet Error:", err);
 });
-        allOrders.push(newOrder);
+        await saveOrdersToFirebase([...allOrders, newOrder]);
 
         updateDashboard();
 
