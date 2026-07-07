@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
-    <link rel="stylesheet" href="test.css">
+    <link rel="stylesheet" href="style.css">
 
 </head>
 
@@ -403,96 +403,12 @@ await window.set(window.ref(window.db, "orders"), orders);
         { username: "pharmaUser", password: "123456", warehouse: "Pharma" },
         { username: "retailUser", password: "123456", warehouse: "Retail" }
     ];
-const warehouseSheets = [
+    const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?output=csv";
 
-    {
-        name: "P&C",
-        url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=228371932&single=true&output=csv"
-    },
-
-    {
-        name: "Pharma",
-        url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=875574333&single=true&output=csv"
-    },
-
-    {
-        name: "Retail",
-        url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=274206&single=true&output=csv"
-    },
-
-    {
-        name: "Beesline",
-        url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=1278749068&single=true&output=csv"
-    },
-
-    {
-        name: "L'oreal lux",
-        url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=884068351&single=true&output=csv"
-    }
-
-];
     let allOrders = [];
     const distributionSheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTecpCEwZ10-Ncz2y0xSsAnNdLXcWDGt_GiAeJlbWYhgg9B8zlhvJ1DeDH8H0NDSg/pub?output=csv";
     let distributedOrders = new Set(); // 
-    const packingSheetURL ="https://docs.google.com/spreadsheets/d/e/2PACX-1vSAeWlFZdvqQqrWCq0uJKqxz6boomvVuNal1IYM1tOuoeraNE_ZW2BfYYKr3lKfmldOWOgWAXhz88Ke/pub?gid=457547473&single=true&output=csv";
-async function loadAllWarehouseSheets() {
 
-    let mergedRows = [];
-    let headers = [];
-
-const responses = await Promise.allSettled(
-
-    warehouseSheets.map(sheet =>
-        fetch(sheet.url + "&t=" + Date.now(), {
-            cache: "no-store"
-        })
-    )
-
-);
-
-let successCount = 0;
-
-for (const res of responses) {
-
-    if (res.status !== "fulfilled")
-        continue;
-
-    const csv = await res.value.text();
-
-    if (!csv.trim())
-        continue;
-
-    const parsed = Papa.parse(csv, {
-        skipEmptyLines: true
-    });
-
-    if (!parsed.data.length)
-        continue;
-
-    successCount++;
-
-    const h = parsed.data.shift();
-
-    if (!headers.length)
-        headers = h;
-
-    mergedRows.push(...parsed.data);
-}
-// إذا لم ينجح تحميل أي Sheet لا تمسح البيانات الحالية
-
-
-if (successCount === 0 || mergedRows.length === 0) {
-
-    console.warn("⚠️ All warehouse sheets are empty. Keeping previous data.");
-
-    return null;
-}
-    return {
-        headers,
-        rows: mergedRows
-    };
-
-}
     let distributedOrdersMap = {};
 
 
@@ -924,49 +840,6 @@ function loadCanceledFromFirebase() {
 
     return null;
 }
-let packingOrdersSet = new Set();
-
-async function loadPackingSheet() {
-
-    const res = await fetch(packingSheetURL + "&t=" + Date.now(), {
-        cache: "no-store"
-    });
-
-    const csv = await res.text();
-
-    const parsed = Papa.parse(csv, {
-        skipEmptyLines: true
-    });
-
-    const rows = parsed.data;
-
-    if (!rows.length) return;
-
-    const headers = rows.shift().map(h =>
-        h.toString().trim().toLowerCase()
-    );
-
-    const ORDER_COL = headers.findIndex(h =>
-        h.includes("order")
-    );
-
-    if (ORDER_COL === -1) return;
-
-    const set = new Set();
-
-    rows.forEach(r => {
-
-        const orderNo = r[ORDER_COL]
-            ?.trim()
-            .toUpperCase();
-
-        if (orderNo)
-            set.add(orderNo);
-
-    });
-
-    packingOrdersSet = set;
-}
     let highestOrderCountSeen = 0;
     let highestEffectiveDateSeen = null;
     async function loadData({ force = false, silent = false } = {}) {
@@ -975,20 +848,15 @@ async function loadPackingSheet() {
         if (!silent && !dataCache) loadingOverlay.classList.remove("hidden");
         try {
             await loadDistributedOrders();
-            await loadCanceledOrders();   
-            await loadPackingSheet();// 🔥 هذا السطر كان ناقص 
-const data = await loadAllWarehouseSheets();
-
-if (!data) {
-    console.warn("Keeping previous dashboard data.");
-    return;
-}
-
-const rows = data.rows;
-
-if (!rows.length) return;
-
-const headers = data.headers.map(h => h.toLowerCase().trim());
+            await loadCanceledOrders();   // 🔥 هذا السطر كان ناقص 
+            const res = await fetch(sheetURL + "&t=" + Date.now(), {
+                cache: "no-store"
+            });
+            const csv = await res.text();
+            const parsed = Papa.parse(csv, { skipEmptyLines: true });
+            const rows = parsed.data;
+            if (!rows.length) return;
+            const headers = rows.shift().map(h => h.toLowerCase().trim());
             const col = {};
             headers.forEach((h, i) => col[h] = i);
             const ORDER = col["shopify order#"];
@@ -1019,18 +887,12 @@ const headers = data.headers.map(h => h.toLowerCase().trim());
                 // ✅ معالجة جميع صيغ العمود Packed  
                 const packedValues = ["TRUE", "True", "true", "1", "Yes", "yes", "X", "x"];
 
-const isPacked =
-    w.packed ||
-    (packedRaw && packedValues.includes(packedRaw)) ||
-    packingOrdersSet.has(orderNo);
+                if (w.packed || (packedRaw && packedValues.includes(packedRaw))) {
+                    map[orderNo].wh[w.base].packed = true;
 
-if (isPacked) {
-
-    map[orderNo].wh[w.base].packed = true;
-
-    map[orderNo].wh[w.base].packingTime =
-        formatDateForInput(r[DATE]);
-}
+                    // ⬅️ هنا نخزن وقت التحويل إلى Packing
+                    map[orderNo].wh[w.base].packingTime = formatDateForInput(r[DATE]);
+                }
             });
             let newOrders = Object.values(map).map(o => {
                 const warehouses = Object.values(o.wh);
