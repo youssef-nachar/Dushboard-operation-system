@@ -978,12 +978,12 @@ async function loadPackingSheet() {
         );
 
 
-        console.log(
-            "ORDER COL:",
-            ORDER_COL,
-            "PACK TIME COL:",
-            PACK_TIME_COL
-        );
+        // console.log(
+        //     "ORDER COL:",
+        //     ORDER_COL,
+        //     "PACK TIME COL:",
+        //     PACK_TIME_COL
+        // );
 
 
         if (ORDER_COL === -1) {
@@ -1038,12 +1038,12 @@ async function loadPackingSheet() {
                     formatted || rawTime;
 
 
-                console.log(
-                    "PACKING:",
-                    orderNo,
-                    rawTime,
-                    formatted
-                );
+                // console.log(
+                //     "PACKING:",
+                //     orderNo,
+                //     rawTime,
+                //     formatted
+                // );
 
             }
 
@@ -1226,11 +1226,11 @@ saveOrdersToFirebase(newOrders);
             isLoading = false;
             loadingOverlay.classList.add("hidden");
         }
-        console.log(
-    orderNo,
-    r[PACK_TIME],
-    formatDateForInput(r[PACK_TIME])
-);
+//         console.log(
+//     orderNo,
+//     r[PACK_TIME],
+//     formatDateForInput(r[PACK_TIME])
+// );
     }
     
     function initDate() {
