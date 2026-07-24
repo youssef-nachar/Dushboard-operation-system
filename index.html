@@ -924,47 +924,160 @@ function loadCanceledFromFirebase() {
     return null;
 }
 let packingOrdersSet = new Set();
+let packingTimeMap = {};
 
 async function loadPackingSheet() {
 
-    const res = await fetch(packingSheetURL + "&t=" + Date.now(), {
-        cache: "no-store"
-    });
+    try {
 
-    const csv = await res.text();
+        const res = await fetch(
+            packingSheetURL + "&t=" + Date.now(),
+            {
+                cache: "no-store"
+            }
+        );
 
-    const parsed = Papa.parse(csv, {
-        skipEmptyLines: true
-    });
+        const csv = await res.text();
 
-    const rows = parsed.data;
+        const parsed = Papa.parse(csv, {
+            skipEmptyLines: true
+        });
 
-    if (!rows.length) return;
+        const rows = parsed.data;
 
-    const headers = rows.shift().map(h =>
-        h.toString().trim().toLowerCase()
-    );
+        if (!rows.length) {
+            console.warn("Packing sheet empty");
+            return;
+        }
 
-    const ORDER_COL = headers.findIndex(h =>
-        h.includes("order")
-    );
 
-    if (ORDER_COL === -1) return;
+        // Headers
+        const headers = rows.shift().map(h =>
+            h.toString()
+                .trim()
+                .toLowerCase()
+                .replace(/\s+/g, " ")
+        );
 
-    const set = new Set();
 
-    rows.forEach(r => {
+        console.log("Packing Headers:", headers);
 
-        const orderNo = r[ORDER_COL]
-            ?.trim()
-            .toUpperCase();
 
-        if (orderNo)
-            set.add(orderNo);
+        // البحث عن Order Number
+        const ORDER_COL = headers.findIndex(h =>
+            h.includes("order")
+        );
 
-    });
 
-    packingOrdersSet = set;
+        // البحث عن وقت الـ Packing
+        const PACK_TIME_COL = headers.findIndex(h =>
+            h.includes("packing") ||
+            h.includes("pack time") ||
+            h.includes("packed time") ||
+            h.includes("pack station")
+        );
+
+
+        console.log(
+            "ORDER COL:",
+            ORDER_COL,
+            "PACK TIME COL:",
+            PACK_TIME_COL
+        );
+
+
+        if (ORDER_COL === -1) {
+
+            console.warn(
+                "Order column not found in Packing Sheet"
+            );
+
+            return;
+        }
+
+
+        let newSet = new Set();
+        let newTimeMap = {};
+
+
+        rows.forEach(r => {
+
+
+            const orderNo = r[ORDER_COL]
+                ?.toString()
+                .trim()
+                .toUpperCase();
+
+
+            if (!orderNo)
+                return;
+
+
+            // إضافة الطلب إلى قائمة Packed
+            newSet.add(orderNo);
+
+
+
+            // استخراج وقت الـ Packing
+            if (
+                PACK_TIME_COL !== -1 &&
+                r[PACK_TIME_COL]
+            ) {
+
+                const rawTime =
+                    r[PACK_TIME_COL]
+                        .toString()
+                        .trim();
+
+
+                const formatted =
+                    formatDateForInput(rawTime);
+
+
+                newTimeMap[orderNo] =
+                    formatted || rawTime;
+
+
+                console.log(
+                    "PACKING:",
+                    orderNo,
+                    rawTime,
+                    formatted
+                );
+
+            }
+
+
+        });
+
+
+        // تحديث البيانات
+        packingOrdersSet = newSet;
+
+        packingTimeMap = newTimeMap;
+
+
+        console.log(
+            "✅ Packing Orders Loaded:",
+            packingOrdersSet.size
+        );
+
+        console.log(
+            "✅ Packing Times Loaded:",
+            Object.keys(packingTimeMap).length
+        );
+
+
+    }
+    catch(error){
+
+        console.error(
+            "❌ Packing Sheet Error:",
+            error
+        );
+
+    }
+
 }
     let highestOrderCountSeen = 0;
     let highestEffectiveDateSeen = null;
@@ -994,6 +1107,9 @@ const headers = data.headers.map(h => h.toLowerCase().trim());
             const DATE = col["order received in wh"];
             const WH = col["warehouse name"];
             const PACKED = col["packed"] || null;
+            const PACK_TIME = headers.findIndex(h =>
+    h.includes("pack station")
+);
             const map = {};
             rows.forEach(r => {
                 const orderNo = r[ORDER]?.trim().toUpperCase();
@@ -1027,8 +1143,10 @@ if (isPacked) {
 
     map[orderNo].wh[w.base].packed = true;
 
+
     map[orderNo].wh[w.base].packingTime =
-        formatDateForInput(r[DATE]);
+        packingTimeMap[orderNo] || null;
+
 }
             });
             let newOrders = Object.values(map).map(o => {
@@ -1108,7 +1226,13 @@ saveOrdersToFirebase(newOrders);
             isLoading = false;
             loadingOverlay.classList.add("hidden");
         }
+        console.log(
+    orderNo,
+    r[PACK_TIME],
+    formatDateForInput(r[PACK_TIME])
+);
     }
+    
     function initDate() {
         const today = new Date().toISOString().slice(0, 10);
 
