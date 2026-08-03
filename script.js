@@ -1,4 +1,3 @@
-<script>
 async function saveOrdersToFirebase(orders) {
     try {
 await window.set(window.ref(window.db, "orders"), orders);      
@@ -2220,4 +2219,3 @@ function clearNewOrderForm() {
                 container.innerHTML += row;
             });
     }
-</script>
