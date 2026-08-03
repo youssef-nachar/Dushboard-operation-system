@@ -345,34 +345,15 @@ window.set = set;
 
 
 <script>
-async function saveOrdersToFirebase(newOrders) {
-
-    const ordersRef = window.ref(window.db, "orders");
-
-    const snapshot = await window.get(ordersRef);
-
-    const firebaseOrders = snapshot.val() || {};
-
-    // تحويل القديم إلى Map
-    const map = {};
-
-    Object.values(firebaseOrders).forEach(o => {
-        map[o.orderNo] = o;
-    });
-
-    // تحديث أو إضافة الجديد فقط
-    newOrders.forEach(o => {
-        map[o.orderNo] = {
-            ...(map[o.orderNo] || {}),
-            ...o
-        };
-    });
-
-    await window.set(ordersRef, map);
-
-    console.log("✅ Firebase merged successfully");
+async function saveOrdersToFirebase(orders) {
+    try {
+await window.set(window.ref(window.db, "orders"), orders);      
+  console.log("✅ Data saved to Firebase");
+    } catch (e) {
+        console.error("❌ Firebase save error:", e);
+    }
 }
-const orderDetails = document.getElementById("orderDetails");
+    const orderDetails = document.getElementById("orderDetails");
 
     orderDetails.addEventListener("click", (e) => {
         if (e.target === orderDetails) {
@@ -997,6 +978,13 @@ async function loadPackingSheet() {
         );
 
 
+        console.log(
+            "ORDER COL:",
+            ORDER_COL,
+            "PACK TIME COL:",
+            PACK_TIME_COL
+        );
+
 
         if (ORDER_COL === -1) {
 
@@ -1050,7 +1038,12 @@ async function loadPackingSheet() {
                     formatted || rawTime;
 
 
-
+                console.log(
+                    "PACKING:",
+                    orderNo,
+                    rawTime,
+                    formatted
+                );
 
             }
 
@@ -1222,18 +1215,7 @@ if (isPacked) {
                 showToast(`🔔 ${newOnly.length} new order(s) received`);
             }
             dataCache = newOrders;
-          const snap = await window.get(window.ref(window.db,"orders"));
-
-if (snap.exists()) {
-
-    allOrders = Object.values(snap.val());
-
-    dataCache = allOrders;
-
-    updateDashboard();
-
-    return;
-}
+            allOrders = newOrders;
             lastDataHash = newHash;
 saveOrdersToFirebase(newOrders);
             updateDashboard();
@@ -1244,6 +1226,11 @@ saveOrdersToFirebase(newOrders);
             isLoading = false;
             loadingOverlay.classList.add("hidden");
         }
+        console.log(
+    orderNo,
+    r[PACK_TIME],
+    formatDateForInput(r[PACK_TIME])
+);
     }
     
     function initDate() {
