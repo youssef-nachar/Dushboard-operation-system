@@ -2219,3 +2219,26 @@ function clearNewOrderForm() {
                 container.innerHTML += row;
             });
     }
+let deferredPrompt;
+
+window.addEventListener("beforeinstallprompt", e => {
+
+    e.preventDefault();
+
+    deferredPrompt = e;
+
+    document.getElementById("installApp").style.display = "block";
+
+});
+
+document.getElementById("installApp").onclick = async () => {
+
+    deferredPrompt.prompt();
+
+    await deferredPrompt.userChoice;
+
+    deferredPrompt = null;
+
+    document.getElementById("installApp").style.display = "none";
+
+};
