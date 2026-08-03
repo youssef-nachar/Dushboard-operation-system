@@ -1,24 +1,25 @@
-
 {
   "name": "OMS Dashboard",
   "short_name": "OMS",
   "description": "Operation Management System",
-  "start_url": "./index.html",
-  "scope": "./",
+  "start_url": "/Dushboard-operation-system/",
+  "scope": "/Dushboard-operation-system/",
   "display": "standalone",
   "background_color": "#08111f",
-  "theme_color": "#0f172a",
+  "theme_color": "#08111f",
   "orientation": "landscape",
   "icons": [
     {
       "src": "icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
