@@ -978,14 +978,6 @@ async function loadPackingSheet() {
         );
 
 
-        console.log(
-            "ORDER COL:",
-            ORDER_COL,
-            "PACK TIME COL:",
-            PACK_TIME_COL
-        );
-
-
         if (ORDER_COL === -1) {
 
             console.warn(
@@ -1037,13 +1029,6 @@ async function loadPackingSheet() {
                 newTimeMap[orderNo] =
                     formatted || rawTime;
 
-
-                console.log(
-                    "PACKING:",
-                    orderNo,
-                    rawTime,
-                    formatted
-                );
 
             }
 
