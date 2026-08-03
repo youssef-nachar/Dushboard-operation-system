@@ -352,17 +352,27 @@ window.set = set;
 
                         <script src="./script.js"></script>
 <script>
-
 if ("serviceWorker" in navigator) {
 
-    window.addEventListener("load", () => {
+window.addEventListener("load", async () => {
 
-        navigator.serviceWorker.register("service-worker.js");
+try{
 
-    });
+await navigator.serviceWorker.register(
+"/Dushboard-operation-system/service-worker.js"
+);
+
+console.log("Service Worker Registered");
+
+}catch(err){
+
+console.error(err);
 
 }
 
+});
+
+}
 </script>
 
 
