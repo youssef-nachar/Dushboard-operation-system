@@ -653,214 +653,273 @@ function loadCanceledFromFirebase() {
                 }))
         );
     }
- async function loadDistributedOrders() {
+ // =====================================================================
+//  Distribution Sheet — قراءة بدون الاعتماد على أسماء الأعمدة
+//
+//  الخطوات:
+//  1) استبدل دالة formatDateForInput القديمة بالنسخة الموجودة هنا.
+//  2) احذف دالة loadDistributedOrders القديمة بالكامل وضع مكانها
+//     كل الكود الموجود تحت (DIST_COLUMNS + isDateLike +
+//     detectDistributionColumns + loadDistributedOrders).
+//  بقية الملف يبقى كما هو.
+// =====================================================================
+
+
+// ---------------------------------------------------------------------
+// (1) formatDateForInput — نسخة أكثر مرونة (الثواني اختيارية + يقبل . و - و /)
+// ---------------------------------------------------------------------
+function formatDateForInput(value) {
+    if (value === null || value === undefined) return null;
+
+    const v = String(value).trim();
+    if (!v) return null;
+
+    const pad = n => String(n).padStart(2, "0");
+
+    // DD-MM-YYYY / DD/MM/YYYY / DD.MM.YYYY  [HH:mm[:ss]]
+    let m = v.match(
+        /^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})(?:[\sT]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/
+    );
+    if (m) {
+        const [, d, mo, y, h = "0", mi = "0", s = "0"] = m;
+        return `${y}-${pad(mo)}-${pad(d)} ${pad(h)}:${pad(mi)}:${pad(s)}`;
+    }
+
+    // YYYY-MM-DD / YYYY/MM/DD  [HH:mm[:ss]]
+    m = v.match(
+        /^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})(?:[\sT]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/
+    );
+    if (m) {
+        const [, y, mo, d, h = "0", mi = "0", s = "0"] = m;
+        return `${y}-${pad(mo)}-${pad(d)} ${pad(h)}:${pad(mi)}:${pad(s)}`;
+    }
+
+    const parsed = new Date(v);
+
+    if (!isNaN(parsed)) {
+        return `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())} ` +
+            `${pad(parsed.getHours())}:${pad(parsed.getMinutes())}:${pad(parsed.getSeconds())}`;
+    }
+
+    return null;
+}
+
+
+// ---------------------------------------------------------------------
+// (2) Distribution Sheet
+// ---------------------------------------------------------------------
+
+// لو أردت تحديد الأعمدة يدويًا اكتب رقم العمود (يبدأ من 0 → A=0, B=1, C=2 ...)
+// وإن تركتها null سيكتشفها الكود تلقائيًا من محتوى البيانات.
+const DIST_COLUMNS = { order: null, date: null, company: null };
+
+// هل النص يشبه تاريخ؟
+function isDateLike(v) {
+    const s = String(v ?? "").trim();
+    return (
+        /^\d{1,2}[-\/.]\d{1,2}[-\/.]\d{4}(?:[\sT]+\d{1,2}:\d{2}(?::\d{2})?)?/.test(s) ||
+        /^\d{4}[-\/.]\d{1,2}[-\/.]\d{1,2}(?:[\sT]+\d{1,2}:\d{2}(?::\d{2})?)?/.test(s)
+    );
+}
+
+// اكتشاف الأعمدة من محتوى البيانات (لا يستخدم أسماء الأعمدة)
+function detectDistributionColumns(rows) {
+
+    const sample = rows.slice(0, 500);
+    const colCount = sample.reduce((m, r) => Math.max(m, r.length), 0);
+
+    // أرقام الطلبات المعروفة من شيتات المستودعات (تساعد في التعرف على عمود الطلب)
+    const known = new Set((allOrders || []).map(o => o.orderNo));
+
+    // شكل رقم الطلب: #M12345 أو M12345 أو #12345
+    const orderPattern = /^(?:#?[A-Z]{1,5}[-_]?\d{3,}|#\d{3,})$/i;
+
+    const stats = [];
+
+    for (let c = 0; c < colCount; c++) {
+
+        const s = { c, filled: 0, orders: 0, nums: 0, dates: 0, texts: 0, uniq: 0 };
+        const uniq = new Set();
+
+        sample.forEach(r => {
+
+            const raw = String(r[c] ?? "").trim();
+            if (!raw) return;
+
+            s.filled++;
+
+            if (isDateLike(raw)) {
+                s.dates++;
+            }
+            else if (orderPattern.test(raw) || known.has(raw.toUpperCase())) {
+                s.orders++;
+            }
+            else if (/^\d{4,}$/.test(raw)) {
+                s.nums++;
+            }
+            else if (/[A-Za-z\u0600-\u06FF]/.test(raw) && raw.length <= 40 && !raw.includes("@")) {
+                s.texts++;
+                uniq.add(raw.toUpperCase());
+            }
+        });
+
+        s.uniq = uniq.size;
+        stats.push(s);
+    }
+
+    // أفضل عمود حسب نوع المحتوى
+    const pick = (key, exclude = []) => {
+        let best = null;
+        stats.forEach(s => {
+            if (exclude.includes(s.c) || s[key] === 0) return;
+            if (!best || s[key] > best[key]) best = s;
+        });
+        return best ? best.c : -1;
+    };
+
+    // ---- عمود رقم الطلب ----
+    let orderCol = DIST_COLUMNS.order ?? pick("orders");
+    if (orderCol === -1) orderCol = pick("nums");   // احتياط: أرقام فقط
+
+    // ---- عمود التاريخ (أول عمود يحتوي تواريخ) ----
+    const dateCol = DIST_COLUMNS.date ?? pick("dates", [orderCol]);
+
+    // ---- عمود الشركة ----
+    let companyCol = DIST_COLUMNS.company;
+
+    if (companyCol === null) {
+
+        // تلميح اختياري من العنوان إن وُجد (غير مطلوب ولا يؤثر لو تغيّر الاسم)
+        const hint = (rows[0] || []).findIndex(h =>
+            /company|carrier|courier|شركة/i.test(String(h))
+        );
+
+        if (hint !== -1 && hint !== orderCol && hint !== dateCol) {
+            companyCol = hint;
+        }
+        else {
+            // عمود نصي قصير ومتكرر (أسماء شركات قليلة تتكرر)
+            companyCol = -1;
+            let bestTexts = 0;
+
+            stats.forEach(s => {
+                if (s.c === orderCol || s.c === dateCol) return;
+                if (s.texts < 1 || s.texts / s.filled < 0.6) return;
+                if (s.uniq > Math.max(5, s.texts * 0.3)) return;
+
+                if (s.texts > bestTexts) {
+                    bestTexts = s.texts;
+                    companyCol = s.c;
+                }
+            });
+        }
+    }
+
+    return { ORDER_COL: orderCol, DATE_COL: dateCol, COMPANY_COL: companyCol };
+}
+
+
+async function loadDistributedOrders() {
 
     try {
 
         console.log("🔄 Loading Distribution Sheet...");
 
-        const url =
-            distributionSheetURL +
-            "&t=" +
-            Date.now();
-
-        const res = await fetch(url, {
+        const res = await fetch(distributionSheetURL + "&t=" + Date.now(), {
             method: "GET",
             cache: "no-store"
         });
 
         if (!res.ok) {
-
             throw new Error(
                 `Distribution Sheet HTTP ${res.status} ${res.statusText}`
             );
-
         }
 
         const csv = await res.text();
 
         if (!csv || !csv.trim()) {
-
-            console.warn(
-                "⚠️ Distribution Sheet returned empty data. Keeping previous data."
-            );
-
+            console.warn("⚠️ Distribution Sheet returned empty data. Keeping previous data.");
             return;
-
         }
 
-        const parsed = Papa.parse(csv, {
-            skipEmptyLines: true
-        });
-
+        const parsed = Papa.parse(csv, { skipEmptyLines: true });
         const rows = parsed.data;
 
         if (!rows || !rows.length) {
-
-            console.warn(
-                "⚠️ Distribution Sheet contains no rows."
-            );
-
+            console.warn("⚠️ Distribution Sheet contains no rows.");
             return;
-
         }
 
-        const headers = rows
-            .shift()
-            .map(h =>
-                h.toString()
-                    .trim()
-                    .toLowerCase()
-            );
+        // ✅ لا نستخدم أسماء الأعمدة — نكتشفها من المحتوى
+        // ✅ لا نحذف الصف الأول: لو كان عناوين سيتم تجاهله تلقائيًا لأن تاريخه غير صالح
+        const { ORDER_COL, DATE_COL, COMPANY_COL } = detectDistributionColumns(rows);
 
-        console.log(
-            "Distribution Headers:",
-            headers
-        );
+        console.log("Distribution columns detected →", { ORDER_COL, DATE_COL, COMPANY_COL });
 
-        const ORDER_COL =
-            headers.indexOf("request number");
-
-        const DATE_COL =
-            headers.indexOf(
-                "request registration date time"
-            );
-
-        const COMPANY_COL =
-            headers.findIndex(
-                h => h.includes("company")
-            );
-
-        if (
-            ORDER_COL === -1 ||
-            DATE_COL === -1
-        ) {
-
-            console.warn(
-                "❌ Distribution columns not found.",
-                headers
-            );
-
+        if (ORDER_COL === -1 || DATE_COL === -1) {
+            console.warn("❌ Could not detect order/date columns.", rows.slice(0, 3));
             return;
-
         }
 
         const newMap = {};
 
         rows.forEach(r => {
 
-            const orderNo =
-                r[ORDER_COL]
-                    ?.toString()
-                    .trim()
-                    .toUpperCase();
+            const orderNo = r[ORDER_COL]?.toString().trim().toUpperCase();
+            const rawDate = r[DATE_COL]?.toString().trim();
 
-            const rawDate =
-                r[DATE_COL];
+            if (!orderNo || !rawDate) return;
 
-            const company =
-                COMPANY_COL !== -1
-                    ? r[COMPANY_COL]
-                        ?.toString()
-                        .trim()
-                    : "";
+            // يتجاهل صف العناوين (إن وُجد)
+            if (!isDateLike(rawDate) && !/\d{4}/.test(rawDate)) return;
 
-            if (
-                !orderNo ||
-                !rawDate
-            ) {
-                return;
-            }
+            const formattedDate = formatDateForInput(rawDate);
+            if (!formattedDate) return;
 
-            const formattedDate =
-                formatDateForInput(rawDate);
-
-            if (!formattedDate) {
-                return;
-            }
+            const company = COMPANY_COL !== -1
+                ? r[COMPANY_COL]?.toString().trim()
+                : "";
 
             newMap[orderNo] = {
-
                 date: formattedDate,
-
-                company:
-                    company || "LMD"
-
+                company: company || "LMD"
             };
-
         });
 
-        /*
-         * لا تستبدل البيانات إذا Google رجع
-         * نسخة فارغة.
-         */
-        if (
-            Object.keys(newMap).length === 0
-        ) {
-
-            console.warn(
-                "⚠️ Distribution Sheet returned 0 valid orders. Keeping previous data."
-            );
-
+        // لا تستبدل البيانات إذا Google رجع نسخة فارغة
+        if (Object.keys(newMap).length === 0) {
+            console.warn("⚠️ Distribution Sheet returned 0 valid orders. Keeping previous data.");
             return;
-
         }
 
-        const newHash =
-            hashDistribution(newMap);
+        const newHash = hashDistribution(newMap);
 
         // لا تغيير
-        if (
-            lastDistributionHash &&
-            newHash === lastDistributionHash
-        ) {
-
+        if (lastDistributionHash && newHash === lastDistributionHash) {
             return;
-
         }
 
         // منع snapshot قديم
-        if (
-            Object.keys(newMap).length <
-            Object.keys(distributionCache).length
-        ) {
-
-            console.warn(
-                "⚠️ Older distribution snapshot blocked."
-            );
-
+        if (Object.keys(newMap).length < Object.keys(distributionCache).length) {
+            console.warn("⚠️ Older distribution snapshot blocked.");
             return;
-
         }
 
         // اعتماد البيانات الجديدة
-        distributionCache =
-            newMap;
+        distributionCache = newMap;
+        distributedOrdersMap = newMap;
+        lastDistributionHash = newHash;
 
-        distributedOrdersMap =
-            newMap;
-
-        lastDistributionHash =
-            newHash;
-
-        console.log(
-            "✅ Distribution updated:",
-            Object.keys(newMap).length
-        );
+        console.log("✅ Distribution updated:", Object.keys(newMap).length);
 
     } catch (error) {
 
-        console.error(
-            "❌ Distribution Sheet Load Error:",
-            error
-        );
-
-        console.warn(
-            "⚠️ Keeping previous distribution data."
-        );
-
+        console.error("❌ Distribution Sheet Load Error:", error);
+        console.warn("⚠️ Keeping previous distribution data.");
     }
 }
+
     function resetFilters() {
         // 🔹 إلغاء Today Mode  
         todayOnlyMode = false;
@@ -1113,48 +1172,7 @@ function loadCanceledFromFirebase() {
         updateDashboard();
     }
     // FORMAT DATE  
-    function formatDateForInput(value) {
-    if (!value) return null;
-
-    let v = String(value).trim();
-
-    // DD-MM-YYYY HH:mm:ss
-    const match = v.match(
-        /^(\d{1,2})-(\d{1,2})-(\d{4})(?:\s+(\d{1,2}):(\d{2}):(\d{2}))?$/
-    );
-
-    if (match) {
-        const [, d, m, y, h = "00", min = "00", s = "00"] = match;
-
-        return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")} ${h.padStart(2, "0")}:${min}:${s}`;
-    }
-
-    // DD/MM/YYYY HH:mm:ss
-    const match2 = v.match(
-        /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}):(\d{2}))?$/
-    );
-
-    if (match2) {
-        const [, d, m, y, h = "00", min = "00", s = "00"] = match2;
-
-        return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")} ${h.padStart(2, "0")}:${min}:${s}`;
-    }
-
-    const parsed = new Date(v);
-
-    if (!isNaN(parsed)) {
-        const yyyy = parsed.getFullYear();
-        const mm = String(parsed.getMonth() + 1).padStart(2, "0");
-        const dd = String(parsed.getDate()).padStart(2, "0");
-        const hh = String(parsed.getHours()).padStart(2, "0");
-        const mi = String(parsed.getMinutes()).padStart(2, "0");
-        const ss = String(parsed.getSeconds()).padStart(2, "0");
-
-        return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
-    }
-
-    return null;
-}
+    
 let packingOrdersSet = new Set();
 let packingTimeMap = {};
 
